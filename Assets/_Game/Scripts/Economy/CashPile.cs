@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BubbleTea.Core;
 using UnityEngine;
 
 namespace BubbleTea.Economy
@@ -80,6 +81,7 @@ namespace BubbleTea.Economy
             bill.FlyTo(flyTarget, landed =>
             {
                 if (wallet != null) wallet.Add(valuePerBill);
+                GameEvents.RaiseCashCollected(flyTarget != null ? flyTarget.position : transform.position);
                 landed.gameObject.SetActive(false);
                 landed.transform.SetParent(transform, false);
                 spare.Push(landed);

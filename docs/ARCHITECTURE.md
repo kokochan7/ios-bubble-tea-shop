@@ -22,6 +22,7 @@ This is the plan for how the prototype's code fits together. It's written so a n
 | Customers | `Scripts/Customers` | Spawning, queueing at the counter, buying drinks, dropping cash | Step 4 |
 | Upgrades | `Scripts/Upgrades` | Upgrade levels, buying them, and the zone at the upgrade desk | Milestone 2 |
 | Staff | `Scripts/Staff` | Hired helpers that move items between stations and the counter | Milestone 4 |
+| Feedback | `Scripts/Feedback` | Sounds, vibration, confetti, sale pop-ups, guide arrow | Milestone 6 |
 | Saving | `Scripts/Saving` | Writing progress to a JSON file and putting it back on start | Milestone 1 |
 
 Dependencies only point one way: Player, Economy, Building, Cooking and Customers may use Core, Upgrades uses Economy (to pay), UI and Saving may read from any of them, but Core never depends on gameplay code.
@@ -65,6 +66,10 @@ A `Runner` is just another `ItemCarrier`, so stations and the counter hand items
 ## Shop expansion (milestone 5)
 
 Unlock pads can show and hide scene objects when they're bought (`showWhenUnlocked`, `hideWhenUnlocked`), which is how Expand Shop opens the wall and reveals the new floor; because it happens in the same code path as loading, a saved expansion comes back open. Each `ServingCounter` has a `lane` name and a price multiplier, and each `CustomerSpawner` sends customers to the counter with its lane, so the drive-through is just a second counter prefab plus a car-shaped customer prefab.
+
+## Game feel (milestone 6)
+
+Gameplay scripts announce moments through `Core/GameEvents` (cash collected, pad paid, unlocked, drink sold, upgrade bought) and never play sounds or effects themselves. The Feedback module listens and decides what each moment looks, sounds and feels like, so polish can change without touching gameplay. Player preferences live in `Core/GameSettings` (PlayerPrefs), separate from the save file.
 
 ## Conventions
 

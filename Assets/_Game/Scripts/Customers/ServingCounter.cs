@@ -151,7 +151,9 @@ namespace BubbleTea.Customers
         {
             drink = null;
             if (order == null || !drinks.TryTake(item => item == order.Drink, out drink)) return false;
-            if (cashPile != null) cashPile.AddValue(Mathf.RoundToInt(order.Price * priceMultiplier * Stats.Get(StatId.DrinkPrice, 1f)));
+            int paid = Mathf.RoundToInt(order.Price * priceMultiplier * Stats.Get(StatId.DrinkPrice, 1f));
+            if (cashPile != null) cashPile.AddValue(paid);
+            GameEvents.RaiseDrinkSold(transform.position, paid);
             return true;
         }
 

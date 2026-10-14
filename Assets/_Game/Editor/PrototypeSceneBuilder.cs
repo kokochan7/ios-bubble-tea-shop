@@ -2,6 +2,7 @@ using BubbleTea.Building;
 using BubbleTea.Cooking;
 using BubbleTea.Customers;
 using BubbleTea.Economy;
+using BubbleTea.Feedback;
 using BubbleTea.Player;
 using BubbleTea.Saving;
 using BubbleTea.UI;
@@ -78,7 +79,9 @@ namespace BubbleTea.EditorTools
                 new Vector3(22f, 0f, -14f), new Vector3(30f, 0f, -1.5f), secondsBetween: 6f, max: 3);
             UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
             CreateUpgradePanel(hud, upgrades, content.Upgrades);
-            CreateSaveManager(wallet, pads, upgrades);
+            SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades);
+            CreateFeedback(player.transform);
+            CreateSettingsMenu(hud, saveManager);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuild(ScenePath);
@@ -379,7 +382,7 @@ namespace BubbleTea.EditorTools
         }
 
         // Loads progress on Play and keeps saving it. Delete it with Bubble Tea > Delete Save Data.
-        private static void CreateSaveManager(Wallet wallet, UnlockPad[] pads, UpgradeManager upgrades)
+        private static SaveManager CreateSaveManager(Wallet wallet, UnlockPad[] pads, UpgradeManager upgrades)
         {
             var go = new GameObject("SaveManager");
             var saveManager = go.AddComponent<SaveManager>();
@@ -391,6 +394,120 @@ namespace BubbleTea.EditorTools
             list.arraySize = pads.Length;
             for (int i = 0; i < pads.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = pads[i];
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            return saveManager;
+        }
+
+        // Sounds, vibration, confetti, sale pop-ups and the guide arrow.
+        private static void CreateFeedback(Transform player)
+        {
+            var go = new GameObject("Feedback");
+            go.AddComponent<AudioSource>();
+            go.AddComponent<SoundEffects>();
+            go.AddComponent<Haptics>();
+            go.AddComponent<UnlockConfetti>();
+            go.AddComponent<SalePopups>();
+
+            Material arrowMat = GetOrCreateMaterial("GuideArrow", new Color(1f, 0.82f, 0.2f));
+
+            // The marker: a fat yellow "down arrow" made of a post and a diamond tip.
+            var marker = new GameObject("GoalMarker").transform;
+            marker.SetParent(go.transform, false);
+            AddShape(marker, PrimitiveType.Cube, new Vector3(0f, 0.45f, 0f), new Vector3(0.3f, 0.6f, 0.3f), Quaternion.identity, arrowMat);
+            AddShape(marker, PrimitiveType.Cube, new Vector3(0f, 0f, 0f), new Vector3(0.5f, 0.5f, 0.5f),
+                Quaternion.Euler(45f, 0f, 45f), arrowMat);
+
+            // The pointer: a flat arrow on the floor, pointing along its forward (z) direction.
+            var pointer = new GameObject("GoalPointer").transform;
+            pointer.SetParent(go.transform, false);
+            AddShape(pointer, PrimitiveType.Cube, new Vector3(0f, 0f, 1.1f), new Vector3(0.18f, 0.02f, 0.6f), Quaternion.identity, arrowMat);
+            AddShape(pointer, PrimitiveType.Cube, new Vector3(0f, 0f, 1.45f), new Vector3(0.35f, 0.02f, 0.35f),
+                Quaternion.Euler(0f, 45f, 0f), arrowMat);
+
+            var arrow = go.AddComponent<GoalArrow>();
+            SetReference(arrow, "player", player);
+            SetReference(arrow, "marker", marker);
+            SetReference(arrow, "pointer", pointer);
+        }
+
+        private static void AddShape(Transform parent, PrimitiveType type, Vector3 position, Vector3 scale, Quaternion rotation,
+            Material material)
+        {
+            GameObject shape = GameObject.CreatePrimitive(type);
+            Object.DestroyImmediate(shape.GetComponent<Collider>());
+            shape.transform.SetParent(parent, false);
+            shape.transform.localPosition = position;
+            shape.transform.localRotation = rotation;
+            shape.transform.localScale = scale;
+            shape.GetComponent<Renderer>().sharedMaterial = material;
+        }
+
+        // A MENU button in the top-right corner that opens sound, vibration and reset options.
+        private static void CreateSettingsMenu(Transform hud, SaveManager saveManager)
+        {
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform root = CreateUiObject("Settings", hud);
+            Stretch(root);
+            var menu = root.gameObject.AddComponent<SettingsMenu>();
+
+            Button openButton = CreateMenuButton("MenuButton", root, "MENU", rounded, font, new Color(0.15f, 0.15f, 0.2f, 0.75f), out _);
+            var openRect = (RectTransform)openButton.transform;
+            openRect.anchorMin = openRect.anchorMax = new Vector2(1f, 1f);
+            openRect.pivot = new Vector2(1f, 1f);
+            openRect.anchoredPosition = new Vector2(-40f, -110f);
+            openRect.sizeDelta = new Vector2(200f, 110f);
+
+            RectTransform panel = CreateUiObject("Panel", root);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = new Vector2(800f, 760f);
+            var panelImage = panel.gameObject.AddComponent<Image>();
+            panelImage.sprite = rounded;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.95f);
+
+            Text title = CreateHudText("Title", panel, font, 60, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 20f, 110f, 0f, 0f);
+            title.text = "SETTINGS";
+
+            var green = new Color(0.35f, 0.78f, 0.38f);
+            Button sound = CreateMenuButton("Sound", panel, "Sound: ON", rounded, font, green, out Text soundLabel);
+            SetTopRow((RectTransform)sound.transform, 160f, 120f, 60f, 60f);
+            Button vibration = CreateMenuButton("Vibration", panel, "Vibration: ON", rounded, font, green, out Text vibrationLabel);
+            SetTopRow((RectTransform)vibration.transform, 310f, 120f, 60f, 60f);
+            Button reset = CreateMenuButton("Reset", panel, "Reset Progress", rounded, font, new Color(0.85f, 0.35f, 0.35f),
+                out Text resetLabel);
+            SetTopRow((RectTransform)reset.transform, 460f, 120f, 60f, 60f);
+            Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
+            SetTopRow((RectTransform)close.transform, 610f, 110f, 200f, 200f);
+
+            SetReference(menu, "panel", panel.gameObject);
+            SetReference(menu, "openButton", openButton);
+            SetReference(menu, "closeButton", close);
+            SetReference(menu, "soundButton", sound);
+            SetReference(menu, "soundLabel", soundLabel);
+            SetReference(menu, "vibrationButton", vibration);
+            SetReference(menu, "vibrationLabel", vibrationLabel);
+            SetReference(menu, "resetButton", reset);
+            SetReference(menu, "resetLabel", resetLabel);
+            SetReference(menu, "saveManager", saveManager);
+        }
+
+        private static Button CreateMenuButton(string name, Transform parent, string text, Sprite sprite, Font font, Color color,
+            out Text label)
+        {
+            RectTransform rect = CreateUiObject(name, parent);
+            var image = rect.gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.color = color;
+            var button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+
+            label = CreateHudText("Label", rect, font, 50, TextAnchor.MiddleCenter);
+            Stretch(label.rectTransform);
+            label.text = text;
+            return button;
         }
 
         private static UpgradeManager CreateUpgradeManager(Wallet wallet, UpgradeDefinition[] upgrades)

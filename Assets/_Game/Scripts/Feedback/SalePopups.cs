@@ -1,0 +1,88 @@
+using System.Collections.Generic;
+using BubbleTea.Core;
+using UnityEngine;
+
+namespace BubbleTea.Feedback
+{
+    /// <summary>
+    /// Floats a green "+$15" above the counter for every sale, then fades it out.
+    /// Labels are reused, so selling drinks never creates garbage.
+    /// </summary>
+    public class SalePopups : MonoBehaviour
+    {
+        [SerializeField, Tooltip("Seconds a label stays up.")]
+        private float lifetime = 1f;
+
+        [SerializeField, Tooltip("How far up a label floats, in meters.")]
+        private float rise = 1.5f;
+
+        [SerializeField, Tooltip("Text color.")]
+        private Color color = new(0.25f, 0.75f, 0.3f);
+
+        private class Popup
+        {
+            public TextMesh Text;
+            public Vector3 Start;
+            public float Age;
+        }
+
+        private readonly List<Popup> live = new();
+        private readonly Stack<Popup> spare = new();
+        private Transform cameraTransform;
+
+        private void OnEnable() => GameEvents.DrinkSold += Show;
+        private void OnDisable() => GameEvents.DrinkSold -= Show;
+
+        private void Show(Vector3 position, int amount)
+        {
+            Popup popup = spare.Count > 0 ? spare.Pop() : Create();
+            popup.Text.text = "+$" + amount.ToString("N0");
+            popup.Start = position + Vector3.up * 1.6f;
+            popup.Age = 0f;
+            popup.Text.gameObject.SetActive(true);
+            live.Add(popup);
+        }
+
+        private void LateUpdate()
+        {
+            if (cameraTransform == null && Camera.main != null) cameraTransform = Camera.main.transform;
+
+            for (int i = live.Count - 1; i >= 0; i--)
+            {
+                Popup popup = live[i];
+                popup.Age += Time.deltaTime;
+                float t = popup.Age / Mathf.Max(lifetime, 0.01f);
+                if (t >= 1f)
+                {
+                    popup.Text.gameObject.SetActive(false);
+                    live.RemoveAt(i);
+                    spare.Push(popup);
+                    continue;
+                }
+
+                Transform label = popup.Text.transform;
+                label.position = popup.Start + Vector3.up * (rise * t);
+                if (cameraTransform != null) label.rotation = cameraTransform.rotation; // always face the camera
+                Color faded = color;
+                faded.a = 1f - t * t;
+                popup.Text.color = faded;
+            }
+        }
+
+        private Popup Create()
+        {
+            var go = new GameObject("Sale Popup");
+            go.transform.SetParent(transform, false);
+            var text = go.AddComponent<TextMesh>();
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = font;
+            go.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            text.fontSize = 64;
+            text.characterSize = 0.05f;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.fontStyle = FontStyle.Bold;
+            return new Popup { Text = text };
+        }
+    }
+}
