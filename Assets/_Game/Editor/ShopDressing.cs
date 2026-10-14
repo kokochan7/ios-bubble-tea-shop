@@ -249,6 +249,37 @@ namespace BubbleTea.EditorTools
             Part(root, PrimitiveType.Cube, "Staff Door Post", new Vector3(StaffDoorFrom, 1.05f, z), new Vector3(0.12f, 2.1f, 0.14f), wood);
             Part(root, PrimitiveType.Cube, "Staff Door Post", new Vector3(StaffDoorTo, 1.05f, z), new Vector3(0.12f, 2.1f, 0.14f), wood);
             Label(root, "STAFF", new Vector3((StaffDoorFrom + StaffDoorTo) / 2f, 2.35f, z), 0.035f, new Color(0.45f, 0.30f, 0.22f));
+
+            // Two swing doors that open as the player or staff walk through.
+            var door = new GameObject("Staff Door").transform;
+            door.SetParent(root, false);
+            door.localPosition = new Vector3((StaffDoorFrom + StaffDoorTo) / 2f, 0f, z);
+            Material panel = Mat("DoorPanel", new Color(0.78f, 0.58f, 0.42f), 0.35f);
+            float leafWidth = (StaffDoorTo - StaffDoorFrom) / 2f - 0.1f;
+            var hinges = new Transform[2];
+            for (int i = 0; i < 2; i++)
+            {
+                float side = i == 0 ? -1f : 1f; // left leaf hangs on the left post, right leaf on the right
+                Transform hinge = new GameObject(i == 0 ? "Left Leaf" : "Right Leaf").transform;
+                hinge.SetParent(door, false);
+                hinge.localPosition = new Vector3(side * ((StaffDoorTo - StaffDoorFrom) / 2f - 0.06f), 0f, 0f);
+                Vector3 middle = new(-side * leafWidth / 2f, 0f, 0f);
+                Part(hinge, PrimitiveType.Cube, "Panel", middle + new Vector3(0f, 0.95f, 0f), new Vector3(leafWidth, 1.1f, 0.06f), panel);
+                Part(hinge, PrimitiveType.Cube, "Top Rail", middle + new Vector3(0f, 1.52f, 0f), new Vector3(leafWidth, 0.06f, 0.08f), wood);
+                Part(hinge, PrimitiveType.Cube, "Window", middle + new Vector3(0f, 1.15f, -0.035f), new Vector3(leafWidth * 0.5f, 0.35f, 0.01f), Glass());
+                hinges[i] = hinge;
+            }
+            var swing = door.gameObject.AddComponent<BubbleTea.Building.SwingDoor>();
+            var serialized = new SerializedObject(swing);
+            SerializedProperty leaves = serialized.FindProperty("leaves");
+            SerializedProperty angles = serialized.FindProperty("openAngles");
+            leaves.arraySize = 2;
+            angles.arraySize = 2;
+            for (int i = 0; i < 2; i++) leaves.GetArrayElementAtIndex(i).objectReferenceValue = hinges[i];
+            // Both leaves swing into the kitchen.
+            angles.GetArrayElementAtIndex(0).floatValue = -85f;
+            angles.GetArrayElementAtIndex(1).floatValue = 85f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // Gray kitchen tiles behind the counter, so the two rooms read as different spaces.

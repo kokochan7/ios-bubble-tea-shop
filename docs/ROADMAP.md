@@ -173,3 +173,11 @@ After the fifth playtest:
 - **Goals** no longer reset at midnight: claiming a goal replaces it with a new one straight away.
 - Drinks nobody wants leave the counter every 2 seconds. Customers wait 10 seconds, and each one served wins back a tenth of a star.
 - Baristas carry 1 drink at first, plus 1 per Carry More level.
+
+After the sixth playtest:
+
+- Smoother progression: the Counter reveals only the Tea Brewer; the Tea Brewer reveals the first Hire Barista, the Upgrades desk and the Topping Bar; the Topping Bar reveals the Taro Station, Seating Area and Hire Cashier.
+- Customers wait 20 seconds.
+- The Hire Cleaner pad sits right beside the café tables (it still appears once the Seating Area is built).
+- Swing doors on the staff entrance open as you or staff walk through (`Scripts/Building/SwingDoor.cs`).
+- You carry 1 drink at first, like baristas, plus 1 per Carry More level.

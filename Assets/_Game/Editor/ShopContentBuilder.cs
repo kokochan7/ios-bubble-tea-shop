@@ -111,7 +111,7 @@ namespace BubbleTea.EditorTools
                 GetOrCreateUpgrade("Walk Speed", StatId.MoveSpeed,
                     new[] { 1f, 1.15f, 1.3f, 1.45f, 1.6f }, Scaled(40, 90, 180, 350)),
                 GetOrCreateUpgrade("Carry More", StatId.CarryBonus,
-                    new[] { 0f, 2f, 4f, 6f, 8f }, Scaled(50, 120, 250, 500)),
+                    new[] { 0f, 1f, 2f, 3f, 4f }, Scaled(50, 120, 250, 500)), // +1 item per level (see ItemCarrier)
                 GetOrCreateUpgrade("Brew Speed", StatId.BrewSpeed,
                     new[] { 1f, 1.25f, 1.5f, 1.75f, 2f }, Scaled(60, 140, 280, 550)),
                 GetOrCreateUpgrade("Drink Price", StatId.DrinkPrice,

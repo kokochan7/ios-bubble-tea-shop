@@ -46,6 +46,17 @@ namespace BubbleTea.Upgrades
         public int LevelOf(UpgradeDefinition upgrade) =>
             upgrade != null && levels.TryGetValue(upgrade, out int level) ? level : 0;
 
+        /// <summary>The level of the upgrade that changes this stat in the current shop (0 if none).</summary>
+        public static int LevelOfStat(StatId stat)
+        {
+            if (Instance == null) return 0;
+            foreach (UpgradeDefinition upgrade in Instance.All)
+            {
+                if (upgrade != null && upgrade.Stat == stat) return Instance.LevelOf(upgrade);
+            }
+            return 0;
+        }
+
         /// <summary>Price of the next level, or -1 if the upgrade is maxed out.</summary>
         public int NextCost(UpgradeDefinition upgrade) =>
             upgrade != null ? upgrade.CostToUpgradeFrom(LevelOf(upgrade)) : -1;

@@ -7,8 +7,8 @@ namespace BubbleTea.Cooking
 {
     /// <summary>
     /// Lets the player carry a stack of items. Stations and the counter look for carriers
-    /// standing in their zone and hand items over automatically. The carry upgrade adds
-    /// room to the stack.
+    /// standing in their zone and hand items over automatically. Each level of the Carry More
+    /// upgrade adds room for one more item.
     /// </summary>
     public class ItemCarrier : MonoBehaviour
     {
@@ -55,7 +55,7 @@ namespace BubbleTea.Cooking
 
         private void ApplyCarryBonus()
         {
-            stack.ExtraCapacity = usesCarryUpgrade ? Mathf.RoundToInt(Stats.Get(StatId.CarryBonus, 0f)) : 0;
+            stack.ExtraCapacity = usesCarryUpgrade ? BubbleTea.Upgrades.UpgradeManager.LevelOfStat(StatId.CarryBonus) : 0;
         }
     }
 }

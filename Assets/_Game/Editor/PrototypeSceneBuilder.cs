@@ -104,7 +104,7 @@ namespace BubbleTea.EditorTools
             Cashier = new(1f, 0f, 1.8f),
             Expansion = new(7f, 0f, 8.6f),
             MoreSeating = new(14.5f, 0f, -6f),
-            Cleaner = new(-8f, 0f, -7f),
+            Cleaner = new(0.8f, 0f, -5.5f), // just west of the café tables
             DriveThruCashier = new(14f, 0f, 6.5f),
             SecondShopPad = new(16.6f, 0f, 8.2f),
             TravelBack = new(8f, 0f, -8f),
@@ -142,7 +142,7 @@ namespace BubbleTea.EditorTools
             Cashier = new(0f, 0f, 2.8f),
             Expansion = new(8f, 0f, 11.5f),
             MoreSeating = new(20f, 0f, -8f),
-            Cleaner = new(-10f, 0f, -11f),
+            Cleaner = new(2f, 0f, -5.5f),
             DriveThruCashier = new(21.5f, 0f, 7.5f),
             SecondShopPad = new(18f, 0f, 11.5f),
             TravelBack = new(12f, 0f, -12f),
@@ -642,7 +642,7 @@ namespace BubbleTea.EditorTools
             var carrier = player.AddComponent<ItemCarrier>();
             var serializedCarrier = new SerializedObject(carrier);
             serializedCarrier.FindProperty("stack.anchor").objectReferenceValue = hands;
-            serializedCarrier.FindProperty("stack.capacity").intValue = 6;
+            serializedCarrier.FindProperty("stack.capacity").intValue = 1; // +1 per Carry More level, like baristas
             serializedCarrier.ApplyModifiedPropertiesWithoutUndo();
             return player;
         }
@@ -793,11 +793,11 @@ namespace BubbleTea.EditorTools
             return refiller;
         }
 
-        // Pads in a chain: the counter reveals the tea brewer and the upgrade desk, then
-        // tea brewer -> topping bar -> taro station -> fruit bar. The topping bar also
-        // reveals the seating area, which reveals
-        // the cleaner. The fruit bar reveals Expand Shop, which opens the east wall and reveals
-        // the drive-through and more seating.
+        // Pads in a chain, a few new things at a time like levels in an RPG:
+        //   counter -> tea brewer -> first barista + upgrade desk + topping bar;
+        //   topping bar -> taro station + seating area + cashier; seating area -> cleaner;
+        //   each barista -> the next; taro station -> fruit bar -> Expand Shop, which opens
+        //   the east wall and reveals the drive-through and more seating.
         //
         // The floor plan works like a real café, seen from the street (south):
         //   - the dining room at the front: the door, the line at the counter, café tables;
@@ -845,20 +845,19 @@ namespace BubbleTea.EditorTools
 
             // The decorations (Planter, Menu Board, Boba Statue) are left out for now; their
             // prefabs and data are still built, so they can come back as pads later.
-            // Dining room: café tables beside the line, the cleaner's pad by the west wall.
+            // Dining room: café tables beside the line, the cleaner's pad right beside them.
             UnlockPad cleanerPad = CreatePad(content.Cleaner, Layout.Cleaner, billPrefab, wallet, padMat);
             UnlockPad seatingPad = CreatePad(content.Seating, Layout.Seating, billPrefab, wallet, padMat, cleanerPad);
-            UnlockPad toppingPad = CreatePad(content.ToppingBar, Layout.ToppingBar, billPrefab, wallet, padMat,
-                taroPad, seatingPad);
-            Turn(toppingPad, 180f);
             // The cashier stands behind the counter beside its cash pile.
             UnlockPad cashierPad = CreatePad(content.Cashier, Layout.Cashier, billPrefab, wallet, padMat);
-            UnlockPad brewerPad = CreatePad(content.TeaBrewer, Layout.TeaBrewer, billPrefab, wallet, padMat, toppingPad,
-                cashierPad);
-            Turn(brewerPad, 180f);
+            UnlockPad toppingPad = CreatePad(content.ToppingBar, Layout.ToppingBar, billPrefab, wallet, padMat,
+                taroPad, seatingPad, cashierPad);
+            Turn(toppingPad, 180f);
             UnlockPad upgradePad = CreatePad(content.UpgradeDesk, Layout.UpgradeDesk, billPrefab, wallet, padMat);
-            UnlockPad counterPad = CreatePad(content.Counter, Layout.Counter, billPrefab, wallet, padMat,
-                brewerPad, upgradePad);
+            UnlockPad brewerPad = CreatePad(content.TeaBrewer, Layout.TeaBrewer, billPrefab, wallet, padMat, toppingPad,
+                baristaPads[0], upgradePad);
+            Turn(brewerPad, 180f);
+            UnlockPad counterPad = CreatePad(content.Counter, Layout.Counter, billPrefab, wallet, padMat, brewerPad);
 
             // Only the first pad is visible at the start.
             toppingPad.gameObject.SetActive(false);
@@ -873,8 +872,8 @@ namespace BubbleTea.EditorTools
             cleanerPad.gameObject.SetActive(false);
             moreSeatingPad.gameObject.SetActive(false);
             driveThruCashierPad.gameObject.SetActive(false);
-            // The first barista can be hired from the start; each one reveals the next.
-            for (int i = 1; i < baristaPads.Length; i++) baristaPads[i].gameObject.SetActive(false);
+            // The tea brewer reveals the first barista; each one reveals the next.
+            for (int i = 0; i < baristaPads.Length; i++) baristaPads[i].gameObject.SetActive(false);
             var all = new System.Collections.Generic.List<UnlockPad>
             {
                 counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad,
