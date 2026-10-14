@@ -4,7 +4,10 @@ using BubbleTea.Cooking;
 using BubbleTea.Customers;
 using BubbleTea.Economy;
 using BubbleTea.Feedback;
+using BubbleTea.Goals;
+using BubbleTea.Onboarding;
 using BubbleTea.Player;
+using BubbleTea.Rating;
 using BubbleTea.Saving;
 using BubbleTea.UI;
 using BubbleTea.Upgrades;
@@ -26,6 +29,7 @@ namespace BubbleTea.EditorTools
     public static class PrototypeSceneBuilder
     {
         private const string ScenePath = "Assets/_Game/Scenes/Prototype.unity";
+        private const string Shop2ScenePath = "Assets/_Game/Scenes/Shop2.unity";
         private const string PrefabFolder = "Assets/_Game/Prefabs";
         private const string MaterialFolder = "Assets/_Game/Materials";
 
@@ -36,20 +40,71 @@ namespace BubbleTea.EditorTools
             new(0f, 0f, 7f),
         };
 
+        // What differs between shops. Everything else (layout, pads, staff) is shared.
+        private sealed class ShopPlan
+        {
+            public int Number;
+            public string ScenePath;
+            public string SaveFile;
+            public string FloorMaterial;
+            public Color FloorColor;
+            public string WallMaterial;
+            public Color WallColor;
+            public string ExpansionFloorMaterial;
+            public Color ExpansionFloorColor;
+        }
+
+        private static readonly ShopPlan FirstShop = new()
+        {
+            Number = 1,
+            ScenePath = ScenePath,
+            SaveFile = "save.json",
+            FloorMaterial = "Floor",
+            FloorColor = new Color(0.93f, 0.87f, 0.78f),
+            WallMaterial = "Wall",
+            WallColor = new Color(0.85f, 0.78f, 0.70f),
+            ExpansionFloorMaterial = "ExpansionFloor",
+            ExpansionFloorColor = new Color(0.86f, 0.90f, 0.82f),
+        };
+
+        private static readonly ShopPlan SecondShop = new()
+        {
+            Number = 2,
+            ScenePath = Shop2ScenePath,
+            SaveFile = "save-shop2.json",
+            FloorMaterial = "Shop2Floor",
+            FloorColor = new Color(0.90f, 0.94f, 0.84f),
+            WallMaterial = "Shop2Wall",
+            WallColor = new Color(0.66f, 0.80f, 0.60f),
+            ExpansionFloorMaterial = "Shop2ExpansionFloor",
+            ExpansionFloorColor = new Color(0.97f, 0.88f, 0.90f),
+        };
+
+        // Where the bus stop stands: in the expansion for shop 1 (revealed after the
+        // drive-through), and near the front door from the start in the second shop.
+        private static readonly Vector3 SecondShopPadPosition = new(24f, 0f, 10f);
+        private static readonly Vector3 TravelBackPosition = new(12f, 0f, -12f);
+
         [MenuItem("Bubble Tea/Build Prototype Scene")]
-        public static void Build()
+        public static void Build() => BuildShop(FirstShop);
+
+        /// <summary>Builds the Matcha House, the second shop that the first one unlocks.</summary>
+        [MenuItem("Bubble Tea/Build Second Shop Scene")]
+        public static void BuildSecondShop() => BuildShop(SecondShop);
+
+        private static void BuildShop(ShopPlan plan)
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
-            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null &&
-                !EditorUtility.DisplayDialog("Rebuild prototype scene?",
-                    $"{ScenePath} already exists. Rebuilding replaces it (and any changes you made to it).",
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(plan.ScenePath) != null &&
+                !EditorUtility.DisplayDialog("Rebuild shop scene?",
+                    $"{plan.ScenePath} already exists. Rebuilding replaces it (and any changes you made to it).",
                     "Rebuild", "Cancel"))
             {
                 return;
             }
 
-            Material floorMat = GetOrCreateMaterial("Floor", new Color(0.93f, 0.87f, 0.78f));
+            Material floorMat = GetOrCreateMaterial(plan.FloorMaterial, plan.FloorColor);
             Material playerMat = GetOrCreateMaterial("Player", new Color(0.36f, 0.62f, 0.95f));
             Material cashMat = GetOrCreateMaterial("Cash", new Color(0.35f, 0.78f, 0.38f));
             Material padMat = GetOrCreateMaterial("CashSpot", new Color(0.80f, 0.73f, 0.62f));
@@ -59,8 +114,10 @@ namespace BubbleTea.EditorTools
 
             CreateLight();
             CreateFloor(floorMat);
-            GameObject eastWall = CreateWalls();
-            GameObject expansionArea = CreateExpansionArea();
+            Material wallMat = GetOrCreateMaterial(plan.WallMaterial, plan.WallColor);
+            GameObject eastWall = CreateWalls(wallMat);
+            GameObject expansionArea = CreateExpansionArea(wallMat,
+                GetOrCreateMaterial(plan.ExpansionFloorMaterial, plan.ExpansionFloorColor));
             CreateDecorations();
 
             GameObject player = CreatePlayer(playerMat, out Wallet wallet);
@@ -73,8 +130,13 @@ namespace BubbleTea.EditorTools
 
             CashPile[] piles = CreateCashPiles(billPrefab, padMat);
             CreateRefiller(piles);
-            ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab);
+            ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab, plan.Number);
             UnlockPad[] pads = CreateUnlockPads(content, billPrefab, wallet, eastWall, expansionArea);
+            if (content.TravelBack != null)
+            {
+                var stop = (GameObject)PrefabUtility.InstantiatePrefab(content.TravelBack);
+                stop.transform.position = TravelBackPosition;
+            }
             CreateCustomerSpawner("CustomerSpawner", "Main", content.CustomerPrefab,
                 new Vector3(-5f, 0f, -14f), new Vector3(-14f, 0f, -8f), secondsBetween: 3f, max: 4);
             CreateCustomerSpawner("CarSpawner", "DriveThru", content.CarPrefab,
@@ -82,16 +144,29 @@ namespace BubbleTea.EditorTools
             UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
             CreateUpgradePanel(hud, upgrades, content.Upgrades);
             OfflineEarnings offlineEarnings = CreateOfflineEarnings(wallet);
-            SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings);
+            DailyGoals dailyGoals = CreateDailyGoals(wallet, content.Menu, offlineEarnings);
+            ShopRating rating = CreateShopRating(pads, content);
+            SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings, dailyGoals, rating);
+            var saveFile = new SerializedObject(saveManager);
+            saveFile.FindProperty("fileName").stringValue = plan.SaveFile;
+            saveFile.ApplyModifiedPropertiesWithoutUndo();
             CreateFeedback(player.transform);
             CreateSettingsMenu(hud, saveManager);
+            CreateGoalsPanel(hud, dailyGoals);
+            CreateRatingView(hud, rating);
             CreateWelcomeBackPopup(hud, offlineEarnings);
+            if (plan.Number == 1) CreateTutorial(hud, player, wallet, pads[0], pads[1]);
 
-            EditorSceneManager.SaveScene(scene, ScenePath);
-            AddSceneToBuild(ScenePath);
+            EditorSceneManager.SaveScene(scene, plan.ScenePath);
+            AddSceneToBuild(plan.ScenePath, first: plan.Number == 1);
             Selection.activeGameObject = player;
 
-            Debug.Log("Bubble Tea: prototype scene built at " + ScenePath + ". Press Play to try it.");
+            Debug.Log($"Bubble Tea: shop {plan.Number} built at {plan.ScenePath}. Press Play to try it.");
+            if (plan.Number == 1 && AssetDatabase.LoadAssetAtPath<SceneAsset>(Shop2ScenePath) == null)
+            {
+                Debug.Log("Bubble Tea: the second shop isn't built yet. Click Bubble Tea > Build Second Shop Scene " +
+                          "so its bus stop has somewhere to go.");
+            }
         }
 
         private static void CreateLight()
@@ -117,9 +192,8 @@ namespace BubbleTea.EditorTools
 
         // Low walls around the 30 x 30 m shop so nobody walks off the edge. Returns the east
         // wall, which the Expand Shop pad removes.
-        private static GameObject CreateWalls()
+        private static GameObject CreateWalls(Material wallMat)
         {
-            Material wallMat = GetOrCreateMaterial("Wall", new Color(0.85f, 0.78f, 0.70f));
             var root = new GameObject("Walls");
             CreateWall(root.transform, "North", new Vector3(0f, 0.5f, 15.25f), new Vector3(30.5f, 1f, 0.5f), wallMat);
             CreateWall(root.transform, "South", new Vector3(0f, 0.5f, -15.25f), new Vector3(30.5f, 1f, 0.5f), wallMat);
@@ -129,10 +203,8 @@ namespace BubbleTea.EditorTools
         }
 
         // The extra 16 x 30 m to the east, hidden until Expand Shop is bought.
-        private static GameObject CreateExpansionArea()
+        private static GameObject CreateExpansionArea(Material wallMat, Material expansionFloor)
         {
-            Material wallMat = GetOrCreateMaterial("Wall", new Color(0.85f, 0.78f, 0.70f));
-            Material expansionFloor = GetOrCreateMaterial("ExpansionFloor", new Color(0.86f, 0.90f, 0.82f));
             var root = new GameObject("Expansion Area");
 
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
@@ -395,18 +467,32 @@ namespace BubbleTea.EditorTools
         {
             Material padMat = GetOrCreateMaterial("UnlockPad", new Color(0.97f, 0.97f, 0.97f));
 
-            UnlockPad driveThruPad = CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat);
+            // Shop 1 only: once the drive-through is built, a pad opens the second shop.
+            UnlockPad secondShopPad = content.SecondShop != null
+                ? CreatePad(content.SecondShop, SecondShopPadPosition, billPrefab, wallet, padMat)
+                : null;
+            UnlockPad driveThruPad = secondShopPad != null
+                ? CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat, secondShopPad)
+                : CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat);
             UnlockPad expansionPad = CreatePad(content.Expansion, new Vector3(12f, 0f, 10f), billPrefab, wallet, padMat,
                 driveThruPad);
             SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
             SetObjectList(expansionPad, "hideWhenUnlocked", eastWall);
             UnlockPad fruitPad = CreatePad(content.FruitBar, new Vector3(10f, 0f, -5f), billPrefab, wallet, padMat,
                 expansionPad);
-            UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(5f, 0f, -8f), billPrefab, wallet, padMat, fruitPad);
+            UnlockPad barista2Pad = CreatePad(content.Barista2, new Vector3(-6f, 0f, 9f), billPrefab, wallet, padMat);
+            UnlockPad barista1Pad = CreatePad(content.Barista1, new Vector3(-6f, 0f, 4f), billPrefab, wallet, padMat, barista2Pad);
+            UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(5f, 0f, -8f), billPrefab, wallet, padMat, fruitPad,
+                barista1Pad);
             UnlockPad runner2Pad = CreatePad(content.Runner2, new Vector3(-10f, 0f, 5f), billPrefab, wallet, padMat);
             UnlockPad runner1Pad = CreatePad(content.Runner1, new Vector3(-10f, 0f, 0f), billPrefab, wallet, padMat, runner2Pad);
+            UnlockPad statuePad = CreatePad(content.Statue, new Vector3(-11f, 0f, -9f), billPrefab, wallet, padMat);
+            UnlockPad menuBoardPad = CreatePad(content.MenuBoard, new Vector3(3f, 0f, 9f), billPrefab, wallet, padMat, statuePad);
+            UnlockPad seatingPad = CreatePad(content.Seating, new Vector3(6f, 0f, 6f), billPrefab, wallet, padMat);
+            UnlockPad planterPad = CreatePad(content.Planter, new Vector3(-3f, 0f, 9f), billPrefab, wallet, padMat, menuBoardPad,
+                seatingPad);
             UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat,
-                taroPad, runner1Pad);
+                taroPad, runner1Pad, planterPad);
             UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad);
             UnlockPad upgradePad = CreatePad(content.UpgradeDesk, new Vector3(9f, 0f, 1f), billPrefab, wallet, padMat);
             UnlockPad counterPad = CreatePad(content.Counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat,
@@ -422,11 +508,24 @@ namespace BubbleTea.EditorTools
             runner2Pad.gameObject.SetActive(false);
             expansionPad.gameObject.SetActive(false);
             driveThruPad.gameObject.SetActive(false);
-            return new[]
+            planterPad.gameObject.SetActive(false);
+            barista1Pad.gameObject.SetActive(false);
+            seatingPad.gameObject.SetActive(false);
+            barista2Pad.gameObject.SetActive(false);
+            menuBoardPad.gameObject.SetActive(false);
+            statuePad.gameObject.SetActive(false);
+            var all = new System.Collections.Generic.List<UnlockPad>
             {
                 counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad, runner1Pad, runner2Pad,
-                expansionPad, driveThruPad,
+                expansionPad, driveThruPad, planterPad, menuBoardPad, statuePad, barista1Pad, barista2Pad,
+                seatingPad,
             };
+            if (secondShopPad != null)
+            {
+                secondShopPad.gameObject.SetActive(false);
+                all.Add(secondShopPad);
+            }
+            return all.ToArray();
         }
 
         private static void SetObjectList(Object component, string fieldName, params GameObject[] objects)
@@ -440,13 +539,15 @@ namespace BubbleTea.EditorTools
 
         // Loads progress on Play and keeps saving it. Delete it with Bubble Tea > Delete Save Data.
         private static SaveManager CreateSaveManager(Wallet wallet, UnlockPad[] pads, UpgradeManager upgrades,
-            OfflineEarnings offlineEarnings)
+            OfflineEarnings offlineEarnings, DailyGoals dailyGoals, ShopRating rating)
         {
             var go = new GameObject("SaveManager");
             var saveManager = go.AddComponent<SaveManager>();
             SetReference(saveManager, "wallet", wallet);
             SetReference(saveManager, "upgradeManager", upgrades);
             SetReference(saveManager, "offlineEarnings", offlineEarnings);
+            SetReference(saveManager, "dailyGoals", dailyGoals);
+            SetReference(saveManager, "rating", rating);
 
             var serialized = new SerializedObject(saveManager);
             SerializedProperty list = serialized.FindProperty("pads");
@@ -456,7 +557,246 @@ namespace BubbleTea.EditorTools
             return saveManager;
         }
 
+        // Three small goals a day that pay a bonus.
+        private static DailyGoals CreateDailyGoals(Wallet wallet, DrinkRecipe[] menu, OfflineEarnings earnings)
+        {
+            var goals = new GameObject("DailyGoals").AddComponent<DailyGoals>();
+            SetReference(goals, "wallet", wallet);
+            SetReference(goals, "earnings", earnings);
+            SetReferences(goals, "menu", menu);
+            return goals;
+        }
+
+        // A GOALS button under MENU that opens today's goals, plus a banner when one is finished.
+        private static void CreateGoalsPanel(Transform hud, DailyGoals goals)
+        {
+            const int rows = 3;
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform root = CreateUiObject("Goals", hud);
+            Stretch(root);
+            var view = root.gameObject.AddComponent<GoalsPanel>();
+
+            Button openButton = CreateMenuButton("GoalsButton", root, "GOALS", rounded, font, new Color(0.91f, 0.51f, 0.6f, 0.9f), out _);
+            var openRect = (RectTransform)openButton.transform;
+            openRect.anchorMin = openRect.anchorMax = new Vector2(1f, 1f);
+            openRect.pivot = new Vector2(1f, 1f);
+            openRect.anchoredPosition = new Vector2(-40f, -235f);
+            openRect.sizeDelta = new Vector2(200f, 110f);
+
+            // A red "!" in the button's corner when a reward is waiting.
+            RectTransform badge = CreateUiObject("Badge", openRect);
+            badge.anchorMin = badge.anchorMax = new Vector2(0f, 1f);
+            badge.sizeDelta = new Vector2(64f, 64f);
+            badge.anchoredPosition = new Vector2(6f, -6f);
+            var badgeImage = badge.gameObject.AddComponent<Image>();
+            badgeImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            badgeImage.color = new Color(0.9f, 0.25f, 0.25f);
+            badgeImage.raycastTarget = false;
+            Text badgeText = CreateHudText("Mark", badge, font, 44, TextAnchor.MiddleCenter);
+            Stretch(badgeText.rectTransform);
+            badgeText.text = "!";
+
+            RectTransform panel = CreateUiObject("Panel", root);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = new Vector2(940f, 220f + rows * 170f + 140f);
+            var panelImage = panel.gameObject.AddComponent<Image>();
+            panelImage.sprite = rounded;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.95f);
+
+            Text title = CreateHudText("Title", panel, font, 60, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 20f, 100f, 0f, 0f);
+            title.text = "DAILY GOALS";
+            Text hint = CreateHudText("Hint", panel, font, 32, TextAnchor.MiddleCenter);
+            SetTopRow(hint.rectTransform, 115f, 60f, 0f, 0f);
+            hint.fontStyle = FontStyle.Normal;
+            hint.color = new Color(0.8f, 0.8f, 0.85f);
+            hint.text = "New goals every day at midnight";
+
+            var descriptions = new Text[rows];
+            var progress = new Text[rows];
+            var claims = new Button[rows];
+            var claimLabels = new Text[rows];
+            for (int i = 0; i < rows; i++)
+            {
+                RectTransform row = CreateUiObject("Goal" + (i + 1), panel);
+                SetTopRow(row, 200f + i * 170f, 150f, 40f, 40f);
+                var rowImage = row.gameObject.AddComponent<Image>();
+                rowImage.sprite = rounded;
+                rowImage.type = Image.Type.Sliced;
+                rowImage.color = new Color(1f, 1f, 1f, 0.08f);
+
+                descriptions[i] = CreateHudText("Description", row, font, 40, TextAnchor.UpperLeft);
+                SetTopRow(descriptions[i].rectTransform, 18f, 60f, 30f, 300f);
+                progress[i] = CreateHudText("Progress", row, font, 36, TextAnchor.UpperLeft);
+                SetTopRow(progress[i].rectTransform, 82f, 50f, 30f, 300f);
+                progress[i].fontStyle = FontStyle.Normal;
+                progress[i].color = new Color(0.8f, 0.8f, 0.85f);
+
+                claims[i] = CreateMenuButton("Claim", row, "$0", rounded, font, new Color(0.45f, 0.45f, 0.55f), out claimLabels[i]);
+                var claimRect = (RectTransform)claims[i].transform;
+                claimRect.anchorMin = claimRect.anchorMax = new Vector2(1f, 0.5f);
+                claimRect.pivot = new Vector2(1f, 0.5f);
+                claimRect.anchoredPosition = new Vector2(-20f, 0f);
+                claimRect.sizeDelta = new Vector2(250f, 110f);
+            }
+
+            Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
+            SetTopRow((RectTransform)close.transform, 220f + rows * 170f, 110f, 250f, 250f);
+
+            // Banner under the money counter when a goal is finished.
+            Text banner = CreateHudText("Banner", root, font, 44, TextAnchor.MiddleCenter);
+            banner.rectTransform.anchorMin = banner.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            banner.rectTransform.anchoredPosition = new Vector2(0f, -370f);
+            banner.rectTransform.sizeDelta = new Vector2(1000f, 80f);
+            banner.color = new Color(1f, 0.85f, 0.3f);
+            var outline = banner.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.6f);
+
+            SetReference(view, "goals", goals);
+            SetReference(view, "panel", panel.gameObject);
+            SetReference(view, "openButton", openButton);
+            SetReference(view, "closeButton", close);
+            SetReference(view, "badge", badge.gameObject);
+            SetReferences(view, "descriptions", descriptions);
+            SetReferences(view, "progressLabels", progress);
+            SetReferences(view, "claimButtons", claims);
+            SetReferences(view, "claimLabels", claimLabels);
+            SetReference(view, "banner", banner);
+        }
+
+        // The star rating. Every pad counts; decorations and big expansions count more.
+        private static ShopRating CreateShopRating(UnlockPad[] pads, ShopContentBuilder.Content content)
+        {
+            var rating = new GameObject("ShopRating").AddComponent<ShopRating>();
+            var serialized = new SerializedObject(rating);
+            SerializedProperty list = serialized.FindProperty("pads");
+            // The bus stop to the next shop doesn't make this shop any nicer.
+            pads = System.Array.FindAll(pads, pad => content.SecondShop == null || pad.Definition != content.SecondShop);
+            list.arraySize = pads.Length;
+            for (int i = 0; i < pads.Length; i++)
+            {
+                BuildableDefinition definition = pads[i].Definition;
+                int points = definition == content.Statue ? 3
+                    : definition == content.Planter || definition == content.MenuBoard || definition == content.Seating ||
+                      definition == content.Expansion ||
+                      definition == content.DriveThru ? 2
+                    : 1;
+                SerializedProperty entry = list.GetArrayElementAtIndex(i);
+                entry.FindPropertyRelative("pad").objectReferenceValue = pads[i];
+                entry.FindPropertyRelative("points").intValue = points;
+            }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return rating;
+        }
+
+        // Five stars under the money counter. Tapping them explains how to earn more.
+        private static void CreateRatingView(Transform hud, ShopRating rating)
+        {
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            const float starSize = 62f;
+
+            RectTransform root = CreateUiObject("Rating", hud);
+            root.anchorMin = root.anchorMax = new Vector2(0.5f, 1f);
+            root.pivot = new Vector2(0.5f, 1f);
+            root.anchoredPosition = new Vector2(0f, -240f);
+            root.sizeDelta = new Vector2(5 * starSize + 130f, starSize + 10f);
+            var hitArea = root.gameObject.AddComponent<Image>();
+            hitArea.color = new Color(0f, 0f, 0f, 0.25f);
+            var help = root.gameObject.AddComponent<Button>();
+            help.targetGraphic = hitArea;
+            var view = root.gameObject.AddComponent<RatingView>();
+
+            var empty = new Image[5];
+            var filled = new Image[5];
+            for (int i = 0; i < 5; i++)
+            {
+                RectTransform back = CreateUiObject("Star" + (i + 1), root);
+                back.anchorMin = back.anchorMax = new Vector2(0f, 0.5f);
+                back.pivot = new Vector2(0f, 0.5f);
+                back.anchoredPosition = new Vector2(10f + i * starSize, 0f);
+                back.sizeDelta = new Vector2(starSize, starSize);
+                empty[i] = back.gameObject.AddComponent<Image>();
+                empty[i].color = new Color(1f, 1f, 1f, 0.3f);
+                empty[i].raycastTarget = false;
+
+                RectTransform front = CreateUiObject("Fill", back);
+                Stretch(front);
+                filled[i] = front.gameObject.AddComponent<Image>();
+                filled[i].color = new Color(1f, 0.82f, 0.25f);
+                filled[i].raycastTarget = false;
+            }
+
+            Text value = CreateHudText("Value", root, font, 48, TextAnchor.MiddleLeft);
+            value.rectTransform.anchorMin = value.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+            value.rectTransform.pivot = new Vector2(0f, 0.5f);
+            value.rectTransform.anchoredPosition = new Vector2(20f + 5 * starSize, 0f);
+            value.rectTransform.sizeDelta = new Vector2(110f, starSize);
+
+            Text hint = CreateHudText("Hint", root, font, 34, TextAnchor.MiddleCenter);
+            hint.rectTransform.anchorMin = hint.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            hint.rectTransform.pivot = new Vector2(0.5f, 1f);
+            hint.rectTransform.anchoredPosition = new Vector2(0f, -10f);
+            hint.rectTransform.sizeDelta = new Vector2(900f, 100f);
+            hint.horizontalOverflow = HorizontalWrapMode.Wrap;
+            hint.text = "Serve customers fast and buy decorations\nfor more stars. More stars, more customers!";
+            hint.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.7f);
+
+            SetReference(view, "rating", rating);
+            SetReferences(view, "emptyStars", empty);
+            SetReferences(view, "filledStars", filled);
+            SetReference(view, "valueLabel", value);
+            SetReference(view, "helpButton", help);
+            SetReference(view, "helpLabel", hint);
+        }
+
+        // Fills a private [SerializeField] array the same way dragging items into it in the Inspector would.
+        internal static void SetReferences(Object component, string fieldName, Object[] values)
+        {
+            var serialized = new SerializedObject(component);
+            SerializedProperty list = serialized.FindProperty(fieldName);
+            list.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         // Measures how fast the shop earns and pays part of it for time away.
+        // The first-minute tutorial: a banner near the bottom with one instruction at a time.
+        // pads[0] is the Counter and pads[1] the Tea Brewer (see CreateUnlockPads).
+        private static void CreateTutorial(Transform hud, GameObject player, Wallet wallet, UnlockPad counterPad,
+            UnlockPad brewerPad)
+        {
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform banner = CreateUiObject("Tutorial Banner", hud);
+            banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 0f);
+            banner.pivot = new Vector2(0.5f, 0f);
+            banner.anchoredPosition = new Vector2(0f, 320f);
+            banner.sizeDelta = new Vector2(960f, 130f);
+            var image = banner.gameObject.AddComponent<Image>();
+            image.sprite = rounded;
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.15f, 0.15f, 0.2f, 0.85f);
+            image.raycastTarget = false; // the joystick works anywhere, including under the banner
+
+            Text label = CreateHudText("Text", banner, font, 50, TextAnchor.MiddleCenter);
+            Stretch(label.rectTransform);
+            label.color = new Color(1f, 0.9f, 0.45f);
+            banner.gameObject.SetActive(false);
+
+            var guide = new GameObject("TutorialGuide").AddComponent<TutorialGuide>();
+            SetReference(guide, "player", player.transform);
+            SetReference(guide, "wallet", wallet);
+            SetReference(guide, "carrier", player.GetComponent<ItemCarrier>());
+            SetReference(guide, "counterPad", counterPad);
+            SetReference(guide, "brewerPad", brewerPad);
+            SetReference(guide, "banner", banner);
+            SetReference(guide, "label", label);
+        }
+
         private static OfflineEarnings CreateOfflineEarnings(Wallet wallet)
         {
             var earnings = new GameObject("OfflineEarnings").AddComponent<OfflineEarnings>();
@@ -873,11 +1213,13 @@ namespace BubbleTea.EditorTools
             return material;
         }
 
-        private static void AddSceneToBuild(string path)
+        // The first shop must be scene 0 (the game starts there); other shops go after it.
+        private static void AddSceneToBuild(string path, bool first)
         {
             var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             scenes.RemoveAll(s => s.path == path);
-            scenes.Insert(0, new EditorBuildSettingsScene(path, true));
+            if (first) scenes.Insert(0, new EditorBuildSettingsScene(path, true));
+            else scenes.Add(new EditorBuildSettingsScene(path, true));
             EditorBuildSettings.scenes = scenes.ToArray();
         }
 

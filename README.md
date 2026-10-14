@@ -58,7 +58,7 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 ## Try the prototype
 
 1. In Unity's menu bar, click **Bubble Tea > Build Prototype Scene**. It creates `Assets/_Game/Scenes/Prototype.unity` with everything wired up and opens it.
-2. Press **Play**.
+2. Press **Play**. A new game starts with a short tutorial banner near the bottom that walks you through your first sale.
 3. Click and drag anywhere in the Game view to use the joystick (or use WASD / arrow keys). Walk up to the green cash stacks and watch the bills fly to you while the counter at the top goes up.
 4. Stand on the white **Counter** pad. Your money drains into it, and when it's paid off the counter pops up and the next pad (Tea Brewer) appears. That one unlocks the Topping Bar.
 5. Once the Counter is built, customers walk in and line up behind it. Stand in front of the **Tea Brewer** to pick up the milk teas it makes, then stand in front of the **Counter** to drop them off. Each customer takes a drink and pays into the cash pile beside the counter, which you collect like any other cash.
@@ -68,8 +68,9 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 9. After the Fruit Bar, **Expand Shop** opens the east wall onto a new area with a **Drive Thru** window. Cars queue there and pay 1.5x.
 10. A yellow arrow always points to the cheapest pad you can buy next. The **MENU** button (top right) turns sound and vibration on or off and can reset your progress.
 11. Buying the Counter also reveals the purple **Upgrades** desk. Pay for it, then stand in front of it to buy faster walking, bigger carry stacks, faster brewing and higher drink prices.
+12. After the Drive Thru, **Open Matcha House** builds a bus stop to a second shop. Click **Bubble Tea > Build Second Shop Scene** once so it has somewhere to go.
 
-Your progress (money and unlocked stations) is saved as you play, so pressing Play again carries on where you stopped. To start over, stop Play and click **Bubble Tea > Delete Save Data**. If you rebuild the scene, delete the save too so the two match.
+Your progress (money and unlocked stations) is saved as you play, so pressing Play again carries on where you stopped. To start over, stop Play and click **Bubble Tea > Delete Save Data** (it deletes both shops' saves). If you rebuild the scene, delete the save too so the two match.
 
 Your shop keeps earning for up to 2 hours while you're away. Come back after a minute or more and a **Welcome back!** pop-up pays you. To see it without waiting, sell drinks for a couple of minutes, then click **Bubble Tea > Test Away Pop-Up (1 hour)** during Play.
 

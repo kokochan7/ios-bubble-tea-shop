@@ -19,7 +19,7 @@ In Unity, click **Bubble Tea > Apply iPhone Settings**. That sets the app name (
 
 ## 3. Switch to iOS
 
-**File > Build Profiles**, pick **iOS**, click **Switch Platform** (this takes a few minutes the first time). Make sure `Prototype` is in the scene list; if not, open it and click **Add Open Scenes**.
+**File > Build Profiles**, pick **iOS**, click **Switch Platform** (this takes a few minutes the first time). Make sure `Prototype` is first in the scene list and `Shop2` is below it; if not, rebuild them with **Bubble Tea > Build Prototype Scene** and **Bubble Tea > Build Second Shop Scene**.
 
 ## 4. Build the Xcode project
 

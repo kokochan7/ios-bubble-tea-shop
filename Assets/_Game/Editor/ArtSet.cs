@@ -15,9 +15,10 @@ namespace BubbleTea.EditorTools
         /// <summary>Every slot the scene builder knows about, in the order shown in the Inspector.</summary>
         public static readonly string[] SlotNames =
         {
-            "Player", "Customer", "Runner", "Car",
+            "Player", "Customer", "Runner", "Barista", "Car",
             "Counter", "DriveThru", "TeaBrewer", "ToppingBar", "TaroStation", "FruitBar", "UpgradeDesk",
             "Cup",
+            "Planter", "MenuBoard", "Statue", "Table", "BusStop",
         };
 
         [SerializeField, Tooltip("One entry per thing in the shop.")]

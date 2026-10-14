@@ -22,18 +22,20 @@ namespace BubbleTea.EditorTools
                 return;
             }
 
-            string path = SaveManager.SavePath;
-            bool existed = File.Exists(path) || File.Exists(path + ".tmp");
-            if (File.Exists(path)) File.Delete(path);
-            if (File.Exists(path + ".tmp")) File.Delete(path + ".tmp");
+            // Every shop has its own file; delete them all, and forget which shop was open last.
+            string[] files = SaveManager.AllSaveFiles();
+            foreach (string path in files) File.Delete(path);
+            PlayerPrefs.DeleteKey(SaveManager.LastShopKey);
+            PlayerPrefs.DeleteKey(SaveManager.TutorialDoneKey);
+            bool existed = files.Length > 0;
             Debug.Log(existed ? "Bubble Tea: save deleted. The next Play starts a fresh game." : "Bubble Tea: there was no save to delete.");
         }
 
-        [MenuItem("Bubble Tea/Show Save File")]
+        [MenuItem("Bubble Tea/Show Save Files")]
         public static void ShowSave()
         {
-            string path = SaveManager.SavePath;
-            EditorUtility.RevealInFinder(File.Exists(path) ? path : Application.persistentDataPath);
+            string[] files = SaveManager.AllSaveFiles();
+            EditorUtility.RevealInFinder(files.Length > 0 ? files[0] : Application.persistentDataPath);
         }
 
         // Shows the "Welcome back!" pop-up without waiting, as if you'd been away for an hour.

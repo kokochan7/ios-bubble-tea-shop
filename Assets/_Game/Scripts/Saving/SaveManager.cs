@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using BubbleTea.Building;
 using BubbleTea.Economy;
+using BubbleTea.Goals;
+using BubbleTea.Rating;
 using BubbleTea.Upgrades;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -17,7 +19,14 @@ namespace BubbleTea.Saving
     /// </summary>
     public class SaveManager : MonoBehaviour
     {
-        private const string FileName = "save.json";
+        /// <summary>PlayerPrefs key holding the scene of the shop the player was last in.</summary>
+        public const string LastShopKey = "lastShop";
+
+        /// <summary>PlayerPrefs key set once the first-minute tutorial is finished.</summary>
+        public const string TutorialDoneKey = "tutorialDone";
+
+        [SerializeField, Tooltip("Save file name. Each shop has its own, so their progress stays apart.")]
+        private string fileName = "save.json";
 
         [SerializeField, Tooltip("The player's wallet.")]
         private Wallet wallet;
@@ -31,6 +40,12 @@ namespace BubbleTea.Saving
         [SerializeField, Tooltip("Pays for time away. Leave empty to turn that off.")]
         private OfflineEarnings offlineEarnings;
 
+        [SerializeField, Tooltip("Today's goals. Leave empty if the scene has none.")]
+        private DailyGoals dailyGoals;
+
+        [SerializeField, Tooltip("The shop's star rating. Leave empty if the scene has none.")]
+        private ShopRating rating;
+
         [SerializeField, Tooltip("Seconds between saves while money keeps changing.")]
         private float autosaveSeconds = 5f;
 
@@ -42,14 +57,28 @@ namespace BubbleTea.Saving
         private bool dirty;
         private float timer;
 
-        /// <summary>Full path of the save file on this device.</summary>
-        public static string SavePath => Path.Combine(Application.persistentDataPath, FileName);
-        private static string TempPath => SavePath + ".tmp";
+        /// <summary>Full path of this shop's save file on this device.</summary>
+        public string SavePath => Path.Combine(Application.persistentDataPath, fileName);
+        private string TempPath => SavePath + ".tmp";
+
+        /// <summary>Every shop's save file on this device (save.json, save-shop2.json, and their .tmp copies).</summary>
+        public static string[] AllSaveFiles()
+        {
+            try
+            {
+                return Directory.GetFiles(Application.persistentDataPath, "save*.json*");
+            }
+            catch (Exception)
+            {
+                return Array.Empty<string>();
+            }
+        }
 
         private void OnEnable()
         {
             if (wallet != null) wallet.MoneyChanged += OnMoneyChanged;
             if (upgradeManager != null) upgradeManager.Changed += Save;
+            if (dailyGoals != null) dailyGoals.Changed += MarkDirty;
             foreach (UnlockPad pad in pads)
             {
                 if (pad == null) continue;
@@ -62,6 +91,7 @@ namespace BubbleTea.Saving
         {
             if (wallet != null) wallet.MoneyChanged -= OnMoneyChanged;
             if (upgradeManager != null) upgradeManager.Changed -= Save;
+            if (dailyGoals != null) dailyGoals.Changed -= MarkDirty;
             foreach (UnlockPad pad in pads)
             {
                 if (pad == null) continue;
@@ -74,6 +104,7 @@ namespace BubbleTea.Saving
         private void Start()
         {
             if (loadOnStart) Load();
+            if (dailyGoals != null) dailyGoals.EnsureToday();
             loaded = true;
             dirty = false;
         }
@@ -93,6 +124,7 @@ namespace BubbleTea.Saving
         private void OnApplicationQuit() => Save();
 
         private void OnMoneyChanged(int _) => dirty = true;
+        private void MarkDirty() => dirty = true;
         private void OnPadProgress(int remaining, int cost) => dirty = true;
         private void OnPadUnlocked(UnlockPad _) => Save();
 
@@ -108,7 +140,10 @@ namespace BubbleTea.Saving
                 money = (wallet != null ? wallet.Money : 0) + (offlineEarnings != null ? offlineEarnings.Pending : 0),
                 savedAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 earningsPerMinute = offlineEarnings != null ? offlineEarnings.RatePerMinute : 0f,
+                goalsDay = dailyGoals != null ? dailyGoals.Day : null,
+                ratingService = rating != null ? rating.Service : -1f,
             };
+            if (dailyGoals != null) data.goals.AddRange(dailyGoals.Goals);
             foreach (UnlockPad pad in pads)
             {
                 if (pad == null) continue;
@@ -140,20 +175,22 @@ namespace BubbleTea.Saving
             timer = 0f;
         }
 
-        /// <summary>Deletes the save and restarts the scene as a brand-new game.</summary>
+        /// <summary>Deletes every shop's save and starts a brand-new game in the first shop.</summary>
         public void ResetProgress()
         {
             resetting = true;
             try
             {
-                if (File.Exists(SavePath)) File.Delete(SavePath);
-                if (File.Exists(TempPath)) File.Delete(TempPath);
+                foreach (string path in AllSaveFiles()) File.Delete(path);
             }
             catch (Exception e)
             {
                 Debug.LogWarning("Bubble Tea: couldn't delete the save. " + e.Message);
             }
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            PlayerPrefs.DeleteKey(LastShopKey);
+            PlayerPrefs.DeleteKey(TutorialDoneKey);
+            BubbleTea.Core.Stats.Clear();
+            SceneManager.LoadScene(0);
         }
 
         private void Load()
@@ -189,6 +226,9 @@ namespace BubbleTea.Saving
                     if (upgrade != null) upgradeManager.SetLevel(upgrade, entry.level);
                 }
             }
+
+            if (dailyGoals != null) dailyGoals.Restore(data.goalsDay, data.goals);
+            if (rating != null && data.ratingService >= 0f) rating.Restore(data.ratingService);
 
             if (offlineEarnings != null && data.savedAtUnix > 0)
             {

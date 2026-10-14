@@ -27,6 +27,11 @@ namespace BubbleTea.Cooking
         [SerializeField, Tooltip("Where the player stands to drop off and pick up.")]
         private HandoffZone zone = new();
 
+        [SerializeField, Min(0f), Tooltip("Extra speed per barista working here (1 = a barista doubles the speed).")]
+        private float baristaSpeedBonus = 1f;
+
+        private int baristas;
+
         private RecipeStep current;
         private float workTimer;
 
@@ -37,6 +42,26 @@ namespace BubbleTea.Cooking
         private void OnDisable() => active.Remove(this);
 
         public static IReadOnlyList<Station> All => active;
+
+        /// <summary>Baristas working here right now.</summary>
+        public int Baristas => baristas;
+
+        /// <summary>A barista arrived at this station.</summary>
+        public void AddBarista() => baristas++;
+
+        /// <summary>A barista left this station.</summary>
+        public void RemoveBarista() => baristas = Mathf.Max(0, baristas - 1);
+
+        /// <summary>True if this station turns something into <paramref name="item"/> (or makes it from scratch).</summary>
+        public bool Makes(ItemDefinition item)
+        {
+            if (steps == null || item == null) return false;
+            foreach (RecipeStep step in steps)
+            {
+                if (step != null && step.Output == item) return true;
+            }
+            return false;
+        }
 
         /// <summary>Where a worker stands to drop off and pick up.</summary>
         public Vector3 ZoneCenter => zone.Center(transform);
@@ -94,7 +119,7 @@ namespace BubbleTea.Cooking
             if (current == null && !output.IsFull) current = StartNextStep();
             if (current == null) return;
 
-            workTimer += Time.deltaTime * Stats.Get(StatId.BrewSpeed, 1f);
+            workTimer += Time.deltaTime * Stats.Get(StatId.BrewSpeed, 1f) * (1f + baristaSpeedBonus * baristas);
             if (workTimer < current.Seconds) return;
 
             if (current.Output != null)

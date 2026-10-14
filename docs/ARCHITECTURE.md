@@ -83,9 +83,33 @@ Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-
 
 `Economy/OfflineEarnings` listens to `GameEvents.DrinkSold` and keeps a smoothed dollars-per-minute rate, measured one minute of play at a time. The save file (version 3) stores that rate and the time it was written; on load, `SaveManager` hands the time away to `OfflineEarnings.Grant`, which also handles the app returning from the background. The reward waits in `Pending` until `UI/WelcomeBackPopup`'s Collect button adds it to the wallet, and it is saved as part of the money so quitting before collecting loses nothing.
 
+## Baristas (milestone 11)
+
+`Staff/Barista` scores each `Station` by the drinks waiting customers ordered (`ServingCounter.QueuedOrders`): 2 per drink it makes, 1 per drink made from its output. They stand behind the best unclaimed station and call `Station.AddBarista`, which speeds it up by `baristaSpeedBonus` per barista.
+
+## Seating (milestone 11)
+
+`Customers/SeatingTable` holds seats and a mess object per seat. After buying, a `Customer` may reserve a clean seat (`TryReserve`), sit, then `Leave`, which pays into the area's `CashPile` and shows the mess. Anyone in the table's `HandoffZone` cleans one mess at a time. `GameEvents.MessChanged` lets `ShopRating` take stars off for messy seats.
+
 ## Customer moods (milestone 11)
 
 `Customer` tracks how long it has waited against `patienceSeconds` and shows it on a mood light with a MaterialPropertyBlock. `ServingCounter.TrySell` takes a tip share from the customer and raises `GameEvents.Tipped`; a customer out of patience raises `GameEvents.CustomerLeftUpset` and leaves. `PickOrder` gives a new customer any drink left on the counter by someone who walked out.
+
+## Daily goals (milestone 11)
+
+`Goals/DailyGoals` listens to `GameEvents` (`DrinkServed`, `DrinkSold`, `Tipped`, `UpgradeBought`) and advances today's `GoalState`s. Goals are rolled from a seed made from the date and sized by how many drinks the shop can make. `SaveManager` saves them (save version 4) and calls `EnsureToday` after loading. `UI/GoalsPanel` shows them.
+
+## Shop rating (milestone 11)
+
+`Rating/ShopRating` blends a service score (moved by `GameEvents.CustomerServed` moods and `CustomerLeftUpset`) with the share of rating points bought on unlock pads, and writes `StatId.CustomerRate` and `StatId.ExtraCustomers`, which `CustomerSpawner` reads. The service score is saved (version 5). `UI/RatingView` draws the stars from a sprite generated in code. Decorations are ordinary buildables whose prefabs are solid gray boxes with art slots (`Planter`, `MenuBoard`, `Statue`).
+
+## Second shop (milestone 11)
+
+Each shop is its own scene, built by the same `PrototypeSceneBuilder` from a `ShopPlan` (scene path, save file, floor and wall materials). `ShopContentBuilder.Build(billPrefab, shop)` swaps in that shop's menu and puts its data and prefabs in a `Shop2` subfolder with costs scaled up, so the shops never overwrite each other. `Travel/ShopTravel` saves the current shop, clears `Stats` (the next shop applies its own upgrades and rating) and loads the other scene; `SaveManager.fileName` keeps each shop's progress in its own file. The first shop must stay scene 0 in the build.
+
+## Tutorial (milestone 11)
+
+`Onboarding/TutorialGuide` (first shop only) runs a list of steps, each with a check of game state (player moved, money, pad unlocked, carrying a drink, `GameEvents.DrinkSold`, cash collected after a sale) and a spot for `GoalArrow.Override` to point at. A save whose Tea Brewer is already built skips it, and `SaveManager.TutorialDoneKey` in PlayerPrefs stops it showing twice.
 
 ## Conventions
 

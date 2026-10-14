@@ -65,6 +65,11 @@ namespace BubbleTea.EditorTools
             public static readonly Color Floor = Hex("F3E2CC");
             public static readonly Color Wall = Hex("F7C6CF");
             public static readonly Color ExpansionFloor = Hex("DCEFE4");
+
+            // The Matcha House (second shop): soft greens instead of pink.
+            public static readonly Color Shop2Floor = Hex("EEF3DF");
+            public static readonly Color Shop2Wall = Hex("B9D9A8");
+            public static readonly Color Shop2ExpansionFloor = Hex("FBE3E8");
         }
 
         private const float CounterHeight = 1f;
@@ -91,14 +96,18 @@ namespace BubbleTea.EditorTools
                 { "Player", Save("Barista", BuildCharacter(Palette.Blush, Palette.Cream, CharacterStyle.Buns)) },
                 { "Runner", Save("Runner", BuildCharacter(Palette.Mint, Palette.Cream, CharacterStyle.Cap)) },
                 { "Customer", Save("Customer", BuildCharacter(Palette.Butter, null, CharacterStyle.Bob)) },
+                { "Barista", Save("BaristaHelper", BuildCharacter(Palette.Lavender, Palette.Cream, CharacterStyle.Headband)) },
                 { "Car", Save("Car", BuildCar()) },
             };
-            var decorations = new List<GameObject>
-            {
-                Save("Plant", BuildPlant()),
-                Save("MenuBoard", BuildMenuBoard()),
-                Save("BobaStatue", BuildBobaStatue()),
-            };
+            GameObject plant = Save("Plant", BuildPlant());
+            models["Planter"] = plant;
+            models["MenuBoard"] = Save("MenuBoard", BuildMenuBoard());
+            models["Statue"] = Save("BobaStatue", BuildBobaStatue());
+            models["Table"] = Save("CafeTable", BuildCafeTable());
+            models["BusStop"] = Save("BusStop", BuildBusStop());
+
+            // Free plants in the corners; the menu board and statue are bought on pads.
+            var decorations = new List<GameObject> { plant };
 
             ArtSet set = ArtLibrary.Load();
             set.EnsureSlots();
@@ -329,7 +338,7 @@ namespace BubbleTea.EditorTools
 
         // ---------- Characters ----------
 
-        private enum CharacterStyle { Buns, Cap, Bob }
+        private enum CharacterStyle { Buns, Cap, Bob, Headband }
 
         // A chibi character about 1.6 m tall, facing +Z, with an optional apron.
         private static GameObject BuildCharacter(Color shirt, Color? apron, CharacterStyle style)
@@ -368,6 +377,10 @@ namespace BubbleTea.EditorTools
                 case CharacterStyle.Cap:
                     Sphere(root, "Cap", new Vector3(0f, 1.32f, -0.02f), new Vector3(0.64f, 0.42f, 0.64f), Palette.DeepMint);
                     Box(root, "Visor", new Vector3(0f, 1.36f, 0.3f), new Vector3(0.4f, 0.03f, 0.22f), Palette.DeepMint);
+                    break;
+                case CharacterStyle.Headband:
+                    Sphere(root, "Band", new Vector3(0f, 1.3f, -0.01f), new Vector3(0.68f, 0.1f, 0.66f), Palette.DeepPink);
+                    Sphere(root, "Bow", new Vector3(0.24f, 1.42f, 0.05f), new Vector3(0.16f, 0.1f, 0.06f), Palette.DeepPink);
                     break;
                 case CharacterStyle.Bob:
                     Sphere(root, "Bob", new Vector3(0f, 1.1f, -0.08f), new Vector3(0.7f, 0.42f, 0.6f), Palette.Hair);
@@ -452,6 +465,51 @@ namespace BubbleTea.EditorTools
             return root.gameObject;
         }
 
+        // A bus stop sign on a pole with a little bench beside it, for travelling between shops.
+        private static GameObject BuildBusStop()
+        {
+            var root = new GameObject("BusStop").transform;
+            Cylinder(root, "Pole", new Vector3(-0.5f, 1f, 0f), 0.05f, 2f, Palette.Cream);
+            Cylinder(root, "Base", new Vector3(-0.5f, 0.03f, 0f), 0.16f, 0.06f, Palette.DarkWood);
+            Transform sign = Cylinder(root, "Sign", new Vector3(-0.5f, 2.05f, 0f), 0.3f, 0.06f, Palette.Mint);
+            sign.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            Transform cup = Cylinder(root, "SignCup", new Vector3(-0.5f, 2.05f, 0.04f), 0.14f, 0.02f, Palette.Blush);
+            cup.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+            Box(root, "Seat", new Vector3(0.3f, 0.45f, 0f), new Vector3(1f, 0.08f, 0.4f), Palette.Wood);
+            Box(root, "Back", new Vector3(0.3f, 0.75f, 0.17f), new Vector3(1f, 0.4f, 0.06f), Palette.Wood);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Box(root, "Leg", new Vector3(0.3f + side * 0.42f, 0.21f, 0f), new Vector3(0.07f, 0.42f, 0.32f), Palette.DarkWood);
+            }
+            return root.gameObject;
+        }
+
+        // A round café table with a pink chair and a mint chair, 2.6 m wide.
+        private static GameObject BuildCafeTable()
+        {
+            var root = new GameObject("CafeTable").transform;
+            Cylinder(root, "Base", new Vector3(0f, 0.02f, 0f), 0.3f, 0.04f, Palette.DarkWood);
+            Cylinder(root, "Stem", new Vector3(0f, 0.38f, 0f), 0.05f, 0.68f, Palette.Steel);
+            Cylinder(root, "Top", new Vector3(0f, 0.72f, 0f), 0.58f, 0.06f, Palette.Wood);
+            Cylinder(root, "Edge", new Vector3(0f, 0.69f, 0f), 0.59f, 0.02f, Palette.Cream);
+
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Color seatColor = side < 0 ? Palette.Blush : Palette.Mint;
+                float x = side * 1f;
+                Cylinder(root, "Seat", new Vector3(x, 0.45f, 0f), 0.26f, 0.07f, seatColor);
+                for (int leg = 0; leg < 4; leg++)
+                {
+                    float angle = leg * Mathf.PI * 0.5f + Mathf.PI * 0.25f;
+                    Cylinder(root, "Leg", new Vector3(x + Mathf.Cos(angle) * 0.17f, 0.21f, Mathf.Sin(angle) * 0.17f), 0.025f, 0.42f, Palette.Steel);
+                }
+                Box(root, "Back", new Vector3(side * 1.24f, 0.74f, 0f), new Vector3(0.06f, 0.42f, 0.48f), seatColor);
+                Box(root, "BackPost", new Vector3(side * 1.24f, 0.55f, 0f), new Vector3(0.04f, 0.2f, 0.08f), Palette.Steel);
+            }
+            return root.gameObject;
+        }
+
         // A giant milk tea cup, like the statues outside boba shops.
         private static GameObject BuildBobaStatue()
         {
@@ -477,6 +535,9 @@ namespace BubbleTea.EditorTools
             Recolor("Floor", Palette.Floor);
             Recolor("Wall", Palette.Wall);
             Recolor("ExpansionFloor", Palette.ExpansionFloor);
+            Recolor("Shop2Floor", Palette.Shop2Floor);
+            Recolor("Shop2Wall", Palette.Shop2Wall);
+            Recolor("Shop2ExpansionFloor", Palette.Shop2ExpansionFloor);
         }
 
         private static void Recolor(string materialName, Color color)

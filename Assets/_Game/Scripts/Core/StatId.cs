@@ -17,5 +17,11 @@ namespace BubbleTea.Core
 
         /// <summary>Multiplies what customers pay for drinks (1 = menu price).</summary>
         DrinkPrice,
+
+        /// <summary>Multiplies how often customers arrive (1 = normal). Set by the shop rating.</summary>
+        CustomerRate,
+
+        /// <summary>Extra customers allowed in line at once (0 = none). Set by the shop rating.</summary>
+        ExtraCustomers,
     }
 }
