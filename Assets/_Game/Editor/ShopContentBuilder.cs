@@ -38,6 +38,9 @@ namespace BubbleTea.EditorTools
             public UpgradeDefinition[] Upgrades;
             public Customer CustomerPrefab;
             public DrinkRecipe[] Menu;
+            public BuildableDefinition Planter;
+            public BuildableDefinition MenuBoard;
+            public BuildableDefinition Statue;
         }
 
         internal static Content Build(CashBill billPrefab)
@@ -48,6 +51,7 @@ namespace BubbleTea.EditorTools
             EnsureFolder(DataFolder, "Upgrades");
             EnsureFolder(PrefabFolder, "Items");
             EnsureFolder(PrefabFolder, "Stations");
+            EnsureFolder(PrefabFolder, "Decor");
 
             ItemDefinition milkTea = GetOrCreateItem("Milk Tea", new Color(0.85f, 0.70f, 0.52f), null);
             ItemDefinition bobaTea = GetOrCreateItem("Boba Milk Tea", new Color(0.88f, 0.76f, 0.60f), new Color(0.12f, 0.08f, 0.06f));
@@ -113,6 +117,12 @@ namespace BubbleTea.EditorTools
                 Upgrades = upgrades,
                 CustomerPrefab = BuildCustomerPrefab(),
                 Menu = menu,
+                Planter = GetOrCreateBuildable("Planter", 120,
+                    BuildDecorPrefab("Planter", new Color(0.42f, 0.73f, 0.47f), new Vector3(1.2f, 1.3f, 1.2f))),
+                MenuBoard = GetOrCreateBuildable("Menu Board", 200,
+                    BuildDecorPrefab("MenuBoard", new Color(0.3f, 0.32f, 0.3f), new Vector3(1f, 1.4f, 0.6f))),
+                Statue = GetOrCreateBuildable("Boba Statue", 350,
+                    BuildDecorPrefab("Statue", new Color(0.85f, 0.7f, 0.55f), new Vector3(1.2f, 1.8f, 1.2f))),
             };
         }
 
@@ -318,6 +328,14 @@ namespace BubbleTea.EditorTools
         }
 
         // A purple desk. Standing in front of it opens the upgrade panel.
+        // A decoration you can buy: it only makes the shop nicer (and raises the rating).
+        // Solid, so the player walks around it; the art slot of the same name replaces the gray box.
+        private static GameObject BuildDecorPrefab(string name, Color color, Vector3 size)
+        {
+            GameObject root = BuildStationBody(name, color, size, null);
+            return SavePrefab(root, $"{PrefabFolder}/Decor/{name}.prefab");
+        }
+
         private static GameObject BuildUpgradeDeskPrefab()
         {
             GameObject root = BuildStationBody("UpgradeDesk", new Color(0.58f, 0.44f, 0.86f), new Vector3(1.6f, 1f, 1f),

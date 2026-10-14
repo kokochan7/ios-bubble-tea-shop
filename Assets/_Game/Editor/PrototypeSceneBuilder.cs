@@ -6,6 +6,7 @@ using BubbleTea.Economy;
 using BubbleTea.Feedback;
 using BubbleTea.Goals;
 using BubbleTea.Player;
+using BubbleTea.Rating;
 using BubbleTea.Saving;
 using BubbleTea.UI;
 using BubbleTea.Upgrades;
@@ -84,10 +85,12 @@ namespace BubbleTea.EditorTools
             CreateUpgradePanel(hud, upgrades, content.Upgrades);
             OfflineEarnings offlineEarnings = CreateOfflineEarnings(wallet);
             DailyGoals dailyGoals = CreateDailyGoals(wallet, content.Menu, offlineEarnings);
-            SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings, dailyGoals);
+            ShopRating rating = CreateShopRating(pads, content);
+            SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings, dailyGoals, rating);
             CreateFeedback(player.transform);
             CreateSettingsMenu(hud, saveManager);
             CreateGoalsPanel(hud, dailyGoals);
+            CreateRatingView(hud, rating);
             CreateWelcomeBackPopup(hud, offlineEarnings);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -408,8 +411,11 @@ namespace BubbleTea.EditorTools
             UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(5f, 0f, -8f), billPrefab, wallet, padMat, fruitPad);
             UnlockPad runner2Pad = CreatePad(content.Runner2, new Vector3(-10f, 0f, 5f), billPrefab, wallet, padMat);
             UnlockPad runner1Pad = CreatePad(content.Runner1, new Vector3(-10f, 0f, 0f), billPrefab, wallet, padMat, runner2Pad);
+            UnlockPad statuePad = CreatePad(content.Statue, new Vector3(-11f, 0f, -9f), billPrefab, wallet, padMat);
+            UnlockPad menuBoardPad = CreatePad(content.MenuBoard, new Vector3(3f, 0f, 9f), billPrefab, wallet, padMat, statuePad);
+            UnlockPad planterPad = CreatePad(content.Planter, new Vector3(-3f, 0f, 9f), billPrefab, wallet, padMat, menuBoardPad);
             UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat,
-                taroPad, runner1Pad);
+                taroPad, runner1Pad, planterPad);
             UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad);
             UnlockPad upgradePad = CreatePad(content.UpgradeDesk, new Vector3(9f, 0f, 1f), billPrefab, wallet, padMat);
             UnlockPad counterPad = CreatePad(content.Counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat,
@@ -425,10 +431,13 @@ namespace BubbleTea.EditorTools
             runner2Pad.gameObject.SetActive(false);
             expansionPad.gameObject.SetActive(false);
             driveThruPad.gameObject.SetActive(false);
+            planterPad.gameObject.SetActive(false);
+            menuBoardPad.gameObject.SetActive(false);
+            statuePad.gameObject.SetActive(false);
             return new[]
             {
                 counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad, runner1Pad, runner2Pad,
-                expansionPad, driveThruPad,
+                expansionPad, driveThruPad, planterPad, menuBoardPad, statuePad,
             };
         }
 
@@ -443,7 +452,7 @@ namespace BubbleTea.EditorTools
 
         // Loads progress on Play and keeps saving it. Delete it with Bubble Tea > Delete Save Data.
         private static SaveManager CreateSaveManager(Wallet wallet, UnlockPad[] pads, UpgradeManager upgrades,
-            OfflineEarnings offlineEarnings, DailyGoals dailyGoals)
+            OfflineEarnings offlineEarnings, DailyGoals dailyGoals, ShopRating rating)
         {
             var go = new GameObject("SaveManager");
             var saveManager = go.AddComponent<SaveManager>();
@@ -451,6 +460,7 @@ namespace BubbleTea.EditorTools
             SetReference(saveManager, "upgradeManager", upgrades);
             SetReference(saveManager, "offlineEarnings", offlineEarnings);
             SetReference(saveManager, "dailyGoals", dailyGoals);
+            SetReference(saveManager, "rating", rating);
 
             var serialized = new SerializedObject(saveManager);
             SerializedProperty list = serialized.FindProperty("pads");
@@ -552,7 +562,7 @@ namespace BubbleTea.EditorTools
             // Banner under the money counter when a goal is finished.
             Text banner = CreateHudText("Banner", root, font, 44, TextAnchor.MiddleCenter);
             banner.rectTransform.anchorMin = banner.rectTransform.anchorMax = new Vector2(0.5f, 1f);
-            banner.rectTransform.anchoredPosition = new Vector2(0f, -330f);
+            banner.rectTransform.anchoredPosition = new Vector2(0f, -370f);
             banner.rectTransform.sizeDelta = new Vector2(1000f, 80f);
             banner.color = new Color(1f, 0.85f, 0.3f);
             var outline = banner.gameObject.AddComponent<Outline>();
@@ -568,6 +578,88 @@ namespace BubbleTea.EditorTools
             SetReferences(view, "claimButtons", claims);
             SetReferences(view, "claimLabels", claimLabels);
             SetReference(view, "banner", banner);
+        }
+
+        // The star rating. Every pad counts; decorations and big expansions count more.
+        private static ShopRating CreateShopRating(UnlockPad[] pads, ShopContentBuilder.Content content)
+        {
+            var rating = new GameObject("ShopRating").AddComponent<ShopRating>();
+            var serialized = new SerializedObject(rating);
+            SerializedProperty list = serialized.FindProperty("pads");
+            list.arraySize = pads.Length;
+            for (int i = 0; i < pads.Length; i++)
+            {
+                BuildableDefinition definition = pads[i].Definition;
+                int points = definition == content.Statue ? 3
+                    : definition == content.Planter || definition == content.MenuBoard || definition == content.Expansion ||
+                      definition == content.DriveThru ? 2
+                    : 1;
+                SerializedProperty entry = list.GetArrayElementAtIndex(i);
+                entry.FindPropertyRelative("pad").objectReferenceValue = pads[i];
+                entry.FindPropertyRelative("points").intValue = points;
+            }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return rating;
+        }
+
+        // Five stars under the money counter. Tapping them explains how to earn more.
+        private static void CreateRatingView(Transform hud, ShopRating rating)
+        {
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            const float starSize = 62f;
+
+            RectTransform root = CreateUiObject("Rating", hud);
+            root.anchorMin = root.anchorMax = new Vector2(0.5f, 1f);
+            root.pivot = new Vector2(0.5f, 1f);
+            root.anchoredPosition = new Vector2(0f, -240f);
+            root.sizeDelta = new Vector2(5 * starSize + 130f, starSize + 10f);
+            var hitArea = root.gameObject.AddComponent<Image>();
+            hitArea.color = new Color(0f, 0f, 0f, 0.25f);
+            var help = root.gameObject.AddComponent<Button>();
+            help.targetGraphic = hitArea;
+            var view = root.gameObject.AddComponent<RatingView>();
+
+            var empty = new Image[5];
+            var filled = new Image[5];
+            for (int i = 0; i < 5; i++)
+            {
+                RectTransform back = CreateUiObject("Star" + (i + 1), root);
+                back.anchorMin = back.anchorMax = new Vector2(0f, 0.5f);
+                back.pivot = new Vector2(0f, 0.5f);
+                back.anchoredPosition = new Vector2(10f + i * starSize, 0f);
+                back.sizeDelta = new Vector2(starSize, starSize);
+                empty[i] = back.gameObject.AddComponent<Image>();
+                empty[i].color = new Color(1f, 1f, 1f, 0.3f);
+                empty[i].raycastTarget = false;
+
+                RectTransform front = CreateUiObject("Fill", back);
+                Stretch(front);
+                filled[i] = front.gameObject.AddComponent<Image>();
+                filled[i].color = new Color(1f, 0.82f, 0.25f);
+                filled[i].raycastTarget = false;
+            }
+
+            Text value = CreateHudText("Value", root, font, 48, TextAnchor.MiddleLeft);
+            value.rectTransform.anchorMin = value.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+            value.rectTransform.pivot = new Vector2(0f, 0.5f);
+            value.rectTransform.anchoredPosition = new Vector2(20f + 5 * starSize, 0f);
+            value.rectTransform.sizeDelta = new Vector2(110f, starSize);
+
+            Text hint = CreateHudText("Hint", root, font, 34, TextAnchor.MiddleCenter);
+            hint.rectTransform.anchorMin = hint.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            hint.rectTransform.pivot = new Vector2(0.5f, 1f);
+            hint.rectTransform.anchoredPosition = new Vector2(0f, -10f);
+            hint.rectTransform.sizeDelta = new Vector2(900f, 100f);
+            hint.horizontalOverflow = HorizontalWrapMode.Wrap;
+            hint.text = "Serve customers fast and buy decorations\nfor more stars. More stars, more customers!";
+            hint.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.7f);
+
+            SetReference(view, "rating", rating);
+            SetReferences(view, "emptyStars", empty);
+            SetReferences(view, "filledStars", filled);
+            SetReference(view, "valueLabel", value);
+            SetReference(view, "helpButton", help);
+            SetReference(view, "helpLabel", hint);
         }
 
         // Fills a private [SerializeField] array the same way dragging items into it in the Inspector would.

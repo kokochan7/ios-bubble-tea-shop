@@ -91,6 +91,10 @@ Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-
 
 `Goals/DailyGoals` listens to `GameEvents` (`DrinkServed`, `DrinkSold`, `Tipped`, `UpgradeBought`) and advances today's `GoalState`s. Goals are rolled from a seed made from the date and sized by how many drinks the shop can make. `SaveManager` saves them (save version 4) and calls `EnsureToday` after loading. `UI/GoalsPanel` shows them.
 
+## Shop rating (milestone 11)
+
+`Rating/ShopRating` blends a service score (moved by `GameEvents.CustomerServed` moods and `CustomerLeftUpset`) with the share of rating points bought on unlock pads, and writes `StatId.CustomerRate` and `StatId.ExtraCustomers`, which `CustomerSpawner` reads. The service score is saved (version 5). `UI/RatingView` draws the stars from a sprite generated in code. Decorations are ordinary buildables whose prefabs are solid gray boxes with art slots (`Planter`, `MenuBoard`, `Statue`).
+
 ## Conventions
 
 - Namespace: `BubbleTea.<Module>`, for example `BubbleTea.Economy`.

@@ -12,7 +12,7 @@ namespace BubbleTea.Saving
     public class SaveData
     {
         /// <summary>Bumped when the layout changes, so old saves can be upgraded instead of lost.</summary>
-        public int version = 4;
+        public int version = 5;
 
         public int money;
         public List<PadSave> pads = new();
@@ -31,6 +31,9 @@ namespace BubbleTea.Saving
 
         /// <summary>Added in version 4: today's goals and their progress.</summary>
         public List<GoalState> goals = new();
+
+        /// <summary>Added in version 5: the shop rating's service score (0 to 1). -1 = not saved yet.</summary>
+        public float ratingService = -1f;
     }
 
     /// <summary>One unlock pad's progress.</summary>

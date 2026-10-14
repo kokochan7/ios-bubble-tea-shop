@@ -4,6 +4,7 @@ using System.IO;
 using BubbleTea.Building;
 using BubbleTea.Economy;
 using BubbleTea.Goals;
+using BubbleTea.Rating;
 using BubbleTea.Upgrades;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -34,6 +35,9 @@ namespace BubbleTea.Saving
 
         [SerializeField, Tooltip("Today's goals. Leave empty if the scene has none.")]
         private DailyGoals dailyGoals;
+
+        [SerializeField, Tooltip("The shop's star rating. Leave empty if the scene has none.")]
+        private ShopRating rating;
 
         [SerializeField, Tooltip("Seconds between saves while money keeps changing.")]
         private float autosaveSeconds = 5f;
@@ -117,6 +121,7 @@ namespace BubbleTea.Saving
                 savedAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 earningsPerMinute = offlineEarnings != null ? offlineEarnings.RatePerMinute : 0f,
                 goalsDay = dailyGoals != null ? dailyGoals.Day : null,
+                ratingService = rating != null ? rating.Service : -1f,
             };
             if (dailyGoals != null) data.goals.AddRange(dailyGoals.Goals);
             foreach (UnlockPad pad in pads)
@@ -201,6 +206,7 @@ namespace BubbleTea.Saving
             }
 
             if (dailyGoals != null) dailyGoals.Restore(data.goalsDay, data.goals);
+            if (rating != null && data.ratingService >= 0f) rating.Restore(data.ratingService);
 
             if (offlineEarnings != null && data.savedAtUnix > 0)
             {

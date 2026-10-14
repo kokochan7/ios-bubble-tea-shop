@@ -141,6 +141,7 @@ namespace BubbleTea.Customers
             if (waitTimer < pauseBeforeBuying || !counter.TrySell(Order, out CarriedItem drink, TipShare())) return;
 
             drink.MoveTo(transform, drinkHoldPosition);
+            GameEvents.RaiseCustomerServed(transform.position, Mood);
             StopWaiting();
         }
 

@@ -1,11 +1,13 @@
 using System.Collections.Generic;
+using BubbleTea.Core;
 using UnityEngine;
 
 namespace BubbleTea.Customers
 {
     /// <summary>
     /// Sends customers to the serving counter for its lane once that counter is built,
-    /// keeping up to a set number inside at once.
+    /// keeping up to a set number inside at once. A better shop rating brings customers
+    /// more often and lets more of them line up.
     /// </summary>
     public class CustomerSpawner : MonoBehaviour
     {
@@ -32,8 +34,9 @@ namespace BubbleTea.Customers
             ServingCounter counter = ServingCounter.FindLane(lane);
             if (customerPrefab == null || counter == null) return;
 
-            timer += Time.deltaTime;
-            if (timer < secondsBetweenCustomers || inside.Count >= maxCustomers) return;
+            timer += Time.deltaTime * Stats.Get(StatId.CustomerRate, 1f);
+            int max = maxCustomers + Mathf.RoundToInt(Stats.Get(StatId.ExtraCustomers, 0f));
+            if (timer < secondsBetweenCustomers || inside.Count >= max) return;
             timer = 0f;
 
             Customer customer = Instantiate(customerPrefab, transform.position, transform.rotation);

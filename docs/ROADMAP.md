@@ -111,7 +111,7 @@ Kenny picked these, built one pull request at a time in this order:
 
 1. **Customer moods and tips** (done): a light beside each order turns from green to yellow to red as the customer waits. Serve them in the green and they tip half the drink's price, in the yellow a fifth. If it runs out, they say "Too slow!" and leave without buying. Patience drains slower for people further back in line. All the numbers are at the top of `Scripts/Customers/Customer.cs` (the prefabs are rebuilt from those defaults).
 2. **Daily goals** (done): a pink GOALS button under MENU opens three goals for today, like "Sell 20 Taro Milk Tea", "Get 8 tips" or "Earn $500 from sales". Each shows its progress and a CLAIM button with its cash reward, a "!" appears on GOALS when one is ready, and a banner pops up when you finish one. New goals arrive at midnight (unclaimed finished ones are paid automatically), and they grow as you unlock more drinks.
-3. Shop rating
+3. **Shop rating** (done): five stars under your money, from 1 to 5. Half comes from service (happy customers raise it, walkouts lower it) and half from building the shop up, including three new decorations to buy: a Planter, a Menu Board and a Boba Statue (they appear after the Topping Bar). More stars bring customers up to twice as often and let two more line up. Tap the stars for a reminder of how it works.
 4. Barista staff
 5. Seating area
 6. Second shop

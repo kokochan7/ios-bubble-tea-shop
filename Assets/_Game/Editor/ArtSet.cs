@@ -18,6 +18,7 @@ namespace BubbleTea.EditorTools
             "Player", "Customer", "Runner", "Car",
             "Counter", "DriveThru", "TeaBrewer", "ToppingBar", "TaroStation", "FruitBar", "UpgradeDesk",
             "Cup",
+            "Planter", "MenuBoard", "Statue",
         };
 
         [SerializeField, Tooltip("One entry per thing in the shop.")]

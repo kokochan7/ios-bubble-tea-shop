@@ -93,12 +93,13 @@ namespace BubbleTea.EditorTools
                 { "Customer", Save("Customer", BuildCharacter(Palette.Butter, null, CharacterStyle.Bob)) },
                 { "Car", Save("Car", BuildCar()) },
             };
-            var decorations = new List<GameObject>
-            {
-                Save("Plant", BuildPlant()),
-                Save("MenuBoard", BuildMenuBoard()),
-                Save("BobaStatue", BuildBobaStatue()),
-            };
+            GameObject plant = Save("Plant", BuildPlant());
+            models["Planter"] = plant;
+            models["MenuBoard"] = Save("MenuBoard", BuildMenuBoard());
+            models["Statue"] = Save("BobaStatue", BuildBobaStatue());
+
+            // Free plants in the corners; the menu board and statue are bought on pads.
+            var decorations = new List<GameObject> { plant };
 
             ArtSet set = ArtLibrary.Load();
             set.EnsureSlots();
