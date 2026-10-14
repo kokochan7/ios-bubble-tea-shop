@@ -1,4 +1,5 @@
 using BubbleTea.Building;
+using BubbleTea.Core;
 using BubbleTea.Cooking;
 using BubbleTea.Customers;
 using BubbleTea.Economy;
@@ -60,6 +61,7 @@ namespace BubbleTea.EditorTools
             CreateFloor(floorMat);
             GameObject eastWall = CreateWalls();
             GameObject expansionArea = CreateExpansionArea();
+            CreateDecorations();
 
             GameObject player = CreatePlayer(playerMat, out Wallet wallet);
             Camera camera = CreateCamera(player.transform);
@@ -146,6 +148,43 @@ namespace BubbleTea.EditorTools
             return root;
         }
 
+        // Plants (or whatever the Art Set lists as decorations) in the corners of the shop.
+        private static readonly Vector3[] DecorationSpots =
+        {
+            new(-14f, 0f, 14f), new(14f, 0f, 14f), new(-14f, 0f, 9f), new(14f, 0f, -14f), new(-14f, 0f, -3f), new(6f, 0f, 14f),
+        };
+
+        private static void CreateDecorations()
+        {
+            ArtSet art = ArtLibrary.Load();
+            if (art.Decorations.Count == 0) return;
+
+            var root = new GameObject("Decorations").transform;
+            for (int i = 0; i < DecorationSpots.Length; i++)
+            {
+                GameObject model = art.Decorations[i % art.Decorations.Count];
+                if (model == null) continue;
+                var spot = new GameObject(model.name).transform;
+                spot.SetParent(root, false);
+                spot.localPosition = DecorationSpots[i];
+                AttachLoose(model, spot, 1.2f);
+            }
+        }
+
+        // Places a model (not tied to a slot) standing on the spot, about this tall.
+        private static void AttachLoose(GameObject model, Transform spot, float height)
+        {
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(model);
+            instance.transform.SetParent(spot, false);
+            Renderer[] renderers = instance.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0) return;
+            Bounds bounds = renderers[0].bounds;
+            foreach (Renderer renderer in renderers) bounds.Encapsulate(renderer.bounds);
+            float scale = bounds.size.y > 0.0001f ? height / bounds.size.y : 1f;
+            instance.transform.localScale = Vector3.one * scale;
+            instance.transform.localPosition = -(new Vector3(bounds.center.x, bounds.min.y, bounds.center.z) - spot.position) * scale;
+        }
+
         private static GameObject CreateWall(Transform parent, string name, Vector3 position, Vector3 size, Material material)
         {
             GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -179,6 +218,17 @@ namespace BubbleTea.EditorTools
             nose.transform.localPosition = new Vector3(0f, 0.4f, 0.5f);
             nose.transform.localScale = new Vector3(0.3f, 0.2f, 0.2f);
             nose.GetComponent<Renderer>().sharedMaterial = material;
+
+            // A character model, if the Art Set has one. The capsule stays as the collider.
+            GameObject model = ArtLibrary.Attach("Player", player.transform, new Vector3(0.8f, 1.8f, 0.8f),
+                ArtLibrary.Fit.Height, new Vector3(0f, -1f, 0f));
+            if (model != null)
+            {
+                ArtLibrary.HideGrayBox(player, nose);
+                foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>()) renderer.enabled = true;
+                var bob = player.AddComponent<WalkBob>();
+                SetReference(bob, "visual", model.transform);
+            }
 
             player.AddComponent<PlayerMovement>();
             wallet = player.AddComponent<Wallet>();

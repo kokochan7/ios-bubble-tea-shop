@@ -63,3 +63,11 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 - **Confetti** bursts when a station unlocks, and a green **+$15** floats up from the counter on every sale.
 - **Vibration** on unlocks and upgrades (iPhone only).
 - **Settings:** a MENU button in the top-right corner with Sound on/off, Vibration on/off, and Reset Progress (tap twice).
+
+## Milestone 7: Real art
+
+- Every station, character, car and cup has an **art slot** in `Assets/_Game/Data/ArtSet.asset`. Filled slots replace the gray box when the scene is rebuilt, and empty ones keep it.
+- Models are sized to fit automatically, and each slot can be turned, scaled or nudged.
+- **Bubble Tea > Art > Auto-Fill From Art Folder** finds matching models by name. It's tuned for Kenney's free kits (Furniture, Food, Mini Characters, Car).
+- Characters waddle when they walk, and plants decorate the corners if you add some.
+- Step-by-step download guide: [ART.md](ART.md).

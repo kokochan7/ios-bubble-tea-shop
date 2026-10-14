@@ -71,6 +71,10 @@ Unlock pads can show and hide scene objects when they're bought (`showWhenUnlock
 
 Gameplay scripts announce moments through `Core/GameEvents` (cash collected, pad paid, unlocked, drink sold, upgrade bought) and never play sounds or effects themselves. The Feedback module listens and decides what each moment looks, sounds and feels like, so polish can change without touching gameplay. Player preferences live in `Core/GameSettings` (PlayerPrefs), separate from the save file.
 
+## Art (milestone 7)
+
+Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-only asset) maps slot names (`TeaBrewer`, `Customer`, `Cup`...) to models, and `ArtLibrary.Attach` puts a model inside a prefab, scaled to the gray box's footprint or height and standing on the floor. The gray-box parts stay as invisible colliders, so swapping art can never change gameplay. `Core/WalkBob` gives characters a procedural waddle until real animations arrive.
+
 ## Conventions
 
 - Namespace: `BubbleTea.<Module>`, for example `BubbleTea.Economy`.
