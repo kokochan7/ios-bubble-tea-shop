@@ -16,7 +16,7 @@ All of these are by [Kenney](https://kenney.nl). They're free and public domain 
 |------|------|----------|
 | Furniture Kit | kenney.nl/assets/furniture-kit | Counter, tea brewer (coffee machine), topping bar (blender), taro station (microwave), fruit bar (fridge), upgrade desk, potted plants |
 | Food Kit | kenney.nl/assets/food-kit | Drink cups |
-| Mini Characters | kenney.nl/assets/mini-characters | You, customers and runners |
+| Mini Characters | kenney.nl/assets/mini-characters | You, customers and staff |
 | Car Kit | kenney.nl/assets/car-kit | Drive-through cars |
 
 ## 2. Copy them into the project

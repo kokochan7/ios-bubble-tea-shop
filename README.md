@@ -59,14 +59,14 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 
 1. In Unity's menu bar, click **Bubble Tea > Build Prototype Scene**. It creates `Assets/_Game/Scenes/Prototype.unity` with everything wired up and opens it.
 2. Press **Play**.
-3. Click and drag anywhere in the Game view to use the joystick (or use WASD / arrow keys). Walk up to the green cash stacks and watch the bills fly to you while the counter at the top goes up.
+3. Click and drag anywhere in the Game view to use the joystick (or use WASD / arrow keys). Walk up to the green cash spot and watch the bills fly to you while the counter at the top goes up.
 4. Stand on the white **Counter** pad. Your money drains into it, and when it's paid off the counter pops up and the next pad (Tea Brewer) appears. That one unlocks the Topping Bar.
 5. Once the Counter is built, customers walk in and line up behind it. Stand in front of the **Tea Brewer** to pick up the milk teas it makes, then stand in front of the **Counter** to drop them off. Each customer takes a drink and pays into the cash pile beside the counter, which you collect like any other cash.
 6. For a pricier drink, drop milk teas at the **Topping Bar** first. It turns them into boba milk tea, which sells for more.
 7. Each customer shows the drink they want on a bubble above their head and waits for exactly that one. The Topping Bar leads to the **Taro Station** and then the **Fruit Bar**, which add taro, taro boba and mango drinks to the orders.
-8. The Topping Bar also reveals a **Hire Runner** pad. A runner keeps the counter stocked for you, so you can focus on collecting cash. A second runner pad appears after the first. The Tea Brewer reveals a **Hire Cashier** pad: the cashier stands by the counter and banks customers' payments for you.
+8. The Topping Bar also reveals a **Hire Barista** pad. A barista keeps the counter stocked and works the stations when there's nothing to carry, so you can focus on collecting cash. Up to five baristas can be hired, each pad appearing after the one before. The Seating Area reveals a **Hire Cleaner** who wipes the tables and banks the tips customers leave there. The Tea Brewer reveals a **Hire Cashier** pad: the cashier stands by the counter and banks customers' payments for you.
 9. After the Fruit Bar, **Expand Shop** opens the east wall onto a new area with a **Drive Thru** window. Cars queue there and pay 1.5x.
-10. The **MENU** button (top right) turns sound and vibration on or off and can reset your progress.
+10. The **MENU** button (top right) turns sound and vibration on or off and can reset your progress. In the Editor and Development builds it also has **GM Tools**: +$10,000, Build Everything, Instant Build (pads build the moment you step on them) and Max Upgrades.
 11. Buying the Counter also reveals the purple **Upgrades** desk. Pay for it, then stand in front of it to buy faster walking, bigger carry stacks, faster brewing and higher drink prices.
 12. The Boba Shop is level 1. Once every pad in it is built, **Open Matcha House** appears and builds a bus stop to level 2, the Matcha House. Click **Bubble Tea > Build Second Shop Scene** once so it has somewhere to go.
 
@@ -74,7 +74,7 @@ Your progress (money and unlocked stations) is saved as you play, so pressing Pl
 
 Your shop keeps earning for up to 2 hours while you're away. Come back after a minute or more and a **Welcome back!** pop-up pays you. To see it without waiting, sell drinks for a couple of minutes, then click **Bubble Tea > Test Away Pop-Up (1 hour)** during Play.
 
-The piles refill every few seconds so there's always something to collect. You can tweak speeds and values by selecting objects in the Hierarchy and editing their fields in the Inspector. Rebuilding the scene from the menu resets changes made in the scene, but keeps the prices, recipes and timings you edited in `Assets/_Game/Data`. The gray-box prefabs are rebuilt each time.
+The floor cash spot refills every few seconds until it has handed out $500 in total, just enough to get the shop going; after that your money comes from drinks. You can tweak speeds and values by selecting objects in the Hierarchy and editing their fields in the Inspector. Rebuilding the scene from the menu resets changes made in the scene, but keeps the prices, recipes and timings you edited in `Assets/_Game/Data`. The gray-box prefabs are rebuilt each time.
 
 For the bubble tea shop look, click **Bubble Tea > Art > Build Boba Art Kit** and rebuild the scene. Other models (free packs, Meshy) are covered in [docs/ART.md](docs/ART.md) and [docs/MESHY.md](docs/MESHY.md).
 
@@ -106,7 +106,7 @@ Assets/_Game/
     Customers/  Customer spawning, queueing, paying
     Saving/     Saving and loading progress
     Upgrades/   Upgrade levels and the upgrade desk
-    Staff/      Hired helpers (runners)
+    Staff/      Hired helpers (baristas, cashier, cleaner)
     Feedback/   Sounds, vibration, confetti, pop-ups
     UI/         HUD, money counter, joystick visuals
 ```

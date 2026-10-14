@@ -61,7 +61,7 @@ Upgrades never reach into other modules. `UpgradeManager` writes numbers into `C
 
 ## Staff (milestone 4)
 
-A `Runner` is just another `ItemCarrier`, so stations and the counter hand items to it through the same floor zones they use with the player. Two properties on `ItemCarrier` keep workers tidy: `GiveOnlyTo` (only drop items at this station or counter) and `TakeFilter` (only pick up this item). The counter tells workers what the line needs (`NextNeeded`) and keeps reservations so two runners don't fetch the same order. Runners are hired with ordinary unlock pads whose buildable prefab is the runner, so saving and loading them needed no new code.
+A `Barista` is just another `ItemCarrier`, so stations and the counter hand items to it through the same floor zones they use with the player. Two properties on `ItemCarrier` keep workers tidy: `GiveOnlyTo` (only drop items at this station or counter) and `TakeFilter` (only pick up this item). The counter tells workers what the line needs (`NextNeeded`) and keeps reservations so two baristas don't fetch the same order. With nothing to carry, a barista stands at the busiest station and speeds it up. Baristas, the cashier and the cleaner are hired with ordinary unlock pads whose buildable prefab is the worker, so saving and loading them needed no new code.
 
 ## Shop expansion (milestone 5)
 
@@ -112,7 +112,7 @@ Each shop is its own scene, built by the same `PrototypeSceneBuilder` from a `Sh
 - The tutorial and the guide arrow were removed; players find the next pad themselves.
 - `Staff/Cashier` stands by a counter and sends bills from its `ServingCounter.CashPile` straight to the player's `Wallet`.
 - `ServingCounter` takes any menu drink (wanted ones first) and keeps extras for later customers; `PickOrder` already makes new customers order a waiting drink.
-- Runners, baristas and the cashier read `StatId.MoveSpeed`, and runners also `StatId.CarryBonus` (several of the same item per trip).
+- Baristas, the cashier and the cleaner read `StatId.MoveSpeed`, and baristas also `StatId.CarryBonus` (several of the same item per trip).
 
 ## Conventions
 

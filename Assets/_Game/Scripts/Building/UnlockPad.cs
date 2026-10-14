@@ -52,6 +52,12 @@ namespace BubbleTea.Building
         private static readonly List<UnlockPad> active = new();
         public static IReadOnlyList<UnlockPad> Active => active;
 
+        /// <summary>Game master option: pads build the moment you step on them, for free.</summary>
+        public static bool InstantBuild { get; set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => InstantBuild = false;
+
         private readonly Stack<CashBill> spareBills = new();
         private int paid;
         private int billsInFlight;
@@ -89,6 +95,15 @@ namespace BubbleTea.Building
             ProgressChanged?.Invoke(Remaining, Cost);
         }
 
+        /// <summary>Builds this pad right now without paying (game master tools).</summary>
+        public void BuildNow()
+        {
+            if (completed || definition == null) return;
+            paid = Cost;
+            ProgressChanged?.Invoke(Remaining, Cost);
+            Build(animate: true);
+        }
+
         private void OnEnable() => active.Add(this);
         private void OnDisable() => active.Remove(this);
 
@@ -99,6 +114,11 @@ namespace BubbleTea.Building
             if (!IsPlayerOnPad())
             {
                 standTimer = 0f;
+                return;
+            }
+            if (InstantBuild)
+            {
+                BuildNow();
                 return;
             }
 

@@ -17,7 +17,7 @@ namespace BubbleTea.Staff
         private string lane = "Main";
 
         [SerializeField, Tooltip("Seconds between bills before upgrades. Smaller is faster.")]
-        private float secondsPerBill = 0.1f;
+        private float secondsPerBill = 0.02f;
 
         [SerializeField, Tooltip("Where the bills fly to. Leave empty for the cashier's position.")]
         private Transform hands;

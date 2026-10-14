@@ -94,10 +94,10 @@ namespace BubbleTea.EditorTools
                 { "UpgradeDesk", Save("UpgradeDesk", BuildUpgradeDesk()) },
                 { "Cup", Save("BobaCup", BuildCup()) },
                 { "Player", Save("Barista", BuildCharacter(Palette.Blush, Palette.Cream, CharacterStyle.Buns)) },
-                { "Runner", Save("Runner", BuildCharacter(Palette.Mint, Palette.Cream, CharacterStyle.Cap)) },
                 { "Customer", Save("Customer", BuildCharacter(Palette.Butter, null, CharacterStyle.Bob)) },
                 { "Barista", Save("BaristaHelper", BuildCharacter(Palette.Lavender, Palette.Cream, CharacterStyle.Headband)) },
                 { "Cashier", Save("Cashier", BuildCharacter(Palette.Butter, Palette.Cream, CharacterStyle.Buns)) },
+                { "Cleaner", Save("Cleaner", BuildCharacter(Palette.Mint, Palette.Cream, CharacterStyle.Cap)) },
                 { "Car", Save("Car", BuildCar()) },
             };
             GameObject plant = Save("Plant", BuildPlant());

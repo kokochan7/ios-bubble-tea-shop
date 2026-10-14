@@ -33,8 +33,6 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition ToppingBar;
             public BuildableDefinition TaroStation;
             public BuildableDefinition FruitBar;
-            public BuildableDefinition Runner1;
-            public BuildableDefinition Runner2;
             public BuildableDefinition Expansion;
             public BuildableDefinition DriveThru;
             public Customer CarPrefab;
@@ -45,8 +43,10 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition Planter;
             public BuildableDefinition MenuBoard;
             public BuildableDefinition Statue;
-            public BuildableDefinition Barista1;
-            public BuildableDefinition Barista2;
+            /// <summary>Hire Barista pads in the order they unlock.</summary>
+            public BuildableDefinition[] Baristas;
+            public BuildableDefinition Cleaner;
+            public BuildableDefinition MoreSeating;
             public BuildableDefinition Seating;
             public BuildableDefinition Cashier;
 
@@ -114,7 +114,6 @@ namespace BubbleTea.EditorTools
                     new[] { 1f, 1.2f, 1.4f, 1.6f, 1.8f }, Scaled(80, 180, 360, 700)),
             };
             GameObject upgradeDesk = BuildUpgradeDeskPrefab();
-            GameObject runner = BuildRunnerPrefab();
             GameObject barista = BuildBaristaPrefab();
 
             return new Content
@@ -124,8 +123,6 @@ namespace BubbleTea.EditorTools
                 ToppingBar = GetOrCreateBuildable("Topping Bar", 150, set.ToppingBar),
                 TaroStation = GetOrCreateBuildable(set.TaroName, 250, set.TaroStation),
                 FruitBar = GetOrCreateBuildable(set.FruitName, 400, set.FruitBar),
-                Runner1 = GetOrCreateBuildable("Hire Runner", 300, runner),
-                Runner2 = GetOrCreateBuildable("Hire Runner 2", 600, runner),
                 // The expansion builds nothing itself; its pad opens the wall and shows the new floor.
                 Expansion = GetOrCreateBuildable("Expand Shop", 1000, null),
                 DriveThru = GetOrCreateBuildable("Drive Thru", 600, driveThru),
@@ -135,8 +132,16 @@ namespace BubbleTea.EditorTools
                 CustomerPrefab = BuildCustomerPrefab(),
                 Menu = menu,
                 Seating = GetOrCreateBuildable("Seating Area", 500, BuildSeatingPrefab(billPrefab)),
-                Barista1 = GetOrCreateBuildable("Hire Barista", 350, barista),
-                Barista2 = GetOrCreateBuildable("Hire Barista 2", 700, barista),
+                MoreSeating = GetOrCreateBuildable("More Seating", 1200, BuildSeatingPrefab(billPrefab)),
+                Baristas = new[]
+                {
+                    GetOrCreateBuildable("Hire Barista", 300, barista),
+                    GetOrCreateBuildable("Hire Barista 2", 600, barista),
+                    GetOrCreateBuildable("Hire Barista 3", 900, barista),
+                    GetOrCreateBuildable("Hire Barista 4", 1300, barista),
+                    GetOrCreateBuildable("Hire Barista 5", 1800, barista),
+                },
+                Cleaner = GetOrCreateBuildable("Hire Cleaner", 400, BuildCleanerPrefab()),
                 Cashier = GetOrCreateBuildable("Hire Cashier", 150, BuildCashierPrefab()),
                 Planter = GetOrCreateBuildable("Planter", 120,
                     BuildDecorPrefab("Planter", new Color(0.42f, 0.73f, 0.47f), new Vector3(1.2f, 1.3f, 1.2f))),
@@ -512,27 +517,6 @@ namespace BubbleTea.EditorTools
         }
 
         // A green helper with an apron-colored marker, carrying one item at a time.
-        private static GameObject BuildRunnerPrefab()
-        {
-            var root = new GameObject("Runner");
-            Material green = GetOrCreateMaterial("Runner", new Color(0.30f, 0.72f, 0.55f));
-            GameObject body = AddPart(root.transform, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.8f, 0f),
-                new Vector3(0.7f, 0.8f, 0.7f), green);
-            AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
-                new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
-            AddCharacterArt("Runner", root, body);
-
-            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.55f));
-            var carrier = root.AddComponent<ItemCarrier>();
-            var serialized = new SerializedObject(carrier);
-            serialized.FindProperty("stack.anchor").objectReferenceValue = hands;
-            serialized.FindProperty("stack.capacity").intValue = 1;
-            serialized.FindProperty("usesCarryUpgrade").boolValue = true; // Carry More lets runners carry more too
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-
-            root.AddComponent<Runner>();
-            return SavePrefab(root, $"{PrefabFolder}/Runner.prefab");
-        }
 
         // Two café tables with two seats each. Seated customers leave a little money in the pile
         // and an empty cup that blocks the seat until someone cleans it.
@@ -553,11 +537,12 @@ namespace BubbleTea.EditorTools
             serializedPile.FindProperty("maxBills").intValue = 40;
             serializedPile.ApplyModifiedPropertiesWithoutUndo();
 
-            for (int t = 0; t < 2; t++)
+            // Four tables in two rows of two, eight seats in all.
+            for (int t = 0; t < 4; t++)
             {
                 GameObject table = BuildStationBody("Table", new Color(0.83f, 0.64f, 0.46f), new Vector3(2.6f, 0.75f, 1.2f), null);
                 table.transform.SetParent(root.transform, false);
-                table.transform.localPosition = new Vector3(t == 0 ? -1.8f : 1.8f, 0f, 0f);
+                table.transform.localPosition = new Vector3(t % 2 == 0 ? -1.8f : 1.8f, 0f, t < 2 ? 0f : 2.8f);
 
                 var seats = new Transform[2];
                 var messes = new GameObject[2];
@@ -611,6 +596,8 @@ namespace BubbleTea.EditorTools
             return SavePrefab(root, $"{PrefabFolder}/Cashier.prefab");
         }
 
+        // A barista: carries drinks and ingredients where they're needed, and helps at the
+        // busiest station when there's nothing to carry.
         private static GameObject BuildBaristaPrefab()
         {
             var root = new GameObject("Barista");
@@ -619,8 +606,32 @@ namespace BubbleTea.EditorTools
             AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
                 new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
             AddCharacterArt("Barista", root, body);
+
+            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.55f));
+            var carrier = root.AddComponent<ItemCarrier>();
+            var serialized = new SerializedObject(carrier);
+            serialized.FindProperty("stack.anchor").objectReferenceValue = hands;
+            serialized.FindProperty("stack.capacity").intValue = 1;
+            serialized.FindProperty("usesCarryUpgrade").boolValue = true; // Carry More lets baristas carry more too
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
             root.AddComponent<Barista>();
             return SavePrefab(root, $"{PrefabFolder}/Barista.prefab");
+        }
+
+        // A cleaner who clears cups off the tables and collects what seated customers left.
+        private static GameObject BuildCleanerPrefab()
+        {
+            var root = new GameObject("Cleaner");
+            GameObject body = AddPart(root.transform, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.8f, 0f),
+                new Vector3(0.7f, 0.8f, 0.7f), GetOrCreateMaterial("Cleaner", new Color(0.45f, 0.75f, 0.85f)));
+            AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
+                new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
+            AddCharacterArt("Cleaner", root, body);
+            Transform hands = AddAnchor(root.transform, "Hands", new Vector3(0f, 0.9f, 0.4f));
+            var cleaner = root.AddComponent<Cleaner>();
+            SetReference(cleaner, "hands", hands);
+            return SavePrefab(root, $"{PrefabFolder}/Cleaner.prefab");
         }
 
         private static Customer BuildCustomerPrefab()
