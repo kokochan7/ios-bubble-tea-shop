@@ -63,6 +63,7 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 4. Stand on the white **Counter** pad. Your money drains into it, and when it's paid off the counter pops up and the next pad (Tea Brewer) appears. That one unlocks the Topping Bar.
 5. Once the Counter is built, customers walk in and line up behind it. Stand in front of the **Tea Brewer** to pick up the milk teas it makes, then stand in front of the **Counter** to drop them off. Each customer takes a drink and pays into the cash pile beside the counter, which you collect like any other cash.
 6. For a pricier drink, drop milk teas at the **Topping Bar** first. It turns them into boba milk tea, which sells for more.
+7. Buying the Counter also reveals the purple **Upgrades** desk. Pay for it, then stand in front of it to buy faster walking, bigger carry stacks, faster brewing and higher drink prices.
 
 Your progress (money and unlocked stations) is saved as you play, so pressing Play again carries on where you stopped. To start over, stop Play and click **Bubble Tea > Delete Save Data**. If you rebuild the scene, delete the save too so the two match.
 
@@ -73,6 +74,7 @@ To add new content without code, right-click in the Project window and use the *
 - **Recipe Step**: what a station turns into what, and how long it takes. Leave the input empty for a station that makes things from nothing.
 - **Drink**: an item customers will buy, and its price. Add it to the counter's menu.
 - **Buildable**: a station's name, unlock price and prefab, for use on an unlock pad.
+- **Upgrade**: a stat it changes, its value at each level, and the price of each level. Add it to the UpgradeManager's list in the scene (and rebuild the scene to get a row for it in the panel).
 
 ## Folder layout
 
@@ -92,6 +94,7 @@ Assets/_Game/
     Cooking/    Ingredients, recipes, drink-making stations
     Customers/  Customer spawning, queueing, paying
     Saving/     Saving and loading progress
+    Upgrades/   Upgrade levels and the upgrade desk
     UI/         HUD, money counter, joystick visuals
 ```
 

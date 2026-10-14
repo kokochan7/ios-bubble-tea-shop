@@ -20,9 +20,10 @@ This is the plan for how the prototype's code fits together. It's written so a n
 | Building | `Scripts/Building` | Unlock pads that drain money and reveal stations | Step 3 |
 | Cooking | `Scripts/Cooking` | Items, recipe steps, drinks, item stacks (including the one the player carries), stations | Step 4 |
 | Customers | `Scripts/Customers` | Spawning, queueing at the counter, buying drinks, dropping cash | Step 4 |
+| Upgrades | `Scripts/Upgrades` | Upgrade levels, buying them, and the zone at the upgrade desk | Milestone 2 |
 | Saving | `Scripts/Saving` | Writing progress to a JSON file and putting it back on start | Milestone 1 |
 
-Dependencies only point one way: Player, Economy, Building, Cooking and Customers may use Core, UI and Saving may read from any of them, but Core never depends on gameplay code.
+Dependencies only point one way: Player, Economy, Building, Cooking and Customers may use Core, Upgrades uses Economy (to pay), UI and Saving may read from any of them, but Core never depends on gameplay code.
 
 ## The core loop as data flow
 
@@ -51,6 +52,10 @@ Because stations only care about "do my inputs match a step I know", new drinks 
 ## Saving (milestone 1)
 
 `SaveManager` is the only script that knows about the save file. Gameplay scripts just expose their state and a way to put it back (`Wallet.SetMoney`, `UnlockPad.Restore`), and raise the events they already had; the save manager listens and decides when to write. Each pad is found in the file by its **Save Id**, so renaming GameObjects never breaks a save. The file has a `version` number so later milestones can add fields and upgrade old saves instead of wiping them.
+
+## Upgrades (milestone 2)
+
+Upgrades never reach into other modules. `UpgradeManager` writes numbers into `Core/Stats` (walking speed multiplier, extra carry slots, brew speed multiplier, price multiplier), and the code that cares reads them: `PlayerMovement`, `ItemCarrier`, `Station` and `ServingCounter`. A new kind of upgrade means a new `StatId` plus one line where it's used; a new level or price is just an edit to the asset.
 
 ## Conventions
 

@@ -1,3 +1,4 @@
+using BubbleTea.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -16,7 +17,7 @@ namespace BubbleTea.Player
         [SerializeField, Tooltip("Camera used to work out which way is 'up' on the stick.")]
         private Transform cameraTransform;
 
-        [SerializeField, Tooltip("Top speed in meters per second.")]
+        [SerializeField, Tooltip("Top speed in meters per second, before upgrades.")]
         private float moveSpeed = 6f;
 
         [SerializeField, Tooltip("How fast the player turns to face where they walk, in degrees per second.")]
@@ -49,7 +50,8 @@ namespace BubbleTea.Player
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -1f;
             verticalVelocity += Physics.gravity.y * Time.deltaTime;
 
-            controller.Move((move * moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+            float speed = moveSpeed * Stats.Get(StatId.MoveSpeed, 1f);
+            controller.Move((move * speed + Vector3.up * verticalVelocity) * Time.deltaTime);
 
             if (move.sqrMagnitude > 0.0001f)
             {

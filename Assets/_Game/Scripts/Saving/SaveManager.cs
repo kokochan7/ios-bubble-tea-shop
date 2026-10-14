@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using BubbleTea.Building;
 using BubbleTea.Economy;
+using BubbleTea.Upgrades;
 using UnityEngine;
 
 namespace BubbleTea.Saving
@@ -23,6 +24,9 @@ namespace BubbleTea.Saving
         [SerializeField, Tooltip("Every unlock pad in the scene, including hidden ones.")]
         private UnlockPad[] pads;
 
+        [SerializeField, Tooltip("The upgrade manager. Leave empty if the scene has no upgrades.")]
+        private UpgradeManager upgradeManager;
+
         [SerializeField, Tooltip("Seconds between saves while money keeps changing.")]
         private float autosaveSeconds = 5f;
 
@@ -40,6 +44,7 @@ namespace BubbleTea.Saving
         private void OnEnable()
         {
             if (wallet != null) wallet.MoneyChanged += OnMoneyChanged;
+            if (upgradeManager != null) upgradeManager.Changed += Save;
             foreach (UnlockPad pad in pads)
             {
                 if (pad == null) continue;
@@ -51,6 +56,7 @@ namespace BubbleTea.Saving
         private void OnDisable()
         {
             if (wallet != null) wallet.MoneyChanged -= OnMoneyChanged;
+            if (upgradeManager != null) upgradeManager.Changed -= Save;
             foreach (UnlockPad pad in pads)
             {
                 if (pad == null) continue;
@@ -97,6 +103,14 @@ namespace BubbleTea.Saving
                 if (pad == null) continue;
                 data.pads.Add(new PadSave { id = pad.SaveId, paid = pad.Paid, unlocked = pad.IsUnlocked });
             }
+            if (upgradeManager != null)
+            {
+                foreach (UpgradeDefinition upgrade in upgradeManager.All)
+                {
+                    if (upgrade == null) continue;
+                    data.upgrades.Add(new UpgradeSave { id = upgrade.name, level = upgradeManager.LevelOf(upgrade) });
+                }
+            }
 
             try
             {
@@ -137,6 +151,16 @@ namespace BubbleTea.Saving
                     Debug.LogWarning($"Bubble Tea: two unlock pads share the save ID '{pad.SaveId}'. Give one a different Save Id.");
                 }
                 if (byId.TryGetValue(pad.SaveId, out PadSave entry)) pad.Restore(entry.paid, entry.unlocked);
+            }
+
+            if (upgradeManager != null && data.upgrades != null)
+            {
+                foreach (UpgradeSave entry in data.upgrades)
+                {
+                    if (entry == null) continue;
+                    UpgradeDefinition upgrade = upgradeManager.Find(entry.id);
+                    if (upgrade != null) upgradeManager.SetLevel(upgrade, entry.level);
+                }
             }
         }
 

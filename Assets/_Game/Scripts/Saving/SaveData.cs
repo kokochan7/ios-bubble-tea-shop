@@ -11,10 +11,13 @@ namespace BubbleTea.Saving
     public class SaveData
     {
         /// <summary>Bumped when the layout changes, so old saves can be upgraded instead of lost.</summary>
-        public int version = 1;
+        public int version = 2;
 
         public int money;
         public List<PadSave> pads = new();
+
+        /// <summary>Added in version 2. Older saves simply load with no upgrades bought.</summary>
+        public List<UpgradeSave> upgrades = new();
     }
 
     /// <summary>One unlock pad's progress.</summary>
@@ -24,5 +27,13 @@ namespace BubbleTea.Saving
         public string id;
         public int paid;
         public bool unlocked;
+    }
+
+    /// <summary>One upgrade's level.</summary>
+    [Serializable]
+    public class UpgradeSave
+    {
+        public string id;
+        public int level;
     }
 }

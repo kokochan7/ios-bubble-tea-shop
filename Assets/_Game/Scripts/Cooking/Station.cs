@@ -1,3 +1,4 @@
+using BubbleTea.Core;
 using UnityEngine;
 
 namespace BubbleTea.Cooking
@@ -39,7 +40,7 @@ namespace BubbleTea.Cooking
             if (current == null && !output.IsFull) current = StartNextStep();
             if (current == null) return;
 
-            workTimer += Time.deltaTime;
+            workTimer += Time.deltaTime * Stats.Get(StatId.BrewSpeed, 1f);
             if (workTimer < current.Seconds) return;
 
             if (current.Output != null)

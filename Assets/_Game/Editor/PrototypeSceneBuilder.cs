@@ -5,6 +5,7 @@ using BubbleTea.Economy;
 using BubbleTea.Player;
 using BubbleTea.Saving;
 using BubbleTea.UI;
+using BubbleTea.Upgrades;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -59,7 +60,7 @@ namespace BubbleTea.EditorTools
 
             GameObject player = CreatePlayer(playerMat, out Wallet wallet);
             Camera camera = CreateCamera(player.transform);
-            VirtualJoystick joystick = CreateHud(wallet);
+            VirtualJoystick joystick = CreateHud(wallet, out Transform hud);
             CreateEventSystem();
 
             SetReference(player.GetComponent<PlayerMovement>(), "joystick", joystick);
@@ -70,7 +71,9 @@ namespace BubbleTea.EditorTools
             ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab);
             UnlockPad[] pads = CreateUnlockPads(content, billPrefab, wallet);
             CreateCustomerSpawner(content.CustomerPrefab);
-            CreateSaveManager(wallet, pads);
+            UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
+            CreateUpgradePanel(hud, upgrades, content.Upgrades);
+            CreateSaveManager(wallet, pads, upgrades);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuild(ScenePath);
@@ -158,7 +161,7 @@ namespace BubbleTea.EditorTools
             return camera;
         }
 
-        private static VirtualJoystick CreateHud(Wallet wallet)
+        private static VirtualJoystick CreateHud(Wallet wallet, out Transform hud)
         {
             var canvasGo = new GameObject("HUD", typeof(RectTransform));
             var canvas = canvasGo.AddComponent<Canvas>();
@@ -168,6 +171,7 @@ namespace BubbleTea.EditorTools
             scaler.referenceResolution = new Vector2(1080f, 1920f);
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
+            hud = canvasGo.transform;
 
             Sprite circle = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
             Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
@@ -271,33 +275,147 @@ namespace BubbleTea.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        // Three pads in a chain: buying the counter reveals the tea brewer, which reveals the topping bar.
+        // Pads in a chain: buying the counter reveals the tea brewer and the upgrade desk,
+        // and the tea brewer reveals the topping bar.
         private static UnlockPad[] CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet)
         {
             Material padMat = GetOrCreateMaterial("UnlockPad", new Color(0.97f, 0.97f, 0.97f));
 
-            UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat, null);
+            UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat);
             UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad);
-            UnlockPad counterPad = CreatePad(content.Counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat, brewerPad);
+            UnlockPad upgradePad = CreatePad(content.UpgradeDesk, new Vector3(9f, 0f, 1f), billPrefab, wallet, padMat);
+            UnlockPad counterPad = CreatePad(content.Counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat,
+                brewerPad, upgradePad);
 
             // Only the first pad is visible at the start.
             toppingPad.gameObject.SetActive(false);
             brewerPad.gameObject.SetActive(false);
-            return new[] { counterPad, brewerPad, toppingPad };
+            upgradePad.gameObject.SetActive(false);
+            return new[] { counterPad, brewerPad, toppingPad, upgradePad };
         }
 
         // Loads progress on Play and keeps saving it. Delete it with Bubble Tea > Delete Save Data.
-        private static void CreateSaveManager(Wallet wallet, UnlockPad[] pads)
+        private static void CreateSaveManager(Wallet wallet, UnlockPad[] pads, UpgradeManager upgrades)
         {
             var go = new GameObject("SaveManager");
             var saveManager = go.AddComponent<SaveManager>();
             SetReference(saveManager, "wallet", wallet);
+            SetReference(saveManager, "upgradeManager", upgrades);
 
             var serialized = new SerializedObject(saveManager);
             SerializedProperty list = serialized.FindProperty("pads");
             list.arraySize = pads.Length;
             for (int i = 0; i < pads.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = pads[i];
             serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static UpgradeManager CreateUpgradeManager(Wallet wallet, UpgradeDefinition[] upgrades)
+        {
+            var go = new GameObject("UpgradeManager");
+            var manager = go.AddComponent<UpgradeManager>();
+            SetReference(manager, "wallet", wallet);
+
+            var serialized = new SerializedObject(manager);
+            SerializedProperty list = serialized.FindProperty("upgrades");
+            list.arraySize = upgrades.Length;
+            for (int i = 0; i < upgrades.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = upgrades[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return manager;
+        }
+
+        // A panel along the bottom of the screen with one row per upgrade. It's created
+        // after the joystick so its buttons sit on top and get taps first.
+        private static void CreateUpgradePanel(Transform hud, UpgradeManager manager, UpgradeDefinition[] upgrades)
+        {
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            const float rowHeight = 130f;
+            const float titleHeight = 110f;
+
+            RectTransform root = CreateUiObject("Upgrades", hud);
+            Stretch(root);
+            var panelSwitch = root.gameObject.AddComponent<UpgradePanel>();
+
+            RectTransform panel = CreateUiObject("Panel", root);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0f);
+            panel.pivot = new Vector2(0.5f, 0f);
+            panel.anchoredPosition = new Vector2(0f, 60f);
+            panel.sizeDelta = new Vector2(960f, titleHeight + rowHeight * upgrades.Length + 30f);
+            var panelImage = panel.gameObject.AddComponent<Image>();
+            panelImage.sprite = rounded;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.9f);
+            SetReference(panelSwitch, "panel", panel.gameObject);
+
+            Text title = CreateHudText("Title", panel, font, 56, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 0f, titleHeight, 0f, 0f);
+            title.text = "UPGRADES";
+
+            for (int i = 0; i < upgrades.Length; i++)
+            {
+                RectTransform row = CreateUiObject(upgrades[i].DisplayName, panel);
+                SetTopRow(row, titleHeight + i * rowHeight, rowHeight, 40f, 40f);
+
+                Text nameLabel = CreateHudText("Name", row, font, 46, TextAnchor.MiddleLeft);
+                SetColumn(nameLabel.rectTransform, 0f, 0.5f);
+                Text levelLabel = CreateHudText("Level", row, font, 40, TextAnchor.MiddleCenter);
+                SetColumn(levelLabel.rectTransform, 0.5f, 0.68f);
+
+                RectTransform buttonRect = CreateUiObject("Buy", row);
+                SetColumn(buttonRect, 0.7f, 1f);
+                buttonRect.offsetMin = new Vector2(0f, 15f);
+                buttonRect.offsetMax = new Vector2(0f, -15f);
+                var buttonImage = buttonRect.gameObject.AddComponent<Image>();
+                buttonImage.sprite = rounded;
+                buttonImage.type = Image.Type.Sliced;
+                buttonImage.color = new Color(0.35f, 0.78f, 0.38f);
+                var button = buttonRect.gameObject.AddComponent<Button>();
+                button.targetGraphic = buttonImage;
+
+                Text priceLabel = CreateHudText("Price", buttonRect, font, 44, TextAnchor.MiddleCenter);
+                Stretch(priceLabel.rectTransform);
+
+                var view = row.gameObject.AddComponent<UpgradeRow>();
+                SetReference(view, "manager", manager);
+                SetReference(view, "upgrade", upgrades[i]);
+                SetReference(view, "nameLabel", nameLabel);
+                SetReference(view, "levelLabel", levelLabel);
+                SetReference(view, "buyButton", button);
+                SetReference(view, "priceLabel", priceLabel);
+            }
+        }
+
+        private static Text CreateHudText(string name, Transform parent, Font font, int size, TextAnchor alignment)
+        {
+            RectTransform rect = CreateUiObject(name, parent);
+            var text = rect.gameObject.AddComponent<Text>();
+            text.font = font;
+            text.fontSize = size;
+            text.fontStyle = FontStyle.Bold;
+            text.alignment = alignment;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.color = Color.white;
+            text.raycastTarget = false;
+            return text;
+        }
+
+        // Stretches across the parent's width, at a fixed distance from its top edge.
+        private static void SetTopRow(RectTransform rect, float top, float height, float left, float right)
+        {
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.offsetMin = new Vector2(left, -top - height);
+            rect.offsetMax = new Vector2(-right, -top);
+        }
+
+        // Fills the parent's height, between two fractions of its width.
+        private static void SetColumn(RectTransform rect, float from, float to)
+        {
+            rect.anchorMin = new Vector2(from, 0f);
+            rect.anchorMax = new Vector2(to, 1f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
 
         // Customers walk in from the bottom-left, queue behind the counter, and leave to the left.
@@ -314,7 +432,7 @@ namespace BubbleTea.EditorTools
         }
 
         private static UnlockPad CreatePad(BuildableDefinition definition, Vector3 position, CashBill billPrefab,
-            Wallet wallet, Material material, UnlockPad next)
+            Wallet wallet, Material material, params UnlockPad[] next)
         {
             var go = new GameObject($"UnlockPad - {definition.DisplayName}");
             go.transform.position = position;
@@ -334,12 +452,12 @@ namespace BubbleTea.EditorTools
             var serializedPad = new SerializedObject(pad);
             serializedPad.FindProperty("saveId").stringValue = definition.name;
             serializedPad.ApplyModifiedPropertiesWithoutUndo();
-            if (next != null)
+            if (next.Length > 0)
             {
                 var serialized = new SerializedObject(pad);
                 SerializedProperty list = serialized.FindProperty("unlocksNext");
-                list.arraySize = 1;
-                list.GetArrayElementAtIndex(0).objectReferenceValue = next;
+                list.arraySize = next.Length;
+                for (int i = 0; i < next.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = next[i];
                 serialized.ApplyModifiedPropertiesWithoutUndo();
             }
 
