@@ -34,6 +34,12 @@ namespace BubbleTea.Core
         /// <summary>A customer ran out of patience and left without buying.</summary>
         public static event Action<Vector3> CustomerLeftUpset;
 
+        /// <summary>The number of messy café seats changed.</summary>
+        public static event Action<int> MessChanged;
+
+        /// <summary>Someone cleaned a table (position of the cleared cup).</summary>
+        public static event Action<Vector3> TableCleaned;
+
         /// <summary>An upgrade level was bought.</summary>
         public static event Action UpgradeBought;
 
@@ -48,6 +54,8 @@ namespace BubbleTea.Core
         public static void RaiseDrinkServed(string itemId) => DrinkServed?.Invoke(itemId);
         public static void RaiseTipped(Vector3 position, int amount) => Tipped?.Invoke(position, amount);
         public static void RaiseCustomerLeftUpset(Vector3 position) => CustomerLeftUpset?.Invoke(position);
+        public static void RaiseMessChanged(int messes) => MessChanged?.Invoke(messes);
+        public static void RaiseTableCleaned(Vector3 position) => TableCleaned?.Invoke(position);
         public static void RaiseUpgradeBought() => UpgradeBought?.Invoke();
         public static void RaiseBonusCollected() => BonusCollected?.Invoke();
 
@@ -62,6 +70,8 @@ namespace BubbleTea.Core
             Tipped = null;
             DrinkServed = null;
             CustomerServed = null;
+            MessChanged = null;
+            TableCleaned = null;
             CustomerLeftUpset = null;
             UpgradeBought = null;
             BonusCollected = null;

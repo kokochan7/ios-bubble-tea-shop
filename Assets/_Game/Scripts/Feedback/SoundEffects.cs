@@ -68,6 +68,7 @@ namespace BubbleTea.Feedback
             GameEvents.BonusCollected += OnBonus;
             GameEvents.Tipped += OnTip;
             GameEvents.CustomerLeftUpset += OnUpset;
+            GameEvents.TableCleaned += OnCleaned;
         }
 
         private void OnDisable()
@@ -80,6 +81,7 @@ namespace BubbleTea.Feedback
             GameEvents.BonusCollected -= OnBonus;
             GameEvents.Tipped -= OnTip;
             GameEvents.CustomerLeftUpset -= OnUpset;
+            GameEvents.TableCleaned -= OnCleaned;
         }
 
         private void OnCash(Vector3 _)
@@ -103,6 +105,7 @@ namespace BubbleTea.Feedback
         private void OnBonus() => Play(unlockClip, 1f, 1f);
         private void OnTip(Vector3 _, int amount) => Play(tipClip, 1f, 0.7f);
         private void OnUpset(Vector3 _) => Play(upsetClip, 1f, 0.8f);
+        private void OnCleaned(Vector3 _) => Play(tipClip, 0.8f, 0.6f);
 
         private void Play(AudioClip clip, float pitch, float loudness)
         {

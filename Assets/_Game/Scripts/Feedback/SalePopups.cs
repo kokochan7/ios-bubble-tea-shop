@@ -26,6 +26,9 @@ namespace BubbleTea.Feedback
         [SerializeField, Tooltip("Color of the label when a customer walks out.")]
         private Color upsetColor = new(0.9f, 0.3f, 0.3f);
 
+        [SerializeField, Tooltip("Color of the label when a table is cleaned.")]
+        private Color cleanColor = new(0.35f, 0.7f, 0.95f);
+
         private class Popup
         {
             public TextMesh Text;
@@ -43,6 +46,7 @@ namespace BubbleTea.Feedback
             GameEvents.DrinkSold += OnSale;
             GameEvents.Tipped += OnTip;
             GameEvents.CustomerLeftUpset += OnUpset;
+            GameEvents.TableCleaned += OnCleaned;
         }
 
         private void OnDisable()
@@ -50,11 +54,13 @@ namespace BubbleTea.Feedback
             GameEvents.DrinkSold -= OnSale;
             GameEvents.Tipped -= OnTip;
             GameEvents.CustomerLeftUpset -= OnUpset;
+            GameEvents.TableCleaned -= OnCleaned;
         }
 
         private void OnSale(Vector3 position, int amount) => Show(position, "+$" + amount.ToString("N0"), color, 1.6f);
         private void OnTip(Vector3 position, int amount) => Show(position, "TIP!", tipColor, 2.3f);
         private void OnUpset(Vector3 position) => Show(position, "Too slow!", upsetColor, 2.4f);
+        private void OnCleaned(Vector3 position) => Show(position, "Clean!", cleanColor, 0.8f);
 
         private void Show(Vector3 position, string label, Color labelColor, float height)
         {

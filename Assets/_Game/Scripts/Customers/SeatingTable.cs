@@ -1,0 +1,124 @@
+using System.Collections.Generic;
+using BubbleTea.Cooking;
+using BubbleTea.Core;
+using BubbleTea.Economy;
+using UnityEngine;
+
+namespace BubbleTea.Customers
+{
+    /// <summary>
+    /// A café table with seats. After buying, some customers sit here for a while, leave a
+    /// little extra money and an empty cup behind. A seat with a mess on it can't be used until
+    /// someone walks up to the table to clean it, and messy tables lower the shop rating.
+    /// </summary>
+    public class SeatingTable : MonoBehaviour
+    {
+        private static readonly List<SeatingTable> active = new();
+
+        [SerializeField, Tooltip("Where each customer sits. Their forward direction should face the table.")]
+        private Transform[] seats;
+
+        [SerializeField, Tooltip("The empty cup left on the table, one per seat (same order as the seats).")]
+        private GameObject[] messes;
+
+        [SerializeField, Tooltip("Stand here to clean the table.")]
+        private HandoffZone zone = new();
+
+        [SerializeField, Tooltip("Where the extra money from seated customers piles up.")]
+        private CashPile cashPile;
+
+        [SerializeField, Min(0), Tooltip("Extra money a seated customer leaves.")]
+        private int bonusPerVisit = 6;
+
+        private Customer[] occupants;
+
+        /// <summary>Messy seats in the whole shop.</summary>
+        public static int MessCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (SeatingTable table in active) count += table.Messes;
+                return count;
+            }
+        }
+
+        private int Messes
+        {
+            get
+            {
+                int count = 0;
+                foreach (GameObject mess in messes) if (mess != null && mess.activeSelf) count++;
+                return count;
+            }
+        }
+
+        private void Awake() => occupants = new Customer[seats.Length];
+
+        private void OnEnable()
+        {
+            active.Add(this);
+            foreach (GameObject mess in messes) if (mess != null) mess.SetActive(false);
+            GameEvents.RaiseMessChanged(MessCount);
+        }
+
+        private void OnDisable()
+        {
+            active.Remove(this);
+            GameEvents.RaiseMessChanged(MessCount);
+        }
+
+        private void Update() => zone.Tick(transform, Clean);
+
+        /// <summary>Finds a clean, empty seat anywhere in the shop and holds it for the customer.</summary>
+        public static bool TryReserve(Customer customer, out SeatingTable table, out int seat)
+        {
+            foreach (SeatingTable candidate in active)
+            {
+                for (int i = 0; i < candidate.seats.Length; i++)
+                {
+                    if (candidate.occupants[i] != null || candidate.IsMessy(i)) continue;
+                    candidate.occupants[i] = customer;
+                    table = candidate;
+                    seat = i;
+                    return true;
+                }
+            }
+            table = null;
+            seat = -1;
+            return false;
+        }
+
+        public Transform Seat(int seat) => seats[seat];
+
+        /// <summary>The customer got up. Pays the bonus and leaves a mess if they actually sat down.</summary>
+        public void Leave(int seat, bool sat)
+        {
+            if (seat < 0 || seat >= seats.Length) return;
+            occupants[seat] = null;
+            if (!sat) return;
+
+            if (cashPile != null) cashPile.AddValue(bonusPerVisit);
+            if (seat < messes.Length && messes[seat] != null) messes[seat].SetActive(true);
+            GameEvents.RaiseMessChanged(MessCount);
+        }
+
+        private bool IsMessy(int seat) => seat < messes.Length && messes[seat] != null && messes[seat].activeSelf;
+
+        // Anyone standing at the table clears one empty seat's mess at a time.
+        private bool Clean(ItemCarrier carrier)
+        {
+            for (int i = 0; i < seats.Length; i++)
+            {
+                if (!IsMessy(i) || occupants[i] != null) continue;
+                messes[i].SetActive(false);
+                GameEvents.RaiseTableCleaned(messes[i].transform.position);
+                GameEvents.RaiseMessChanged(MessCount);
+                return true;
+            }
+            return false;
+        }
+
+        private void OnDrawGizmosSelected() => zone.DrawGizmo(transform);
+    }
+}

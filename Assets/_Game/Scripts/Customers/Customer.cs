@@ -47,6 +47,18 @@ namespace BubbleTea.Customers
         [SerializeField, Range(0f, 2f), Tooltip("Small tip, as a share of the drink's price.")]
         private float smallTip = 0.2f;
 
+        [SerializeField, Tooltip("Whether this customer can sit at a café table after buying (cars can't).")]
+        private bool canSit = true;
+
+        [SerializeField, Range(0f, 1f), Tooltip("Chance a customer sits down if a clean seat is free.")]
+        private float sitChance = 0.6f;
+
+        [SerializeField, Tooltip("Seconds a customer sits, picked between these two.")]
+        private Vector2 sitSeconds = new(5f, 9f);
+
+        [SerializeField, Tooltip("How far the customer sinks while sitting, so they look seated.")]
+        private float sitDrop = 0.35f;
+
         [SerializeField, Tooltip("A light next to the order that shows the customer's mood. Optional.")]
         private Renderer moodLight;
 
@@ -56,7 +68,7 @@ namespace BubbleTea.Customers
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
-        private enum State { Queueing, Leaving }
+        private enum State { Queueing, ToSeat, Sitting, Leaving }
 
         private ServingCounter counter;
         private Vector3 exit;
@@ -65,6 +77,9 @@ namespace BubbleTea.Customers
         private float waitTimer;
         private float waited;
         private MaterialPropertyBlock moodBlock;
+        private SeatingTable table;
+        private int seat = -1;
+        private float sitTimer;
 
         /// <summary>The drink this customer wants.</summary>
         public DrinkRecipe Order { get; private set; }
@@ -104,8 +119,53 @@ namespace BubbleTea.Customers
 
         private void Update()
         {
-            if (state == State.Queueing) Queue();
-            else if (WalkTo(exit)) Leave();
+            switch (state)
+            {
+                case State.Queueing:
+                    Queue();
+                    break;
+                case State.ToSeat:
+                    GoToSeat();
+                    break;
+                case State.Sitting:
+                    Sit();
+                    break;
+                default:
+                    if (WalkTo(exit)) Leave();
+                    break;
+            }
+        }
+
+        private void GoToSeat()
+        {
+            if (table == null)
+            {
+                state = State.Leaving;
+                return;
+            }
+            Transform spot = table.Seat(seat);
+            if (!WalkTo(spot.position)) return;
+
+            transform.SetPositionAndRotation(spot.position + Vector3.down * sitDrop, spot.rotation);
+            sitTimer = UnityEngine.Random.Range(sitSeconds.x, sitSeconds.y);
+            state = State.Sitting;
+        }
+
+        private void Sit()
+        {
+            sitTimer -= Time.deltaTime;
+            if (sitTimer > 0f) return;
+
+            transform.position += Vector3.up * sitDrop;
+            StandUp(true);
+            state = State.Leaving;
+        }
+
+        private void StandUp(bool sat)
+        {
+            if (table != null) table.Leave(seat, sat);
+            table = null;
+            seat = -1;
         }
 
         private void Queue()
@@ -143,6 +203,7 @@ namespace BubbleTea.Customers
             drink.MoveTo(transform, drinkHoldPosition);
             GameEvents.RaiseCustomerServed(transform.position, Mood);
             StopWaiting();
+            if (canSit && UnityEngine.Random.value < sitChance && SeatingTable.TryReserve(this, out table, out seat)) state = State.ToSeat;
         }
 
         // How generous this customer is right now, as a share of the price.
@@ -204,6 +265,7 @@ namespace BubbleTea.Customers
 
         private void OnDestroy()
         {
+            StandUp(false);
             if (counter != null) counter.LeaveQueue(this);
         }
     }

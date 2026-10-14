@@ -8,6 +8,7 @@ namespace BubbleTea.Rating
     /// <summary>
     /// The shop's star rating, from 1 to 5. Half comes from service (happy customers raise it,
     /// customers who walk out lower it) and half from how built-up and decorated the shop is.
+    /// Messy café tables take stars away until they're cleaned.
     /// More stars bring customers more often and let more of them line up.
     /// </summary>
     public class ShopRating : MonoBehaviour
@@ -29,6 +30,12 @@ namespace BubbleTea.Rating
         [SerializeField, Range(0.01f, 0.5f), Tooltip("How much one customer walking out lowers the service score.")]
         private float walkoutWeight = 0.12f;
 
+        [SerializeField, Tooltip("Stars lost for each messy café seat.")]
+        private float starsPerMess = 0.25f;
+
+        [SerializeField, Tooltip("Most stars messy tables can cost.")]
+        private float maxMessPenalty = 1.5f;
+
         [SerializeField, Tooltip("Customers arrive this many times faster at 5 stars than at 1 star.")]
         private float maxRateBoost = 2f;
 
@@ -36,6 +43,7 @@ namespace BubbleTea.Rating
         private int maxExtraCustomers = 2;
 
         private float service = 0.5f;
+        private int messes;
         private float stars = -1f;
 
         /// <summary>Stars from 1 to 5, to one decimal place.</summary>
@@ -51,6 +59,7 @@ namespace BubbleTea.Rating
         {
             GameEvents.CustomerServed += OnServed;
             GameEvents.CustomerLeftUpset += OnWalkout;
+            GameEvents.MessChanged += OnMessChanged;
             foreach (RatedPad entry in pads)
             {
                 if (entry.pad != null) entry.pad.Unlocked += OnUnlocked;
@@ -61,6 +70,7 @@ namespace BubbleTea.Rating
         {
             GameEvents.CustomerServed -= OnServed;
             GameEvents.CustomerLeftUpset -= OnWalkout;
+            GameEvents.MessChanged -= OnMessChanged;
             foreach (RatedPad entry in pads)
             {
                 if (entry.pad != null) entry.pad.Unlocked -= OnUnlocked;
@@ -90,6 +100,12 @@ namespace BubbleTea.Rating
 
         private void OnUnlocked(UnlockPad _) => Recalculate();
 
+        private void OnMessChanged(int count)
+        {
+            messes = count;
+            Recalculate();
+        }
+
         /// <summary>0 to 1: share of the shop's rating points that have been bought.</summary>
         public float Decor
         {
@@ -108,7 +124,8 @@ namespace BubbleTea.Rating
 
         private void Recalculate()
         {
-            float value = Mathf.Round((1f + 2f * service + 2f * Decor) * 10f) / 10f;
+            float penalty = Mathf.Min(maxMessPenalty, messes * starsPerMess);
+            float value = Mathf.Round(Mathf.Max(1f, 1f + 2f * service + 2f * Decor - penalty) * 10f) / 10f;
             if (Mathf.Approximately(value, stars)) return;
             stars = value;
 

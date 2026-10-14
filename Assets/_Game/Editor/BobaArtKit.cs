@@ -98,6 +98,7 @@ namespace BubbleTea.EditorTools
             models["Planter"] = plant;
             models["MenuBoard"] = Save("MenuBoard", BuildMenuBoard());
             models["Statue"] = Save("BobaStatue", BuildBobaStatue());
+            models["Table"] = Save("CafeTable", BuildCafeTable());
 
             // Free plants in the corners; the menu board and statue are bought on pads.
             var decorations = new List<GameObject> { plant };
@@ -454,6 +455,31 @@ namespace BubbleTea.EditorTools
                     Sphere(face, "Dot", new Vector3(-0.18f, y, 0.032f), new Vector3(0.09f, 0.09f, 0.01f), drinks[i]);
                     Box(face, "Line", new Vector3(0.07f, y, 0.032f), new Vector3(0.3f, 0.025f, 0.005f), Palette.Cream);
                 }
+            }
+            return root.gameObject;
+        }
+
+        // A round café table with a pink chair and a mint chair, 2.6 m wide.
+        private static GameObject BuildCafeTable()
+        {
+            var root = new GameObject("CafeTable").transform;
+            Cylinder(root, "Base", new Vector3(0f, 0.02f, 0f), 0.3f, 0.04f, Palette.DarkWood);
+            Cylinder(root, "Stem", new Vector3(0f, 0.38f, 0f), 0.05f, 0.68f, Palette.Steel);
+            Cylinder(root, "Top", new Vector3(0f, 0.72f, 0f), 0.58f, 0.06f, Palette.Wood);
+            Cylinder(root, "Edge", new Vector3(0f, 0.69f, 0f), 0.59f, 0.02f, Palette.Cream);
+
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Color seatColor = side < 0 ? Palette.Blush : Palette.Mint;
+                float x = side * 1f;
+                Cylinder(root, "Seat", new Vector3(x, 0.45f, 0f), 0.26f, 0.07f, seatColor);
+                for (int leg = 0; leg < 4; leg++)
+                {
+                    float angle = leg * Mathf.PI * 0.5f + Mathf.PI * 0.25f;
+                    Cylinder(root, "Leg", new Vector3(x + Mathf.Cos(angle) * 0.17f, 0.21f, Mathf.Sin(angle) * 0.17f), 0.025f, 0.42f, Palette.Steel);
+                }
+                Box(root, "Back", new Vector3(side * 1.24f, 0.74f, 0f), new Vector3(0.06f, 0.42f, 0.48f), seatColor);
+                Box(root, "BackPost", new Vector3(side * 1.24f, 0.55f, 0f), new Vector3(0.04f, 0.2f, 0.08f), Palette.Steel);
             }
             return root.gameObject;
         }

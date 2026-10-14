@@ -87,6 +87,10 @@ Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-
 
 `Staff/Barista` scores each `Station` by the drinks waiting customers ordered (`ServingCounter.QueuedOrders`): 2 per drink it makes, 1 per drink made from its output. They stand behind the best unclaimed station and call `Station.AddBarista`, which speeds it up by `baristaSpeedBonus` per barista.
 
+## Seating (milestone 11)
+
+`Customers/SeatingTable` holds seats and a mess object per seat. After buying, a `Customer` may reserve a clean seat (`TryReserve`), sit, then `Leave`, which pays into the area's `CashPile` and shows the mess. Anyone in the table's `HandoffZone` cleans one mess at a time. `GameEvents.MessChanged` lets `ShopRating` take stars off for messy seats.
+
 ## Customer moods (milestone 11)
 
 `Customer` tracks how long it has waited against `patienceSeconds` and shows it on a mood light with a MaterialPropertyBlock. `ServingCounter.TrySell` takes a tip share from the customer and raises `GameEvents.Tipped`; a customer out of patience raises `GameEvents.CustomerLeftUpset` and leaves. `PickOrder` gives a new customer any drink left on the counter by someone who walked out.

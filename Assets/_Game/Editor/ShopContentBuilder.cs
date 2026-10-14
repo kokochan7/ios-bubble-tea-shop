@@ -43,6 +43,7 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition Statue;
             public BuildableDefinition Barista1;
             public BuildableDefinition Barista2;
+            public BuildableDefinition Seating;
         }
 
         internal static Content Build(CashBill billPrefab)
@@ -120,6 +121,7 @@ namespace BubbleTea.EditorTools
                 Upgrades = upgrades,
                 CustomerPrefab = BuildCustomerPrefab(),
                 Menu = menu,
+                Seating = GetOrCreateBuildable("Seating Area", 500, BuildSeatingPrefab(billPrefab)),
                 Barista1 = GetOrCreateBuildable("Hire Barista", 350, barista),
                 Barista2 = GetOrCreateBuildable("Hire Barista 2", 700, barista),
                 Planter = GetOrCreateBuildable("Planter", 120,
@@ -372,6 +374,67 @@ namespace BubbleTea.EditorTools
             return SavePrefab(root, $"{PrefabFolder}/Runner.prefab");
         }
 
+        // Two café tables with two seats each. Seated customers leave a little money in the pile
+        // and an empty cup that blocks the seat until someone cleans it.
+        private static GameObject BuildSeatingPrefab(CashBill billPrefab)
+        {
+            var root = new GameObject("SeatingArea");
+            Material cup = GetOrCreateMaterial("EmptyCup", new Color(0.97f, 0.97f, 0.95f));
+            Material straw = GetOrCreateMaterial("Straw", new Color(0.95f, 0.45f, 0.55f));
+
+            var cashGo = new GameObject("CashPile");
+            cashGo.transform.SetParent(root.transform, false);
+            cashGo.transform.localPosition = new Vector3(0f, 0f, -1.5f);
+            var cashPile = cashGo.AddComponent<CashPile>();
+            var serializedPile = new SerializedObject(cashPile);
+            serializedPile.FindProperty("billPrefab").objectReferenceValue = billPrefab;
+            serializedPile.FindProperty("valuePerBill").intValue = 1;
+            serializedPile.FindProperty("startingBills").intValue = 0;
+            serializedPile.FindProperty("maxBills").intValue = 40;
+            serializedPile.ApplyModifiedPropertiesWithoutUndo();
+
+            for (int t = 0; t < 2; t++)
+            {
+                GameObject table = BuildStationBody("Table", new Color(0.83f, 0.64f, 0.46f), new Vector3(2.6f, 0.75f, 1.2f), null);
+                table.transform.SetParent(root.transform, false);
+                table.transform.localPosition = new Vector3(t == 0 ? -1.8f : 1.8f, 0f, 0f);
+
+                var seats = new Transform[2];
+                var messes = new GameObject[2];
+                for (int s = 0; s < 2; s++)
+                {
+                    float side = s == 0 ? -1f : 1f;
+                    seats[s] = AddAnchor(table.transform, "Seat", new Vector3(side * 1f, 0f, 0f));
+                    seats[s].localRotation = Quaternion.Euler(0f, side > 0f ? -90f : 90f, 0f);
+
+                    // An empty cup with its straw, left behind when a customer leaves.
+                    Transform mess = AddAnchor(table.transform, "Mess", new Vector3(side * 0.3f, 0.75f, 0.1f));
+                    AddPart(mess, PrimitiveType.Cylinder, "Cup", new Vector3(0f, 0.09f, 0f), new Vector3(0.16f, 0.09f, 0.16f), cup);
+                    GameObject strawPart = AddPart(mess, PrimitiveType.Cube, "Straw", new Vector3(0.02f, 0.22f, 0f),
+                        new Vector3(0.02f, 0.12f, 0.02f), straw);
+                    strawPart.transform.localRotation = Quaternion.Euler(0f, 0f, -20f);
+                    messes[s] = mess.gameObject;
+                }
+
+                var seating = table.AddComponent<SeatingTable>();
+                var serialized = new SerializedObject(seating);
+                SerializedProperty seatList = serialized.FindProperty("seats");
+                SerializedProperty messList = serialized.FindProperty("messes");
+                seatList.arraySize = 2;
+                messList.arraySize = 2;
+                for (int s = 0; s < 2; s++)
+                {
+                    seatList.GetArrayElementAtIndex(s).objectReferenceValue = seats[s];
+                    messList.GetArrayElementAtIndex(s).objectReferenceValue = messes[s];
+                }
+                serialized.FindProperty("zone.offset").vector3Value = Vector3.zero;
+                serialized.FindProperty("zone.halfSize").floatValue = 1.8f;
+                serialized.FindProperty("cashPile").objectReferenceValue = cashPile;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+            }
+            return SavePrefab(root, $"{PrefabFolder}/Decor/SeatingArea.prefab");
+        }
+
         // A lavender barista who stands behind the busiest station and speeds it up.
         private static GameObject BuildBaristaPrefab()
         {
@@ -438,6 +501,7 @@ namespace BubbleTea.EditorTools
             var customer = root.AddComponent<Customer>();
             var serialized = new SerializedObject(customer);
             serialized.FindProperty("speed").floatValue = 5f;
+            serialized.FindProperty("canSit").boolValue = false;
             serialized.FindProperty("drinkHoldPosition").vector3Value = new Vector3(0.9f, 1f, 0.4f);
             serialized.FindProperty("orderBubble").objectReferenceValue = bubble;
             serialized.FindProperty("moodLight").objectReferenceValue = AddMoodLight(bubble);

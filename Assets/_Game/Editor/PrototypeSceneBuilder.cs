@@ -416,7 +416,9 @@ namespace BubbleTea.EditorTools
             UnlockPad runner1Pad = CreatePad(content.Runner1, new Vector3(-10f, 0f, 0f), billPrefab, wallet, padMat, runner2Pad);
             UnlockPad statuePad = CreatePad(content.Statue, new Vector3(-11f, 0f, -9f), billPrefab, wallet, padMat);
             UnlockPad menuBoardPad = CreatePad(content.MenuBoard, new Vector3(3f, 0f, 9f), billPrefab, wallet, padMat, statuePad);
-            UnlockPad planterPad = CreatePad(content.Planter, new Vector3(-3f, 0f, 9f), billPrefab, wallet, padMat, menuBoardPad);
+            UnlockPad seatingPad = CreatePad(content.Seating, new Vector3(6f, 0f, 6f), billPrefab, wallet, padMat);
+            UnlockPad planterPad = CreatePad(content.Planter, new Vector3(-3f, 0f, 9f), billPrefab, wallet, padMat, menuBoardPad,
+                seatingPad);
             UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat,
                 taroPad, runner1Pad, planterPad);
             UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad);
@@ -436,6 +438,7 @@ namespace BubbleTea.EditorTools
             driveThruPad.gameObject.SetActive(false);
             planterPad.gameObject.SetActive(false);
             barista1Pad.gameObject.SetActive(false);
+            seatingPad.gameObject.SetActive(false);
             barista2Pad.gameObject.SetActive(false);
             menuBoardPad.gameObject.SetActive(false);
             statuePad.gameObject.SetActive(false);
@@ -443,6 +446,7 @@ namespace BubbleTea.EditorTools
             {
                 counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad, runner1Pad, runner2Pad,
                 expansionPad, driveThruPad, planterPad, menuBoardPad, statuePad, barista1Pad, barista2Pad,
+                seatingPad,
             };
         }
 
@@ -596,7 +600,8 @@ namespace BubbleTea.EditorTools
             {
                 BuildableDefinition definition = pads[i].Definition;
                 int points = definition == content.Statue ? 3
-                    : definition == content.Planter || definition == content.MenuBoard || definition == content.Expansion ||
+                    : definition == content.Planter || definition == content.MenuBoard || definition == content.Seating ||
+                      definition == content.Expansion ||
                       definition == content.DriveThru ? 2
                     : 1;
                 SerializedProperty entry = list.GetArrayElementAtIndex(i);
