@@ -1,4 +1,6 @@
 using BubbleTea.Building;
+using BubbleTea.Cooking;
+using BubbleTea.Customers;
 using BubbleTea.Economy;
 using BubbleTea.Player;
 using BubbleTea.UI;
@@ -22,8 +24,6 @@ namespace BubbleTea.EditorTools
         private const string ScenePath = "Assets/_Game/Scenes/Prototype.unity";
         private const string PrefabFolder = "Assets/_Game/Prefabs";
         private const string MaterialFolder = "Assets/_Game/Materials";
-        private const string DataFolder = "Assets/_Game/Data";
-        private const string StationPrefabFolder = "Assets/_Game/Prefabs/Stations";
 
         private static readonly Vector3[] CashPilePositions =
         {
@@ -66,7 +66,9 @@ namespace BubbleTea.EditorTools
 
             CashPile[] piles = CreateCashPiles(billPrefab, padMat);
             CreateRefiller(piles);
-            CreateUnlockPads(billPrefab, wallet);
+            ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab);
+            CreateUnlockPads(content, billPrefab, wallet);
+            CreateCustomerSpawner(content.CustomerPrefab);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuild(ScenePath);
@@ -123,6 +125,16 @@ namespace BubbleTea.EditorTools
             wallet = player.AddComponent<Wallet>();
             var collector = player.AddComponent<CashCollector>();
             SetReference(collector, "wallet", wallet);
+
+            // Items the player carries pile up in front of them.
+            var hands = new GameObject("HandStack").transform;
+            hands.SetParent(player.transform, false);
+            hands.localPosition = new Vector3(0f, 0.1f, 0.7f);
+            var carrier = player.AddComponent<ItemCarrier>();
+            var serializedCarrier = new SerializedObject(carrier);
+            serializedCarrier.FindProperty("stack.anchor").objectReferenceValue = hands;
+            serializedCarrier.FindProperty("stack.capacity").intValue = 6;
+            serializedCarrier.ApplyModifiedPropertiesWithoutUndo();
             return player;
         }
 
@@ -258,26 +270,30 @@ namespace BubbleTea.EditorTools
         }
 
         // Three pads in a chain: buying the counter reveals the tea brewer, which reveals the topping bar.
-        private static void CreateUnlockPads(CashBill billPrefab, Wallet wallet)
+        private static void CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet)
         {
             Material padMat = GetOrCreateMaterial("UnlockPad", new Color(0.97f, 0.97f, 0.97f));
 
-            BuildableDefinition counter = GetOrCreateBuildable("Counter", 30,
-                () => BuildStationPrefab("Counter", new Color(0.62f, 0.42f, 0.28f), new Vector3(2.2f, 1f, 1f), null));
-            BuildableDefinition brewer = GetOrCreateBuildable("Tea Brewer", 80,
-                () => BuildStationPrefab("TeaBrewer", new Color(0.30f, 0.30f, 0.34f), new Vector3(1.4f, 1f, 1f),
-                    new Color(0.55f, 0.32f, 0.16f)));
-            BuildableDefinition toppings = GetOrCreateBuildable("Topping Bar", 150,
-                () => BuildStationPrefab("ToppingBar", new Color(0.95f, 0.78f, 0.55f), new Vector3(2f, 1f, 1f),
-                    new Color(0.15f, 0.1f, 0.08f)));
-
-            UnlockPad toppingPad = CreatePad(toppings, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat, null);
-            UnlockPad brewerPad = CreatePad(brewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad);
-            CreatePad(counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat, brewerPad);
+            UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat, null);
+            UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad);
+            CreatePad(content.Counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat, brewerPad);
 
             // Only the first pad is visible at the start.
             toppingPad.gameObject.SetActive(false);
             brewerPad.gameObject.SetActive(false);
+        }
+
+        // Customers walk in from the bottom-left, queue behind the counter, and leave to the left.
+        private static void CreateCustomerSpawner(Customer customerPrefab)
+        {
+            var exit = new GameObject("CustomerExit");
+            exit.transform.position = new Vector3(-14f, 0f, -8f);
+
+            var go = new GameObject("CustomerSpawner");
+            go.transform.position = new Vector3(-5f, 0f, -14f);
+            var spawner = go.AddComponent<CustomerSpawner>();
+            SetReference(spawner, "customerPrefab", customerPrefab);
+            SetReference(spawner, "exitPoint", exit.transform);
         }
 
         private static UnlockPad CreatePad(BuildableDefinition definition, Vector3 position, CashBill billPrefab,
@@ -364,62 +380,6 @@ namespace BubbleTea.EditorTools
             return label;
         }
 
-        // Reuses an existing data asset so your price tweaks survive a rebuild.
-        private static BuildableDefinition GetOrCreateBuildable(string displayName, int cost, System.Func<GameObject> buildPrefab)
-        {
-            string path = $"{DataFolder}/{displayName.Replace(" ", "")}.asset";
-            var definition = AssetDatabase.LoadAssetAtPath<BuildableDefinition>(path);
-            if (definition != null) return definition;
-
-            definition = ScriptableObject.CreateInstance<BuildableDefinition>();
-            AssetDatabase.CreateAsset(definition, path);
-
-            var serialized = new SerializedObject(definition);
-            serialized.FindProperty("displayName").stringValue = displayName;
-            serialized.FindProperty("cost").intValue = cost;
-            serialized.FindProperty("prefab").objectReferenceValue = buildPrefab();
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-            AssetDatabase.SaveAssets();
-            return definition;
-        }
-
-        // Gray-box station: a body block, plus an optional smaller block on top (a tea urn, topping tubs...).
-        private static GameObject BuildStationPrefab(string name, Color bodyColor, Vector3 bodySize, Color? topColor)
-        {
-            if (!AssetDatabase.IsValidFolder(StationPrefabFolder))
-            {
-                AssetDatabase.CreateFolder(PrefabFolder, "Stations");
-            }
-
-            string path = $"{StationPrefabFolder}/{name}.prefab";
-            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (existing != null) return existing;
-
-            var root = new GameObject(name);
-
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            body.name = "Body";
-            body.transform.SetParent(root.transform, false);
-            body.transform.localScale = bodySize;
-            body.transform.localPosition = new Vector3(0f, bodySize.y * 0.5f, 0f);
-            body.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial(name, bodyColor);
-
-            if (topColor.HasValue)
-            {
-                GameObject top = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                top.name = "Top";
-                Object.DestroyImmediate(top.GetComponent<CapsuleCollider>());
-                top.transform.SetParent(root.transform, false);
-                top.transform.localScale = new Vector3(0.5f, 0.3f, 0.5f);
-                top.transform.localPosition = new Vector3(0f, bodySize.y + 0.3f, 0f);
-                top.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial(name + "Top", topColor.Value);
-            }
-
-            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
-            Object.DestroyImmediate(root);
-            return prefab;
-        }
-
         private static CashBill CreateBillPrefab(Material material)
         {
             GameObject bill = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -434,7 +394,7 @@ namespace BubbleTea.EditorTools
             return prefab.GetComponent<CashBill>();
         }
 
-        private static Material GetOrCreateMaterial(string name, Color color)
+        internal static Material GetOrCreateMaterial(string name, Color color)
         {
             string path = $"{MaterialFolder}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -472,7 +432,7 @@ namespace BubbleTea.EditorTools
         }
 
         // Fills in a private [SerializeField] the same way dragging it in the Inspector would.
-        private static void SetReference(Object component, string fieldName, Object value)
+        internal static void SetReference(Object component, string fieldName, Object value)
         {
             var serialized = new SerializedObject(component);
             SerializedProperty property = serialized.FindProperty(fieldName);
