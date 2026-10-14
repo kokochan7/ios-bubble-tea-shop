@@ -212,17 +212,33 @@ namespace BubbleTea.EditorTools
                     new Vector3(0.25f, 0.05f, 0.25f), GetOrCreateMaterial("Pearls", pearlColor.Value));
             }
 
-            // With a cup model, the drink shows as a colored lid (with pearls on top for boba),
-            // so different drinks still look different.
-            if (ArtLibrary.Attach("Cup", root.transform, new Vector3(0.26f, 0.32f, 0.26f), ArtLibrary.Fit.Height) != null)
+            // A cup model can show the drink itself: parts named "Drink" take the drink's color and parts
+            // named "Pearls" take the pearl color (or hide for drinks without pearls), like the Boba Art Kit's cup.
+            // Other cup models show the drink as a colored lid, with pearls on top for boba.
+            GameObject cupArt = ArtLibrary.Attach("Cup", root.transform, new Vector3(0.26f, 0.32f, 0.26f), ArtLibrary.Fit.Height);
+            if (cupArt != null)
             {
                 ArtLibrary.HideGrayBox(root.transform.Find("Cup").gameObject, root.transform.Find("Straw").gameObject, pearls);
-                AddPart(root.transform, PrimitiveType.Cylinder, "Lid", new Vector3(0f, 0.33f, 0f),
-                    new Vector3(0.22f, 0.01f, 0.22f), GetOrCreateMaterial(name, cupColor));
-                if (pearlColor.HasValue)
+                Transform drink = ArtLibrary.FindChild(cupArt.transform, "Drink");
+                if (drink != null)
                 {
-                    AddPart(root.transform, PrimitiveType.Sphere, "PearlsOnTop", new Vector3(0f, 0.35f, 0f),
-                        new Vector3(0.1f, 0.04f, 0.1f), GetOrCreateMaterial("Pearls", pearlColor.Value));
+                    ArtLibrary.Recolor(drink, GetOrCreateMaterial(name, cupColor));
+                    Transform artPearls = ArtLibrary.FindChild(cupArt.transform, "Pearls");
+                    if (artPearls != null)
+                    {
+                        if (pearlColor.HasValue) ArtLibrary.Recolor(artPearls, GetOrCreateMaterial("Pearls", pearlColor.Value));
+                        else artPearls.gameObject.SetActive(false);
+                    }
+                }
+                else
+                {
+                    AddPart(root.transform, PrimitiveType.Cylinder, "Lid", new Vector3(0f, 0.33f, 0f),
+                        new Vector3(0.22f, 0.01f, 0.22f), GetOrCreateMaterial(name, cupColor));
+                    if (pearlColor.HasValue)
+                    {
+                        AddPart(root.transform, PrimitiveType.Sphere, "PearlsOnTop", new Vector3(0f, 0.35f, 0f),
+                            new Vector3(0.1f, 0.04f, 0.1f), GetOrCreateMaterial("Pearls", pearlColor.Value));
+                    }
                 }
             }
 

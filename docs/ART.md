@@ -2,6 +2,12 @@
 
 The game is built so 3D models can replace the gray boxes without touching code. Every station, character and cup has an **art slot**. Fill a slot with a model and rebuild the scene; leave it empty and that thing stays a gray box. Collisions and gameplay don't change, because the invisible boxes stay underneath.
 
+## The quick way: Boba Art Kit
+
+Click **Bubble Tea > Art > Build Boba Art Kit**, then **Bubble Tea > Build Prototype Scene**. It builds a matching set of pastel bubble tea shop models in code (tea urns, topping tubs, a cup sealer, chibi baristas, boba cups, plants, a menu board and a giant boba cup statue), puts them in every slot, and recolors the floor and walls. The models land in `Assets/_Game/Art/BobaKit`.
+
+To upgrade single pieces with more detailed AI-made models, see [MESHY.md](MESHY.md). The Kenney steps below still work for any slot too.
+
 ## 1. Download the free packs
 
 All of these are by [Kenney](https://kenney.nl). They're free and public domain (CC0), so you can ship them in a paid App Store game without credit, though a "Thanks Kenney" in your credits is nice. On each page, click **Download** (no account needed), then unzip.

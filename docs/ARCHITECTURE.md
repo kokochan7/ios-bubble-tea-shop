@@ -73,7 +73,7 @@ Gameplay scripts announce moments through `Core/GameEvents` (cash collected, pad
 
 ## Art (milestone 7)
 
-Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-only asset) maps slot names (`TeaBrewer`, `Customer`, `Cup`...) to models, and `ArtLibrary.Attach` puts a model inside a prefab, scaled to the gray box's footprint or height and standing on the floor. The gray-box parts stay as invisible colliders, so swapping art can never change gameplay. `Core/WalkBob` gives characters a procedural waddle until real animations arrive.
+Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-only asset) maps slot names (`TeaBrewer`, `Customer`, `Cup`...) to models, and `ArtLibrary.Attach` puts a model inside a prefab, scaled to the gray box's footprint or height and standing on the floor. The gray-box parts stay as invisible colliders, so swapping art can never change gameplay. `Core/WalkBob` gives characters a procedural waddle until real animations arrive. `Editor/BobaArtKit` generates the default pastel models as prefabs from primitives and a tapered-cylinder mesh, with one shared material per palette color. Cup models may name parts `Drink` and `Pearls`; the scene builder recolors those per drink.
 
 ## iPhone (milestone 8)
 

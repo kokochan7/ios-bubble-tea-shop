@@ -117,6 +117,22 @@ namespace BubbleTea.EditorTools
             }
         }
 
+        /// <summary>The first child (at any depth) with this name, or null.</summary>
+        public static Transform FindChild(Transform root, string childName)
+        {
+            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (child != root && child.name == childName) return child;
+            }
+            return null;
+        }
+
+        /// <summary>Gives every renderer under <paramref name="part"/> this material.</summary>
+        public static void Recolor(Transform part, Material material)
+        {
+            foreach (Renderer renderer in part.GetComponentsInChildren<Renderer>(true)) renderer.sharedMaterial = material;
+        }
+
         private static Bounds MeasureBounds(GameObject model)
         {
             Renderer[] renderers = model.GetComponentsInChildren<Renderer>();

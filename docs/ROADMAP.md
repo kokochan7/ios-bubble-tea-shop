@@ -14,8 +14,25 @@ The order is a suggestion: anything can be moved, merged or dropped.
 | 6 | **Guidance and game feel** | An arrow points to the next thing to do, plus sounds, haptics, particles and a settings menu |
 | 7 | **Real art** | Low-poly models, characters with walk animations, and a cute UI instead of gray boxes |
 | 8 | **iPhone build** | The game runs smoothly on your iPhone through Xcode and TestFlight |
-| 9 | **Offline earnings and rewards** | Come back to money earned while away; optional rewarded ads to double it |
-| 10 | **App Store launch** | Icon, screenshots, privacy details, and submission |
+| 9 | **Offline earnings** | Come back to money earned while away |
+| 10 | **Fixes and polish** | Everything found while playtesting on PC and iPhone is fixed |
+| 11 | **More features** | New things to do (picked by Kenny, see the list below) |
+| 12 | **Rewarded ads** | Optionally watch an ad to double offline money |
+| 13 | **App Store launch** | Icon, screenshots, privacy details, and submission |
+
+### Feature ideas for milestone 11
+
+Pick any, in any order, or add your own:
+
+- **Customer moods and tips:** customers lose patience in a long queue; fast service earns a tip and a happy face.
+- **Daily goals:** three small tasks a day ("Sell 20 taro teas") that pay a bonus.
+- **Shop rating:** stars that go up as you serve and decorate, bringing more customers.
+- **More staff:** a barista who runs a station for you, and a cleaner for tables.
+- **Seating area:** tables where customers sit and leave mess to clean up.
+- **Second shop:** once the first is finished, open a new location with new drinks.
+- **Seasonal drinks:** limited-time recipes that pay extra.
+- **First-minute tutorial:** step-by-step hints for brand-new players.
+- **Big-number money:** show $1.2K and $3.4M instead of long numbers.
 
 ## Milestone 1: Save and load
 
@@ -71,6 +88,7 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 - **Bubble Tea > Art > Auto-Fill From Art Folder** finds matching models by name. It's tuned for Kenney's free kits (Furniture, Food, Mini Characters, Car).
 - Characters waddle when they walk, and plants decorate the corners if you add some.
 - Step-by-step download guide: [ART.md](ART.md).
+- **Boba Art Kit** (added later): **Bubble Tea > Art > Build Boba Art Kit** fills every slot with code-built pastel bubble tea shop models and recolors the floor and walls. Hero pieces can be upgraded with Meshy models: [MESHY.md](MESHY.md).
 
 ## Milestone 8: iPhone build
 
