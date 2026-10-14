@@ -14,12 +14,14 @@ namespace BubbleTea.Feedback
         {
             GameEvents.Unlocked += OnUnlocked;
             GameEvents.UpgradeBought += Buzz;
+            GameEvents.BonusCollected += Buzz;
         }
 
         private void OnDisable()
         {
             GameEvents.Unlocked -= OnUnlocked;
             GameEvents.UpgradeBought -= Buzz;
+            GameEvents.BonusCollected -= Buzz;
         }
 
         private void OnUnlocked(Vector3 _) => Buzz();

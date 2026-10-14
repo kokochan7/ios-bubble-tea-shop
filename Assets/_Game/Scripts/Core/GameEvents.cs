@@ -25,11 +25,15 @@ namespace BubbleTea.Core
         /// <summary>An upgrade level was bought.</summary>
         public static event Action UpgradeBought;
 
+        /// <summary>The player collected a bonus, such as money earned while away.</summary>
+        public static event Action BonusCollected;
+
         public static void RaiseCashCollected(Vector3 position) => CashCollected?.Invoke(position);
         public static void RaisePadPaid(Vector3 position) => PadPaid?.Invoke(position);
         public static void RaiseUnlocked(Vector3 position) => Unlocked?.Invoke(position);
         public static void RaiseDrinkSold(Vector3 position, int amount) => DrinkSold?.Invoke(position, amount);
         public static void RaiseUpgradeBought() => UpgradeBought?.Invoke();
+        public static void RaiseBonusCollected() => BonusCollected?.Invoke();
 
         // Domain reload is off, so clear listeners left over from the last Play session.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -40,6 +44,7 @@ namespace BubbleTea.Core
             Unlocked = null;
             DrinkSold = null;
             UpgradeBought = null;
+            BonusCollected = null;
         }
     }
 }

@@ -28,6 +28,9 @@ namespace BubbleTea.Saving
         [SerializeField, Tooltip("The upgrade manager. Leave empty if the scene has no upgrades.")]
         private UpgradeManager upgradeManager;
 
+        [SerializeField, Tooltip("Pays for time away. Leave empty to turn that off.")]
+        private OfflineEarnings offlineEarnings;
+
         [SerializeField, Tooltip("Seconds between saves while money keeps changing.")]
         private float autosaveSeconds = 5f;
 
@@ -99,7 +102,13 @@ namespace BubbleTea.Saving
             // Saving before the old file is loaded would overwrite it with a fresh game.
             if (!loaded || resetting) return;
 
-            var data = new SaveData { money = wallet != null ? wallet.Money : 0 };
+            var data = new SaveData
+            {
+                // Money earned while away but not collected yet is kept, so closing the pop-up by quitting loses nothing.
+                money = (wallet != null ? wallet.Money : 0) + (offlineEarnings != null ? offlineEarnings.Pending : 0),
+                savedAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                earningsPerMinute = offlineEarnings != null ? offlineEarnings.RatePerMinute : 0f,
+            };
             foreach (UnlockPad pad in pads)
             {
                 if (pad == null) continue;
@@ -179,6 +188,13 @@ namespace BubbleTea.Saving
                     UpgradeDefinition upgrade = upgradeManager.Find(entry.id);
                     if (upgrade != null) upgradeManager.SetLevel(upgrade, entry.level);
                 }
+            }
+
+            if (offlineEarnings != null && data.savedAtUnix > 0)
+            {
+                offlineEarnings.Restore(data.earningsPerMinute);
+                long secondsAway = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - data.savedAtUnix;
+                offlineEarnings.Grant(TimeSpan.FromSeconds(secondsAway));
             }
         }
 

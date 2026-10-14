@@ -57,6 +57,7 @@ namespace BubbleTea.Feedback
             GameEvents.Unlocked += OnUnlock;
             GameEvents.DrinkSold += OnSale;
             GameEvents.UpgradeBought += OnUpgrade;
+            GameEvents.BonusCollected += OnBonus;
         }
 
         private void OnDisable()
@@ -66,6 +67,7 @@ namespace BubbleTea.Feedback
             GameEvents.Unlocked -= OnUnlock;
             GameEvents.DrinkSold -= OnSale;
             GameEvents.UpgradeBought -= OnUpgrade;
+            GameEvents.BonusCollected -= OnBonus;
         }
 
         private void OnCash(Vector3 _)
@@ -86,6 +88,7 @@ namespace BubbleTea.Feedback
         private void OnUnlock(Vector3 _) => Play(unlockClip, 1f, 1f);
         private void OnSale(Vector3 _, int amount) => Play(saleClip, 1f, 0.8f);
         private void OnUpgrade() => Play(upgradeClip, 1f, 1f);
+        private void OnBonus() => Play(unlockClip, 1f, 1f);
 
         private void Play(AudioClip clip, float pitch, float loudness)
         {

@@ -79,6 +79,10 @@ Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-
 
 `Core/AppSetup` runs before the first scene loads and sets 60 fps and no screen sleep. All HUD panels except the joystick live under a `SafeArea` object (`UI/SafeArea`) that shrinks to `Screen.safeArea`. `Editor/IosSetup` writes the iOS Player Settings; the Mac build steps are in [IOS_BUILD.md](IOS_BUILD.md).
 
+## Offline earnings (milestone 9)
+
+`Economy/OfflineEarnings` listens to `GameEvents.DrinkSold` and keeps a smoothed dollars-per-minute rate, measured one minute of play at a time. The save file (version 3) stores that rate and the time it was written; on load, `SaveManager` hands the time away to `OfflineEarnings.Grant`, which also handles the app returning from the background. The reward waits in `Pending` until `UI/WelcomeBackPopup`'s Collect button adds it to the wallet, and it is saved as part of the money so quitting before collecting loses nothing.
+
 ## Conventions
 
 - Namespace: `BubbleTea.<Module>`, for example `BubbleTea.Economy`.

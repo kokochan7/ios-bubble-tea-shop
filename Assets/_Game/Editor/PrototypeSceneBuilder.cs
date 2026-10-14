@@ -81,9 +81,11 @@ namespace BubbleTea.EditorTools
                 new Vector3(22f, 0f, -14f), new Vector3(30f, 0f, -1.5f), secondsBetween: 6f, max: 3);
             UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
             CreateUpgradePanel(hud, upgrades, content.Upgrades);
-            SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades);
+            OfflineEarnings offlineEarnings = CreateOfflineEarnings(wallet);
+            SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings);
             CreateFeedback(player.transform);
             CreateSettingsMenu(hud, saveManager);
+            CreateWelcomeBackPopup(hud, offlineEarnings);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuild(ScenePath);
@@ -437,12 +439,14 @@ namespace BubbleTea.EditorTools
         }
 
         // Loads progress on Play and keeps saving it. Delete it with Bubble Tea > Delete Save Data.
-        private static SaveManager CreateSaveManager(Wallet wallet, UnlockPad[] pads, UpgradeManager upgrades)
+        private static SaveManager CreateSaveManager(Wallet wallet, UnlockPad[] pads, UpgradeManager upgrades,
+            OfflineEarnings offlineEarnings)
         {
             var go = new GameObject("SaveManager");
             var saveManager = go.AddComponent<SaveManager>();
             SetReference(saveManager, "wallet", wallet);
             SetReference(saveManager, "upgradeManager", upgrades);
+            SetReference(saveManager, "offlineEarnings", offlineEarnings);
 
             var serialized = new SerializedObject(saveManager);
             SerializedProperty list = serialized.FindProperty("pads");
@@ -450,6 +454,66 @@ namespace BubbleTea.EditorTools
             for (int i = 0; i < pads.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = pads[i];
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return saveManager;
+        }
+
+        // Measures how fast the shop earns and pays part of it for time away.
+        private static OfflineEarnings CreateOfflineEarnings(Wallet wallet)
+        {
+            var earnings = new GameObject("OfflineEarnings").AddComponent<OfflineEarnings>();
+            SetReference(earnings, "wallet", wallet);
+            return earnings;
+        }
+
+        // The "Welcome back!" panel. Built last so it draws on top of the other HUD panels.
+        private static void CreateWelcomeBackPopup(Transform hud, OfflineEarnings earnings)
+        {
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform root = CreateUiObject("WelcomeBack", hud);
+            Stretch(root);
+            var popup = root.gameObject.AddComponent<WelcomeBackPopup>();
+
+            // A dark full-screen backdrop that also stops taps reaching the joystick.
+            RectTransform backdrop = CreateUiObject("Backdrop", root);
+            Stretch(backdrop);
+            backdrop.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);
+
+            RectTransform panel = CreateUiObject("Panel", backdrop);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = new Vector2(860f, 760f);
+            var panelImage = panel.gameObject.AddComponent<Image>();
+            panelImage.sprite = rounded;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.97f);
+
+            Text title = CreateHudText("Title", panel, font, 64, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 30f, 110f, 0f, 0f);
+            title.text = "WELCOME BACK!";
+
+            Text subtitle = CreateHudText("Subtitle", panel, font, 40, TextAnchor.MiddleCenter);
+            SetTopRow(subtitle.rectTransform, 150f, 60f, 0f, 0f);
+            subtitle.text = "Your shop earned";
+
+            Text amount = CreateHudText("Amount", panel, font, 110, TextAnchor.MiddleCenter);
+            SetTopRow(amount.rectTransform, 220f, 150f, 0f, 0f);
+            amount.color = new Color(0.55f, 0.95f, 0.5f);
+            amount.text = "$0";
+
+            Text away = CreateHudText("Away", panel, font, 34, TextAnchor.MiddleCenter);
+            SetTopRow(away.rectTransform, 380f, 140f, 40f, 40f);
+            away.horizontalOverflow = HorizontalWrapMode.Wrap;
+            away.fontStyle = FontStyle.Normal;
+            away.color = new Color(0.85f, 0.85f, 0.9f);
+
+            Button collect = CreateMenuButton("Collect", panel, "COLLECT", rounded, font, new Color(0.35f, 0.78f, 0.38f), out _);
+            SetTopRow((RectTransform)collect.transform, 560f, 140f, 160f, 160f);
+
+            SetReference(popup, "panel", backdrop.gameObject);
+            SetReference(popup, "amountLabel", amount);
+            SetReference(popup, "awayLabel", away);
+            SetReference(popup, "collectButton", collect);
+            SetReference(popup, "earnings", earnings);
         }
 
         // Sounds, vibration, confetti, sale pop-ups and the guide arrow.
