@@ -2,18 +2,18 @@
 
 A 3D top-down iOS idle/arcade game made in Unity 6.6. You walk around your shop, scoop up cash from the floor, and spend it right away to unlock new stations and serve more customers.
 
-**Current goal:** a playable gray-box prototype of the core loop: walk, collect cash, unlock stations, make drinks, sell drinks.
+**Current goal:** turn the finished gray-box prototype into the full game, one milestone at a time. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-## Roadmap
+## Prototype steps (done)
 
 | Step | What you can do when it's done |
 |------|-------------------------------|
-| 1. Project skeleton | Open the project in Unity and see the folder layout (this step) |
+| 1. Project skeleton | Open the project in Unity and see the folder layout |
 | 2. Player and cash | Walk with a joystick or mouse, pick up cash piles, watch the money counter go up |
 | 3. Unlock zones | Stand on a floor pad to pay for a station and watch it appear |
 | 4. Make and sell drinks | Stations build drinks step by step, customers buy them and drop cash |
 
-How the code is organized is explained in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The milestones toward the full game are in [docs/ROADMAP.md](docs/ROADMAP.md). How the code is organized is explained in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## First-time setup (Windows)
 
@@ -64,6 +64,8 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 5. Once the Counter is built, customers walk in and line up behind it. Stand in front of the **Tea Brewer** to pick up the milk teas it makes, then stand in front of the **Counter** to drop them off. Each customer takes a drink and pays into the cash pile beside the counter, which you collect like any other cash.
 6. For a pricier drink, drop milk teas at the **Topping Bar** first. It turns them into boba milk tea, which sells for more.
 
+Your progress (money and unlocked stations) is saved as you play, so pressing Play again carries on where you stopped. To start over, stop Play and click **Bubble Tea > Delete Save Data**. If you rebuild the scene, delete the save too so the two match.
+
 The piles refill every few seconds so there's always something to collect. You can tweak speeds and values by selecting objects in the Hierarchy and editing their fields in the Inspector. Rebuilding the scene from the menu resets changes made in the scene, but keeps the prices, recipes and timings you edited in `Assets/_Game/Data`. The gray-box prefabs are rebuilt each time.
 
 To add new content without code, right-click in the Project window and use the **Create > Bubble Tea** menu:
@@ -89,6 +91,7 @@ Assets/_Game/
     Building/   Unlock pads and buildable stations
     Cooking/    Ingredients, recipes, drink-making stations
     Customers/  Customer spawning, queueing, paying
+    Saving/     Saving and loading progress
     UI/         HUD, money counter, joystick visuals
 ```
 
