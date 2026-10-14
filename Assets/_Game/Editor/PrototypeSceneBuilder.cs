@@ -5,6 +5,7 @@ using BubbleTea.Customers;
 using BubbleTea.Economy;
 using BubbleTea.Feedback;
 using BubbleTea.Goals;
+using BubbleTea.Onboarding;
 using BubbleTea.Player;
 using BubbleTea.Rating;
 using BubbleTea.Saving;
@@ -154,6 +155,7 @@ namespace BubbleTea.EditorTools
             CreateGoalsPanel(hud, dailyGoals);
             CreateRatingView(hud, rating);
             CreateWelcomeBackPopup(hud, offlineEarnings);
+            if (plan.Number == 1) CreateTutorial(hud, player, wallet, pads[0], pads[1]);
 
             EditorSceneManager.SaveScene(scene, plan.ScenePath);
             AddSceneToBuild(plan.ScenePath, first: plan.Number == 1);
@@ -761,6 +763,40 @@ namespace BubbleTea.EditorTools
         }
 
         // Measures how fast the shop earns and pays part of it for time away.
+        // The first-minute tutorial: a banner near the bottom with one instruction at a time.
+        // pads[0] is the Counter and pads[1] the Tea Brewer (see CreateUnlockPads).
+        private static void CreateTutorial(Transform hud, GameObject player, Wallet wallet, UnlockPad counterPad,
+            UnlockPad brewerPad)
+        {
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform banner = CreateUiObject("Tutorial Banner", hud);
+            banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 0f);
+            banner.pivot = new Vector2(0.5f, 0f);
+            banner.anchoredPosition = new Vector2(0f, 320f);
+            banner.sizeDelta = new Vector2(960f, 130f);
+            var image = banner.gameObject.AddComponent<Image>();
+            image.sprite = rounded;
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.15f, 0.15f, 0.2f, 0.85f);
+            image.raycastTarget = false; // the joystick works anywhere, including under the banner
+
+            Text label = CreateHudText("Text", banner, font, 50, TextAnchor.MiddleCenter);
+            Stretch(label.rectTransform);
+            label.color = new Color(1f, 0.9f, 0.45f);
+            banner.gameObject.SetActive(false);
+
+            var guide = new GameObject("TutorialGuide").AddComponent<TutorialGuide>();
+            SetReference(guide, "player", player.transform);
+            SetReference(guide, "wallet", wallet);
+            SetReference(guide, "carrier", player.GetComponent<ItemCarrier>());
+            SetReference(guide, "counterPad", counterPad);
+            SetReference(guide, "brewerPad", brewerPad);
+            SetReference(guide, "banner", banner);
+            SetReference(guide, "label", label);
+        }
+
         private static OfflineEarnings CreateOfflineEarnings(Wallet wallet)
         {
             var earnings = new GameObject("OfflineEarnings").AddComponent<OfflineEarnings>();

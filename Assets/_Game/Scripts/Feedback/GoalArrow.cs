@@ -6,7 +6,8 @@ namespace BubbleTea.Feedback
     /// <summary>
     /// Shows the player what to do next: a bouncing marker over the cheapest unlock pad
     /// that's still waiting, and a pointer at the player's feet aiming toward it.
-    /// Both hide while the player is standing on that pad.
+    /// Both hide while the player is standing on that pad. The tutorial can point it
+    /// somewhere else for a while with <see cref="Override"/>.
     /// </summary>
     public class GoalArrow : MonoBehaviour
     {
@@ -34,8 +35,14 @@ namespace BubbleTea.Feedback
         [SerializeField, Tooltip("Seconds between choosing the target pad again.")]
         private float secondsBetweenChecks = 0.5f;
 
+        /// <summary>When set (and active), the arrow points here instead of at the next pad.</summary>
+        public static Transform Override { get; set; }
+
         private UnlockPad target;
         private float timer;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => Override = null;
 
         private void LateUpdate()
         {
@@ -46,8 +53,10 @@ namespace BubbleTea.Feedback
                 target = PickTarget();
             }
 
-            bool hasTarget = target != null && player != null;
-            Vector3 toTarget = hasTarget ? target.transform.position - player.position : Vector3.zero;
+            Transform aim = Override != null && Override.gameObject.activeInHierarchy ? Override
+                : target != null ? target.transform : null;
+            bool hasTarget = aim != null && player != null;
+            Vector3 toTarget = hasTarget ? aim.position - player.position : Vector3.zero;
             toTarget.y = 0f;
             float distance = toTarget.magnitude;
 
@@ -58,7 +67,7 @@ namespace BubbleTea.Feedback
                 if (show)
                 {
                     float bob = Mathf.Sin(Time.time * bobSpeed * Mathf.PI * 2f) * bobAmount;
-                    marker.position = target.transform.position + Vector3.up * (markerHeight + bob);
+                    marker.position = aim.position + Vector3.up * (markerHeight + bob);
                 }
             }
 

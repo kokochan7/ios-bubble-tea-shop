@@ -107,6 +107,10 @@ Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-
 
 Each shop is its own scene, built by the same `PrototypeSceneBuilder` from a `ShopPlan` (scene path, save file, floor and wall materials). `ShopContentBuilder.Build(billPrefab, shop)` swaps in that shop's menu and puts its data and prefabs in a `Shop2` subfolder with costs scaled up, so the shops never overwrite each other. `Travel/ShopTravel` saves the current shop, clears `Stats` (the next shop applies its own upgrades and rating) and loads the other scene; `SaveManager.fileName` keeps each shop's progress in its own file. The first shop must stay scene 0 in the build.
 
+## Tutorial (milestone 11)
+
+`Onboarding/TutorialGuide` (first shop only) runs a list of steps, each with a check of game state (player moved, money, pad unlocked, carrying a drink, `GameEvents.DrinkSold`, cash collected after a sale) and a spot for `GoalArrow.Override` to point at. A save whose Tea Brewer is already built skips it, and `SaveManager.TutorialDoneKey` in PlayerPrefs stops it showing twice.
+
 ## Conventions
 
 - Namespace: `BubbleTea.<Module>`, for example `BubbleTea.Economy`.

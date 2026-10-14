@@ -22,6 +22,9 @@ namespace BubbleTea.Saving
         /// <summary>PlayerPrefs key holding the scene of the shop the player was last in.</summary>
         public const string LastShopKey = "lastShop";
 
+        /// <summary>PlayerPrefs key set once the first-minute tutorial is finished.</summary>
+        public const string TutorialDoneKey = "tutorialDone";
+
         [SerializeField, Tooltip("Save file name. Each shop has its own, so their progress stays apart.")]
         private string fileName = "save.json";
 
@@ -185,6 +188,7 @@ namespace BubbleTea.Saving
                 Debug.LogWarning("Bubble Tea: couldn't delete the save. " + e.Message);
             }
             PlayerPrefs.DeleteKey(LastShopKey);
+            PlayerPrefs.DeleteKey(TutorialDoneKey);
             BubbleTea.Core.Stats.Clear();
             SceneManager.LoadScene(0);
         }
