@@ -56,6 +56,7 @@ namespace BubbleTea.Upgrades
             int cost = NextCost(upgrade);
             if (cost < 0 || wallet == null || !wallet.TrySpend(cost)) return false;
             SetLevel(upgrade, LevelOf(upgrade) + 1);
+            GameEvents.RaiseUpgradeBought();
             return true;
         }
 

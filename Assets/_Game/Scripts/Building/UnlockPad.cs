@@ -48,6 +48,10 @@ namespace BubbleTea.Building
         [SerializeField, Tooltip("Payments per second while draining. Each one sends a bill flying.")]
         private float paymentsPerSecond = 20f;
 
+        // Pads currently visible, so the guide arrow can find the next one to buy.
+        private static readonly List<UnlockPad> active = new();
+        public static IReadOnlyList<UnlockPad> Active => active;
+
         private readonly Stack<CashBill> spareBills = new();
         private int paid;
         private int billsInFlight;
@@ -85,6 +89,9 @@ namespace BubbleTea.Building
             ProgressChanged?.Invoke(Remaining, Cost);
         }
 
+        private void OnEnable() => active.Add(this);
+        private void OnDisable() => active.Remove(this);
+
         private void Update()
         {
             if (completed || definition == null || wallet == null) return;
@@ -115,6 +122,7 @@ namespace BubbleTea.Building
 
             paid += amount;
             ProgressChanged?.Invoke(Remaining, Cost);
+            GameEvents.RaisePadPaid(transform.position);
             SendBill();
             TryComplete();
         }
@@ -154,6 +162,7 @@ namespace BubbleTea.Building
                 station.name = definition.DisplayName;
                 if (animate) station.AddComponent<PopIn>();
             }
+            if (animate) GameEvents.RaiseUnlocked(transform.position);
 
             if (showWhenUnlocked != null)
             {

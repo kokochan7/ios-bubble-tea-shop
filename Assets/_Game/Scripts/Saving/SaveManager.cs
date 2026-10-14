@@ -5,6 +5,7 @@ using BubbleTea.Building;
 using BubbleTea.Economy;
 using BubbleTea.Upgrades;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace BubbleTea.Saving
 {
@@ -34,6 +35,7 @@ namespace BubbleTea.Saving
         private bool loadOnStart = true;
 
         private bool loaded;
+        private bool resetting;
         private bool dirty;
         private float timer;
 
@@ -95,7 +97,7 @@ namespace BubbleTea.Saving
         public void Save()
         {
             // Saving before the old file is loaded would overwrite it with a fresh game.
-            if (!loaded) return;
+            if (!loaded || resetting) return;
 
             var data = new SaveData { money = wallet != null ? wallet.Money : 0 };
             foreach (UnlockPad pad in pads)
@@ -127,6 +129,22 @@ namespace BubbleTea.Saving
 
             dirty = false;
             timer = 0f;
+        }
+
+        /// <summary>Deletes the save and restarts the scene as a brand-new game.</summary>
+        public void ResetProgress()
+        {
+            resetting = true;
+            try
+            {
+                if (File.Exists(SavePath)) File.Delete(SavePath);
+                if (File.Exists(TempPath)) File.Delete(TempPath);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("Bubble Tea: couldn't delete the save. " + e.Message);
+            }
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
         private void Load()

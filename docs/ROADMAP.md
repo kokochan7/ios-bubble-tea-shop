@@ -55,3 +55,11 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 - After the Fruit Bar, an **Expand Shop** pad ($1,000) appears by the east wall. Paying it removes the wall and reveals a new 16 x 30 m area.
 - In the new area, a **Drive Thru** pad ($600) builds a blue drive-through window. Cars line up, order like customers, and pay **1.5x** the menu price.
 - Each counter has a **lane** (Main, DriveThru) and its own customer spawner, so more counters can be added later without code. Runners serve whichever counter has someone waiting.
+
+## Milestone 6: Guidance and game feel
+
+- **Guide arrow:** a bouncing yellow marker hovers over the cheapest pad you haven't bought yet, and a yellow arrow at your feet points toward it.
+- **Sounds:** a tick for every bill (rising in pitch as you grab a stack), ticks while paying a pad, a chime on unlock, a ding on each sale, and a chime for upgrades. They're simple generated tones for now; real sound files can be dropped into the **SoundEffects** component later.
+- **Confetti** bursts when a station unlocks, and a green **+$15** floats up from the counter on every sale.
+- **Vibration** on unlocks and upgrades (iPhone only).
+- **Settings:** a MENU button in the top-right corner with Sound on/off, Vibration on/off, and Reset Progress (tap twice).
