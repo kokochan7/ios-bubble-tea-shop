@@ -25,3 +25,10 @@ The order is a suggestion: anything can be moved, merged or dropped.
 - **Bubble Tea > Delete Save Data** starts you over; **Bubble Tea > Show Save File** opens the folder it lives in.
 
 Not saved on purpose: cash lying on the floor, drinks on stations, and customers in line. They refill within seconds of starting.
+
+## Milestone 2: Upgrades
+
+- Buying the Counter reveals a second pad: the purple **Upgrades** desk ($40).
+- Stand in front of the desk and a panel opens with four upgrades, each with 4 levels: **Walk Speed**, **Carry More**, **Brew Speed** and **Drink Price**. Buttons grey out when you can't afford them.
+- Upgrades are data: each is an asset in `Assets/_Game/Data/Upgrades` with a list of values and prices you can edit, and new ones are made with **Create > Bubble Tea > Upgrade**.
+- Upgrade levels are saved with the rest of your progress.

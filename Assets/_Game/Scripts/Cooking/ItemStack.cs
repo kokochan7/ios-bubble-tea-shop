@@ -23,8 +23,11 @@ namespace BubbleTea.Cooking
         private List<CarriedItem> items;
         private List<CarriedItem> Items => items ??= new List<CarriedItem>();
 
+        /// <summary>Extra room on top of the capacity set in the Inspector, for upgrades.</summary>
+        public int ExtraCapacity { get; set; }
+
         public int Count => Items.Count;
-        public bool IsFull => Count >= capacity || anchor == null;
+        public bool IsFull => Count >= capacity + ExtraCapacity || anchor == null;
 
         /// <summary>Adds an item on top. Returns false if the stack is full.</summary>
         public bool Push(CarriedItem item)

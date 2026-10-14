@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BubbleTea.Core;
 using BubbleTea.Cooking;
 using BubbleTea.Economy;
 using UnityEngine;
@@ -64,7 +65,7 @@ namespace BubbleTea.Customers
         {
             DrinkRecipe sold = null;
             if (!drinks.TryTake(item => (sold = FindRecipe(item)) != null, out drink)) return false;
-            if (cashPile != null) cashPile.AddValue(sold.Price);
+            if (cashPile != null) cashPile.AddValue(Mathf.RoundToInt(sold.Price * Stats.Get(StatId.DrinkPrice, 1f)));
             return true;
         }
 

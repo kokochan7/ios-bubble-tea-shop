@@ -1,7 +1,9 @@
 using BubbleTea.Building;
+using BubbleTea.Core;
 using BubbleTea.Cooking;
 using BubbleTea.Customers;
 using BubbleTea.Economy;
+using BubbleTea.Upgrades;
 using UnityEditor;
 using UnityEngine;
 using static BubbleTea.EditorTools.PrototypeSceneBuilder;
@@ -24,6 +26,8 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition Counter;
             public BuildableDefinition TeaBrewer;
             public BuildableDefinition ToppingBar;
+            public BuildableDefinition UpgradeDesk;
+            public UpgradeDefinition[] Upgrades;
             public Customer CustomerPrefab;
         }
 
@@ -32,6 +36,7 @@ namespace BubbleTea.EditorTools
             EnsureFolder(DataFolder, "Items");
             EnsureFolder(DataFolder, "Recipes");
             EnsureFolder(DataFolder, "Menu");
+            EnsureFolder(DataFolder, "Upgrades");
             EnsureFolder(PrefabFolder, "Items");
             EnsureFolder(PrefabFolder, "Stations");
 
@@ -50,11 +55,27 @@ namespace BubbleTea.EditorTools
             GameObject toppingBar = BuildStationPrefab("ToppingBar", new Color(0.95f, 0.78f, 0.55f), new Vector3(2f, 1f, 1f),
                 new Color(0.15f, 0.10f, 0.08f), new[] { addBoba }, inputCapacity: 4);
 
+            // Values per level start at level 0; costs start at the price of level 1.
+            UpgradeDefinition[] upgrades =
+            {
+                GetOrCreateUpgrade("Walk Speed", StatId.MoveSpeed,
+                    new[] { 1f, 1.15f, 1.3f, 1.45f, 1.6f }, new[] { 40, 90, 180, 350 }),
+                GetOrCreateUpgrade("Carry More", StatId.CarryBonus,
+                    new[] { 0f, 2f, 4f, 6f, 8f }, new[] { 50, 120, 250, 500 }),
+                GetOrCreateUpgrade("Brew Speed", StatId.BrewSpeed,
+                    new[] { 1f, 1.25f, 1.5f, 1.75f, 2f }, new[] { 60, 140, 280, 550 }),
+                GetOrCreateUpgrade("Drink Price", StatId.DrinkPrice,
+                    new[] { 1f, 1.2f, 1.4f, 1.6f, 1.8f }, new[] { 80, 180, 360, 700 }),
+            };
+            GameObject upgradeDesk = BuildUpgradeDeskPrefab();
+
             return new Content
             {
                 Counter = GetOrCreateBuildable("Counter", 30, counter),
                 TeaBrewer = GetOrCreateBuildable("Tea Brewer", 80, brewer),
                 ToppingBar = GetOrCreateBuildable("Topping Bar", 150, toppingBar),
+                UpgradeDesk = GetOrCreateBuildable("Upgrades", 40, upgradeDesk),
+                Upgrades = upgrades,
                 CustomerPrefab = BuildCustomerPrefab(),
             };
         }
@@ -90,6 +111,23 @@ namespace BubbleTea.EditorTools
             {
                 serialized.FindProperty("drink").objectReferenceValue = drink;
                 serialized.FindProperty("price").intValue = price;
+            });
+        }
+
+        private static UpgradeDefinition GetOrCreateUpgrade(string displayName, StatId stat, float[] values, int[] costs)
+        {
+            return GetOrCreateAsset<UpgradeDefinition>($"{DataFolder}/Upgrades/{FileName(displayName)}.asset", serialized =>
+            {
+                serialized.FindProperty("displayName").stringValue = displayName;
+                serialized.FindProperty("stat").enumValueIndex = (int)stat;
+
+                SerializedProperty valueList = serialized.FindProperty("values");
+                valueList.arraySize = values.Length;
+                for (int i = 0; i < values.Length; i++) valueList.GetArrayElementAtIndex(i).floatValue = values[i];
+
+                SerializedProperty costList = serialized.FindProperty("costs");
+                costList.arraySize = costs.Length;
+                for (int i = 0; i < costs.Length; i++) costList.GetArrayElementAtIndex(i).intValue = costs[i];
             });
         }
 
@@ -205,6 +243,15 @@ namespace BubbleTea.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return SavePrefab(root, $"{PrefabFolder}/Stations/Counter.prefab");
+        }
+
+        // A purple desk. Standing in front of it opens the upgrade panel.
+        private static GameObject BuildUpgradeDeskPrefab()
+        {
+            GameObject root = BuildStationBody("UpgradeDesk", new Color(0.58f, 0.44f, 0.86f), new Vector3(1.6f, 1f, 1f),
+                new Color(1f, 0.85f, 0.3f));
+            root.AddComponent<UpgradeZone>();
+            return SavePrefab(root, $"{PrefabFolder}/Stations/UpgradeDesk.prefab");
         }
 
         private static Customer BuildCustomerPrefab()

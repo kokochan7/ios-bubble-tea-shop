@@ -1,11 +1,13 @@
 using System.Collections.Generic;
+using BubbleTea.Core;
 using UnityEngine;
 
 namespace BubbleTea.Cooking
 {
     /// <summary>
     /// Lets the player carry a stack of items. Stations and the counter look for carriers
-    /// standing in their zone and hand items over automatically.
+    /// standing in their zone and hand items over automatically. The carry upgrade adds
+    /// room to the stack.
     /// </summary>
     public class ItemCarrier : MonoBehaviour
     {
@@ -17,7 +19,24 @@ namespace BubbleTea.Cooking
 
         public ItemStack Stack => stack;
 
-        private void OnEnable() => active.Add(this);
-        private void OnDisable() => active.Remove(this);
+        private void OnEnable()
+        {
+            active.Add(this);
+            Stats.Changed += OnStatChanged;
+            ApplyCarryBonus();
+        }
+
+        private void OnDisable()
+        {
+            active.Remove(this);
+            Stats.Changed -= OnStatChanged;
+        }
+
+        private void OnStatChanged(StatId stat)
+        {
+            if (stat == StatId.CarryBonus) ApplyCarryBonus();
+        }
+
+        private void ApplyCarryBonus() => stack.ExtraCapacity = Mathf.RoundToInt(Stats.Get(StatId.CarryBonus, 0f));
     }
 }
