@@ -149,3 +149,10 @@ After the fourth playtest:
 - A **Trash** bin by the counter: stand next to it to throw away what you carry, one item at a time. Baristas take unneeded items there too.
 - The first **Hire Barista** pad costs $200 and is there from the start.
 - Customers wait about 30 seconds instead of 60. Every customer who walks out costs a star (earned back a little with each customer served); at 0 stars the shop closes and the game starts over with fresh saves. Customers only start coming once a station can make a drink, so you can't lose before the Tea Brewer is built.
+
+Polish pass:
+
+- **Hire Drive-Thru Cashier** ($400, appears with the Drive Thru) works the drive-thru window like the main cashier.
+- Tiled floors, wooden planks in the expansion, striped wallpaper, a tall back wall with windows, trim, wall lamps, bunting and the shop's name on a sign, a rug under the café tables, door mats, and a street with trees outside. All built in code (`Editor/ShopDressing.cs`).
+- Sharper picture: full render resolution on phones (was 80%), 4x anti-aliasing, crisper soft shadows, warmer lighting.
+- Background music for each shop, composed in code (`Editor/MusicMaker.cs`): a bouncy pop tune in the Boba Shop and a mellow lo-fi one in the Matcha House. MENU has a Music on/off button. **Bubble Tea > Audio > Rebuild Music** rewrites the tracks.
