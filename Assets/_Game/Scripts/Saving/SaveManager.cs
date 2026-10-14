@@ -19,7 +19,11 @@ namespace BubbleTea.Saving
     /// </summary>
     public class SaveManager : MonoBehaviour
     {
-        private const string FileName = "save.json";
+        /// <summary>PlayerPrefs key holding the scene of the shop the player was last in.</summary>
+        public const string LastShopKey = "lastShop";
+
+        [SerializeField, Tooltip("Save file name. Each shop has its own, so their progress stays apart.")]
+        private string fileName = "save.json";
 
         [SerializeField, Tooltip("The player's wallet.")]
         private Wallet wallet;
@@ -50,9 +54,22 @@ namespace BubbleTea.Saving
         private bool dirty;
         private float timer;
 
-        /// <summary>Full path of the save file on this device.</summary>
-        public static string SavePath => Path.Combine(Application.persistentDataPath, FileName);
-        private static string TempPath => SavePath + ".tmp";
+        /// <summary>Full path of this shop's save file on this device.</summary>
+        public string SavePath => Path.Combine(Application.persistentDataPath, fileName);
+        private string TempPath => SavePath + ".tmp";
+
+        /// <summary>Every shop's save file on this device (save.json, save-shop2.json, and their .tmp copies).</summary>
+        public static string[] AllSaveFiles()
+        {
+            try
+            {
+                return Directory.GetFiles(Application.persistentDataPath, "save*.json*");
+            }
+            catch (Exception)
+            {
+                return Array.Empty<string>();
+            }
+        }
 
         private void OnEnable()
         {
@@ -155,20 +172,21 @@ namespace BubbleTea.Saving
             timer = 0f;
         }
 
-        /// <summary>Deletes the save and restarts the scene as a brand-new game.</summary>
+        /// <summary>Deletes every shop's save and starts a brand-new game in the first shop.</summary>
         public void ResetProgress()
         {
             resetting = true;
             try
             {
-                if (File.Exists(SavePath)) File.Delete(SavePath);
-                if (File.Exists(TempPath)) File.Delete(TempPath);
+                foreach (string path in AllSaveFiles()) File.Delete(path);
             }
             catch (Exception e)
             {
                 Debug.LogWarning("Bubble Tea: couldn't delete the save. " + e.Message);
             }
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            PlayerPrefs.DeleteKey(LastShopKey);
+            BubbleTea.Core.Stats.Clear();
+            SceneManager.LoadScene(0);
         }
 
         private void Load()

@@ -28,6 +28,7 @@ namespace BubbleTea.EditorTools
     public static class PrototypeSceneBuilder
     {
         private const string ScenePath = "Assets/_Game/Scenes/Prototype.unity";
+        private const string Shop2ScenePath = "Assets/_Game/Scenes/Shop2.unity";
         private const string PrefabFolder = "Assets/_Game/Prefabs";
         private const string MaterialFolder = "Assets/_Game/Materials";
 
@@ -38,20 +39,71 @@ namespace BubbleTea.EditorTools
             new(0f, 0f, 7f),
         };
 
+        // What differs between shops. Everything else (layout, pads, staff) is shared.
+        private sealed class ShopPlan
+        {
+            public int Number;
+            public string ScenePath;
+            public string SaveFile;
+            public string FloorMaterial;
+            public Color FloorColor;
+            public string WallMaterial;
+            public Color WallColor;
+            public string ExpansionFloorMaterial;
+            public Color ExpansionFloorColor;
+        }
+
+        private static readonly ShopPlan FirstShop = new()
+        {
+            Number = 1,
+            ScenePath = ScenePath,
+            SaveFile = "save.json",
+            FloorMaterial = "Floor",
+            FloorColor = new Color(0.93f, 0.87f, 0.78f),
+            WallMaterial = "Wall",
+            WallColor = new Color(0.85f, 0.78f, 0.70f),
+            ExpansionFloorMaterial = "ExpansionFloor",
+            ExpansionFloorColor = new Color(0.86f, 0.90f, 0.82f),
+        };
+
+        private static readonly ShopPlan SecondShop = new()
+        {
+            Number = 2,
+            ScenePath = Shop2ScenePath,
+            SaveFile = "save-shop2.json",
+            FloorMaterial = "Shop2Floor",
+            FloorColor = new Color(0.90f, 0.94f, 0.84f),
+            WallMaterial = "Shop2Wall",
+            WallColor = new Color(0.66f, 0.80f, 0.60f),
+            ExpansionFloorMaterial = "Shop2ExpansionFloor",
+            ExpansionFloorColor = new Color(0.97f, 0.88f, 0.90f),
+        };
+
+        // Where the bus stop stands: in the expansion for shop 1 (revealed after the
+        // drive-through), and near the front door from the start in the second shop.
+        private static readonly Vector3 SecondShopPadPosition = new(24f, 0f, 10f);
+        private static readonly Vector3 TravelBackPosition = new(12f, 0f, -12f);
+
         [MenuItem("Bubble Tea/Build Prototype Scene")]
-        public static void Build()
+        public static void Build() => BuildShop(FirstShop);
+
+        /// <summary>Builds the Matcha House, the second shop that the first one unlocks.</summary>
+        [MenuItem("Bubble Tea/Build Second Shop Scene")]
+        public static void BuildSecondShop() => BuildShop(SecondShop);
+
+        private static void BuildShop(ShopPlan plan)
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
-            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null &&
-                !EditorUtility.DisplayDialog("Rebuild prototype scene?",
-                    $"{ScenePath} already exists. Rebuilding replaces it (and any changes you made to it).",
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(plan.ScenePath) != null &&
+                !EditorUtility.DisplayDialog("Rebuild shop scene?",
+                    $"{plan.ScenePath} already exists. Rebuilding replaces it (and any changes you made to it).",
                     "Rebuild", "Cancel"))
             {
                 return;
             }
 
-            Material floorMat = GetOrCreateMaterial("Floor", new Color(0.93f, 0.87f, 0.78f));
+            Material floorMat = GetOrCreateMaterial(plan.FloorMaterial, plan.FloorColor);
             Material playerMat = GetOrCreateMaterial("Player", new Color(0.36f, 0.62f, 0.95f));
             Material cashMat = GetOrCreateMaterial("Cash", new Color(0.35f, 0.78f, 0.38f));
             Material padMat = GetOrCreateMaterial("CashSpot", new Color(0.80f, 0.73f, 0.62f));
@@ -61,8 +113,10 @@ namespace BubbleTea.EditorTools
 
             CreateLight();
             CreateFloor(floorMat);
-            GameObject eastWall = CreateWalls();
-            GameObject expansionArea = CreateExpansionArea();
+            Material wallMat = GetOrCreateMaterial(plan.WallMaterial, plan.WallColor);
+            GameObject eastWall = CreateWalls(wallMat);
+            GameObject expansionArea = CreateExpansionArea(wallMat,
+                GetOrCreateMaterial(plan.ExpansionFloorMaterial, plan.ExpansionFloorColor));
             CreateDecorations();
 
             GameObject player = CreatePlayer(playerMat, out Wallet wallet);
@@ -75,8 +129,13 @@ namespace BubbleTea.EditorTools
 
             CashPile[] piles = CreateCashPiles(billPrefab, padMat);
             CreateRefiller(piles);
-            ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab);
+            ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab, plan.Number);
             UnlockPad[] pads = CreateUnlockPads(content, billPrefab, wallet, eastWall, expansionArea);
+            if (content.TravelBack != null)
+            {
+                var stop = (GameObject)PrefabUtility.InstantiatePrefab(content.TravelBack);
+                stop.transform.position = TravelBackPosition;
+            }
             CreateCustomerSpawner("CustomerSpawner", "Main", content.CustomerPrefab,
                 new Vector3(-5f, 0f, -14f), new Vector3(-14f, 0f, -8f), secondsBetween: 3f, max: 4);
             CreateCustomerSpawner("CarSpawner", "DriveThru", content.CarPrefab,
@@ -87,17 +146,25 @@ namespace BubbleTea.EditorTools
             DailyGoals dailyGoals = CreateDailyGoals(wallet, content.Menu, offlineEarnings);
             ShopRating rating = CreateShopRating(pads, content);
             SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings, dailyGoals, rating);
+            var saveFile = new SerializedObject(saveManager);
+            saveFile.FindProperty("fileName").stringValue = plan.SaveFile;
+            saveFile.ApplyModifiedPropertiesWithoutUndo();
             CreateFeedback(player.transform);
             CreateSettingsMenu(hud, saveManager);
             CreateGoalsPanel(hud, dailyGoals);
             CreateRatingView(hud, rating);
             CreateWelcomeBackPopup(hud, offlineEarnings);
 
-            EditorSceneManager.SaveScene(scene, ScenePath);
-            AddSceneToBuild(ScenePath);
+            EditorSceneManager.SaveScene(scene, plan.ScenePath);
+            AddSceneToBuild(plan.ScenePath, first: plan.Number == 1);
             Selection.activeGameObject = player;
 
-            Debug.Log("Bubble Tea: prototype scene built at " + ScenePath + ". Press Play to try it.");
+            Debug.Log($"Bubble Tea: shop {plan.Number} built at {plan.ScenePath}. Press Play to try it.");
+            if (plan.Number == 1 && AssetDatabase.LoadAssetAtPath<SceneAsset>(Shop2ScenePath) == null)
+            {
+                Debug.Log("Bubble Tea: the second shop isn't built yet. Click Bubble Tea > Build Second Shop Scene " +
+                          "so its bus stop has somewhere to go.");
+            }
         }
 
         private static void CreateLight()
@@ -123,9 +190,8 @@ namespace BubbleTea.EditorTools
 
         // Low walls around the 30 x 30 m shop so nobody walks off the edge. Returns the east
         // wall, which the Expand Shop pad removes.
-        private static GameObject CreateWalls()
+        private static GameObject CreateWalls(Material wallMat)
         {
-            Material wallMat = GetOrCreateMaterial("Wall", new Color(0.85f, 0.78f, 0.70f));
             var root = new GameObject("Walls");
             CreateWall(root.transform, "North", new Vector3(0f, 0.5f, 15.25f), new Vector3(30.5f, 1f, 0.5f), wallMat);
             CreateWall(root.transform, "South", new Vector3(0f, 0.5f, -15.25f), new Vector3(30.5f, 1f, 0.5f), wallMat);
@@ -135,10 +201,8 @@ namespace BubbleTea.EditorTools
         }
 
         // The extra 16 x 30 m to the east, hidden until Expand Shop is bought.
-        private static GameObject CreateExpansionArea()
+        private static GameObject CreateExpansionArea(Material wallMat, Material expansionFloor)
         {
-            Material wallMat = GetOrCreateMaterial("Wall", new Color(0.85f, 0.78f, 0.70f));
-            Material expansionFloor = GetOrCreateMaterial("ExpansionFloor", new Color(0.86f, 0.90f, 0.82f));
             var root = new GameObject("Expansion Area");
 
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
@@ -401,7 +465,13 @@ namespace BubbleTea.EditorTools
         {
             Material padMat = GetOrCreateMaterial("UnlockPad", new Color(0.97f, 0.97f, 0.97f));
 
-            UnlockPad driveThruPad = CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat);
+            // Shop 1 only: once the drive-through is built, a pad opens the second shop.
+            UnlockPad secondShopPad = content.SecondShop != null
+                ? CreatePad(content.SecondShop, SecondShopPadPosition, billPrefab, wallet, padMat)
+                : null;
+            UnlockPad driveThruPad = secondShopPad != null
+                ? CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat, secondShopPad)
+                : CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat);
             UnlockPad expansionPad = CreatePad(content.Expansion, new Vector3(12f, 0f, 10f), billPrefab, wallet, padMat,
                 driveThruPad);
             SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
@@ -442,12 +512,18 @@ namespace BubbleTea.EditorTools
             barista2Pad.gameObject.SetActive(false);
             menuBoardPad.gameObject.SetActive(false);
             statuePad.gameObject.SetActive(false);
-            return new[]
+            var all = new System.Collections.Generic.List<UnlockPad>
             {
                 counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad, runner1Pad, runner2Pad,
                 expansionPad, driveThruPad, planterPad, menuBoardPad, statuePad, barista1Pad, barista2Pad,
                 seatingPad,
             };
+            if (secondShopPad != null)
+            {
+                secondShopPad.gameObject.SetActive(false);
+                all.Add(secondShopPad);
+            }
+            return all.ToArray();
         }
 
         private static void SetObjectList(Object component, string fieldName, params GameObject[] objects)
@@ -595,6 +671,8 @@ namespace BubbleTea.EditorTools
             var rating = new GameObject("ShopRating").AddComponent<ShopRating>();
             var serialized = new SerializedObject(rating);
             SerializedProperty list = serialized.FindProperty("pads");
+            // The bus stop to the next shop doesn't make this shop any nicer.
+            pads = System.Array.FindAll(pads, pad => content.SecondShop == null || pad.Definition != content.SecondShop);
             list.arraySize = pads.Length;
             for (int i = 0; i < pads.Length; i++)
             {
@@ -1099,11 +1177,13 @@ namespace BubbleTea.EditorTools
             return material;
         }
 
-        private static void AddSceneToBuild(string path)
+        // The first shop must be scene 0 (the game starts there); other shops go after it.
+        private static void AddSceneToBuild(string path, bool first)
         {
             var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             scenes.RemoveAll(s => s.path == path);
-            scenes.Insert(0, new EditorBuildSettingsScene(path, true));
+            if (first) scenes.Insert(0, new EditorBuildSettingsScene(path, true));
+            else scenes.Add(new EditorBuildSettingsScene(path, true));
             EditorBuildSettings.scenes = scenes.ToArray();
         }
 

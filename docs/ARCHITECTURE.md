@@ -103,6 +103,10 @@ Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-
 
 `Rating/ShopRating` blends a service score (moved by `GameEvents.CustomerServed` moods and `CustomerLeftUpset`) with the share of rating points bought on unlock pads, and writes `StatId.CustomerRate` and `StatId.ExtraCustomers`, which `CustomerSpawner` reads. The service score is saved (version 5). `UI/RatingView` draws the stars from a sprite generated in code. Decorations are ordinary buildables whose prefabs are solid gray boxes with art slots (`Planter`, `MenuBoard`, `Statue`).
 
+## Second shop (milestone 11)
+
+Each shop is its own scene, built by the same `PrototypeSceneBuilder` from a `ShopPlan` (scene path, save file, floor and wall materials). `ShopContentBuilder.Build(billPrefab, shop)` swaps in that shop's menu and puts its data and prefabs in a `Shop2` subfolder with costs scaled up, so the shops never overwrite each other. `Travel/ShopTravel` saves the current shop, clears `Stats` (the next shop applies its own upgrades and rating) and loads the other scene; `SaveManager.fileName` keeps each shop's progress in its own file. The first shop must stay scene 0 in the build.
+
 ## Conventions
 
 - Namespace: `BubbleTea.<Module>`, for example `BubbleTea.Economy`.

@@ -68,8 +68,9 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 9. After the Fruit Bar, **Expand Shop** opens the east wall onto a new area with a **Drive Thru** window. Cars queue there and pay 1.5x.
 10. A yellow arrow always points to the cheapest pad you can buy next. The **MENU** button (top right) turns sound and vibration on or off and can reset your progress.
 11. Buying the Counter also reveals the purple **Upgrades** desk. Pay for it, then stand in front of it to buy faster walking, bigger carry stacks, faster brewing and higher drink prices.
+12. After the Drive Thru, **Open Matcha House** builds a bus stop to a second shop. Click **Bubble Tea > Build Second Shop Scene** once so it has somewhere to go.
 
-Your progress (money and unlocked stations) is saved as you play, so pressing Play again carries on where you stopped. To start over, stop Play and click **Bubble Tea > Delete Save Data**. If you rebuild the scene, delete the save too so the two match.
+Your progress (money and unlocked stations) is saved as you play, so pressing Play again carries on where you stopped. To start over, stop Play and click **Bubble Tea > Delete Save Data** (it deletes both shops' saves). If you rebuild the scene, delete the save too so the two match.
 
 Your shop keeps earning for up to 2 hours while you're away. Come back after a minute or more and a **Welcome back!** pop-up pays you. To see it without waiting, sell drinks for a couple of minutes, then click **Bubble Tea > Test Away Pop-Up (1 hour)** during Play.
 

@@ -25,6 +25,12 @@ namespace BubbleTea.Core
             Changed?.Invoke(stat);
         }
 
+        /// <summary>
+        /// Forgets every value, so the next shop starts from its own upgrades. Called before
+        /// switching shops; listeners stay subscribed.
+        /// </summary>
+        public static void Clear() => values.Clear();
+
         // The project has domain reload turned off, so static data survives between Play
         // sessions unless we clear it ourselves when Play starts.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
