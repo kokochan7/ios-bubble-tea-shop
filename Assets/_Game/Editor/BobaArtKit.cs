@@ -20,7 +20,7 @@ namespace BubbleTea.EditorTools
         private const string MaterialFolder = KitFolder + "/Materials";
         private const string MeshFolder = KitFolder + "/Meshes";
 
-        /// <summary>The kit's colors. Soft pastels, warm wood and cream, like a modern boba shop.</summary>
+        /// <summary>The kit's colors: warm honey wood with soft pastel accents, for a cozy café.</summary>
         private static class Palette
         {
             public static readonly Color Cream = Hex("FFF3E3");
@@ -31,8 +31,10 @@ namespace BubbleTea.EditorTools
             public static readonly Color Lavender = Hex("C7B3E8");
             public static readonly Color Peach = Hex("FFC9A3");
             public static readonly Color Butter = Hex("FFE39A");
-            public static readonly Color Wood = Hex("D3A276");
-            public static readonly Color DarkWood = Hex("9C6B48");
+            public static readonly Color Wood = Hex("E3A26C");      // warm honey wood for cabinets
+            public static readonly Color LightWood = Hex("F0BF8C"); // worktops
+            public static readonly Color PanelWood = Hex("C98450"); // carved door panels
+            public static readonly Color DarkWood = Hex("6E4636");
             public static readonly Color Steel = Hex("D9DEE3");
             public static readonly Color Charcoal = Hex("3B3540");
             public static readonly Color Glass = Hex("DDF3F7");
@@ -132,24 +134,31 @@ namespace BubbleTea.EditorTools
 
         // ---------- Stations ----------
 
-        // A pastel cabinet with a wood top, a colored trim band and a darker kick plate.
+        // A cozy wooden cabinet: honey wood with carved door panels, a band in the station's color
+        // (body) with a thin trim line, a lighter worktop and a dark kick plate.
         // Footprint is width x depth, so it fits the gray box exactly.
         private static Transform CounterBase(string name, float width, float depth, Color body, Color trim)
         {
             var root = new GameObject(name).transform;
             float h = CounterHeight;
             Box(root, "Kick", new Vector3(0f, 0.05f, 0f), new Vector3(width - 0.12f, 0.1f, depth - 0.12f), Palette.DarkWood);
-            Box(root, "Cabinet", new Vector3(0f, (h - 0.07f) * 0.5f + 0.05f, 0f), new Vector3(width - 0.06f, h - 0.17f, depth - 0.06f), body);
-            Box(root, "Trim", new Vector3(0f, h * 0.62f, 0f), new Vector3(width - 0.04f, 0.07f, depth - 0.04f), trim);
-            Box(root, "Top", new Vector3(0f, h - 0.035f, 0f), new Vector3(width, 0.07f, depth), Palette.Wood);
+            Box(root, "Cabinet", new Vector3(0f, (h - 0.07f) * 0.5f + 0.05f, 0f), new Vector3(width - 0.06f, h - 0.17f, depth - 0.06f), Palette.Wood);
+            Box(root, "Band", new Vector3(0f, h * 0.78f, 0f), new Vector3(width - 0.03f, 0.12f, depth - 0.03f), body);
+            Box(root, "Trim", new Vector3(0f, h * 0.71f, 0f), new Vector3(width - 0.02f, 0.025f, depth - 0.02f), trim);
+            Box(root, "Top", new Vector3(0f, h - 0.04f, 0f), new Vector3(width + 0.04f, 0.08f, depth + 0.04f), Palette.LightWood);
 
-            // Two inset door panels on each long side, so it reads as furniture.
+            // Carved door panels on each long side (a frame with a raised middle), so it reads as furniture.
+            int doors = Mathf.Max(2, Mathf.RoundToInt(width / 0.55f));
+            float doorWidth = (width - 0.12f) / doors;
             for (int side = -1; side <= 1; side += 2)
             {
-                for (int door = -1; door <= 1; door += 2)
+                float z = side * (depth * 0.5f - 0.02f);
+                for (int door = 0; door < doors; door++)
                 {
-                    Box(root, "Door", new Vector3(door * width * 0.24f, h * 0.33f, side * (depth * 0.5f - 0.025f)),
-                        new Vector3(width * 0.4f, h * 0.38f, 0.02f), Color.Lerp(body, Color.white, 0.35f));
+                    float x = -width * 0.5f + 0.06f + doorWidth * (door + 0.5f);
+                    Box(root, "Door", new Vector3(x, h * 0.37f, z), new Vector3(doorWidth - 0.06f, h * 0.5f, 0.03f), Palette.PanelWood);
+                    Box(root, "DoorPanel", new Vector3(x, h * 0.37f, z + side * 0.015f),
+                        new Vector3(doorWidth - 0.16f, h * 0.38f, 0.02f), Palette.Wood);
                 }
             }
             return root;
@@ -539,26 +548,36 @@ namespace BubbleTea.EditorTools
         }
 
         // A round café table with a pink chair and a mint chair, 2.6 m wide.
+        // A round wooden café table on a dark pedestal, with a bentwood chair on each side.
         private static GameObject BuildCafeTable()
         {
             var root = new GameObject("CafeTable").transform;
-            Cylinder(root, "Base", new Vector3(0f, 0.02f, 0f), 0.3f, 0.04f, Palette.DarkWood);
-            Cylinder(root, "Stem", new Vector3(0f, 0.38f, 0f), 0.05f, 0.68f, Palette.Steel);
-            Cylinder(root, "Top", new Vector3(0f, 0.72f, 0f), 0.58f, 0.06f, Palette.Wood);
-            Cylinder(root, "Edge", new Vector3(0f, 0.69f, 0f), 0.59f, 0.02f, Palette.Cream);
+            Cylinder(root, "Foot", new Vector3(0f, 0.025f, 0f), 0.32f, 0.05f, Palette.Charcoal);
+            Cylinder(root, "Stem", new Vector3(0f, 0.38f, 0f), 0.06f, 0.66f, Palette.Charcoal);
+            Cylinder(root, "Top", new Vector3(0f, 0.72f, 0f), 0.6f, 0.06f, Palette.Wood);
+            Cylinder(root, "Rim", new Vector3(0f, 0.685f, 0f), 0.61f, 0.03f, Palette.PanelWood);
 
             for (int side = -1; side <= 1; side += 2)
             {
-                Color seatColor = side < 0 ? Palette.Blush : Palette.Mint;
                 float x = side * 1f;
-                Cylinder(root, "Seat", new Vector3(x, 0.45f, 0f), 0.26f, 0.07f, seatColor);
+                // Seat cushion on a wooden ring, splayed legs and a curved slatted back.
+                Cylinder(root, "SeatRing", new Vector3(x, 0.43f, 0f), 0.24f, 0.05f, Palette.PanelWood);
+                Cylinder(root, "Seat", new Vector3(x, 0.47f, 0f), 0.22f, 0.05f, Palette.DarkWood);
                 for (int leg = 0; leg < 4; leg++)
                 {
                     float angle = leg * Mathf.PI * 0.5f + Mathf.PI * 0.25f;
-                    Cylinder(root, "Leg", new Vector3(x + Mathf.Cos(angle) * 0.17f, 0.21f, Mathf.Sin(angle) * 0.17f), 0.025f, 0.42f, Palette.Steel);
+                    Transform legPart = Cylinder(root, "Leg",
+                        new Vector3(x + Mathf.Cos(angle) * 0.17f, 0.21f, Mathf.Sin(angle) * 0.17f), 0.025f, 0.43f, Palette.PanelWood);
+                    legPart.localRotation = Quaternion.Euler(-Mathf.Sin(angle) * 8f, 0f, Mathf.Cos(angle) * 8f); // feet splay out
                 }
-                Box(root, "Back", new Vector3(side * 1.24f, 0.74f, 0f), new Vector3(0.06f, 0.42f, 0.48f), seatColor);
-                Box(root, "BackPost", new Vector3(side * 1.24f, 0.55f, 0f), new Vector3(0.04f, 0.2f, 0.08f), Palette.Steel);
+                float backX = side * 1.2f;
+                for (int post = -1; post <= 1; post += 2)
+                {
+                    Transform upright = Cylinder(root, "BackPost", new Vector3(backX, 0.72f, post * 0.17f), 0.025f, 0.52f, Palette.PanelWood);
+                    upright.localRotation = Quaternion.Euler(0f, 0f, -side * 8f); // leans back
+                }
+                Box(root, "BackRail", new Vector3(backX + side * 0.04f, 0.95f, 0f), new Vector3(0.05f, 0.09f, 0.42f), Palette.PanelWood);
+                Box(root, "BackSlat", new Vector3(backX + side * 0.02f, 0.75f, 0f), new Vector3(0.04f, 0.32f, 0.08f), Palette.PanelWood);
             }
             return root.gameObject;
         }
@@ -603,8 +622,125 @@ namespace BubbleTea.EditorTools
 
         // ---------- Shape helpers ----------
 
-        private static Transform Box(Transform parent, string name, Vector3 position, Vector3 size, Color color, bool emissive = false) =>
-            Primitive(parent, PrimitiveType.Cube, name, position, size, color, emissive);
+        // A box with softly rounded edges (scaled like a cube, so children keep working the same way).
+        private static Transform Box(Transform parent, string name, Vector3 position, Vector3 size, Color color, bool emissive = false)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = position;
+            go.transform.localScale = size;
+            go.AddComponent<MeshFilter>().sharedMesh = RoundedBox(WorldSize(parent, size));
+            go.AddComponent<MeshRenderer>().sharedMaterial = GetMaterial(color, emissive);
+            return go.transform;
+        }
+
+        // A box's real size, counting the scale of the boxes it sits inside.
+        private static Vector3 WorldSize(Transform parent, Vector3 size)
+        {
+            Vector3 scale = parent != null ? parent.lossyScale : Vector3.one;
+            return Vector3.Scale(size, scale);
+        }
+
+        private static readonly Dictionary<string, Mesh> RoundedBoxes = new();
+
+        // A 1 x 1 x 1 box mesh whose edges are rounded as if it were this size, so once it's scaled
+        // to that size every edge has the same soft bevel. Cached per size and saved as an asset.
+        private static Mesh RoundedBox(Vector3 size)
+        {
+            size = new Vector3(Mathf.Max(size.x, 0.002f), Mathf.Max(size.y, 0.002f), Mathf.Max(size.z, 0.002f));
+            string key = $"RoundBox_{Mathf.RoundToInt(size.x * 1000)}_{Mathf.RoundToInt(size.y * 1000)}_{Mathf.RoundToInt(size.z * 1000)}";
+            if (RoundedBoxes.TryGetValue(key, out Mesh cached)) return cached;
+
+            float radius = Mathf.Min(0.035f, Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * 0.3f);
+            Vector3 half = size * 0.5f;
+            var vertices = new List<Vector3>();
+            var normals = new List<Vector3>();
+            var triangles = new List<int>();
+
+            // Each face is a grid, denser near its edges, pushed out onto the rounded shape.
+            Vector3[] faceNormals = { Vector3.right, Vector3.left, Vector3.up, Vector3.down, Vector3.forward, Vector3.back };
+            foreach (Vector3 n in faceNormals)
+            {
+                Vector3 u = Mathf.Abs(n.y) > 0.5f ? Vector3.right : Vector3.up;
+                Vector3 v = Vector3.Cross(n, u);
+                int start = vertices.Count;
+                List<float> coords = GridCoordinates(BevelSteps.Length);
+                int count = coords.Count;
+                for (int j = 0; j < count; j++)
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        Vector3 point = Vector3.Scale(n, half)
+                                        + Vector3.Scale(u, half) * Along(coords[i], Vector3.Dot(Abs(u), half), radius)
+                                        + Vector3.Scale(v, half) * Along(coords[j], Vector3.Dot(Abs(v), half), radius);
+                        Vector3 inner = new(
+                            Mathf.Clamp(point.x, -half.x + radius, half.x - radius),
+                            Mathf.Clamp(point.y, -half.y + radius, half.y - radius),
+                            Mathf.Clamp(point.z, -half.z + radius, half.z - radius));
+                        Vector3 outward = point - inner;
+                        outward = outward.sqrMagnitude > 1e-10f ? outward.normalized : n;
+                        Vector3 position = inner + outward * radius;
+                        vertices.Add(new Vector3(position.x / size.x, position.y / size.y, position.z / size.z));
+                        normals.Add(Vector3.Scale(outward, size).normalized); // undoes the scale the object gets
+                    }
+                }
+                for (int j = 0; j < count - 1; j++)
+                {
+                    for (int i = 0; i < count - 1; i++)
+                    {
+                        int a = start + j * count + i, b = a + 1, c = a + count, d = c + 1;
+                        AddFacing(triangles, vertices, n, a, b, d);
+                        AddFacing(triangles, vertices, n, a, d, c);
+                    }
+                }
+            }
+
+            string path = $"{MeshFolder}/{key}.asset";
+            var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            bool isNew = mesh == null;
+            if (isNew) mesh = new Mesh { name = key };
+            mesh.Clear();
+            mesh.SetVertices(vertices);
+            mesh.SetNormals(normals);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateBounds();
+            if (isNew) AssetDatabase.CreateAsset(mesh, path);
+            else EditorUtility.SetDirty(mesh);
+            RoundedBoxes[key] = mesh;
+            return mesh;
+        }
+
+        // How far into the bevel each grid line sits, from the edge (0) to where the flat face starts (1).
+        private static readonly float[] BevelSteps = { 0f, 0.12f, 0.45f, 1f };
+
+        // Grid lines across a face: -4..-1 are the bevel lines at the low edge (-4 on the edge),
+        // 1..4 the ones at the high edge; the flat middle needs no lines in between.
+        private static List<float> GridCoordinates(int steps)
+        {
+            var list = new List<float>();
+            for (int i = steps; i >= 1; i--) list.Add(-i);
+            for (int i = 1; i <= steps; i++) list.Add(i);
+            return list;
+        }
+
+        // Turns a grid line into a fraction of the half size (-1 to 1).
+        private static float Along(float coordinate, float halfSize, float radius)
+        {
+            int index = Mathf.Abs(Mathf.RoundToInt(coordinate)) - 1; // 0 = bevel's end ... 3 = on the edge
+            float fromEdge = BevelSteps[BevelSteps.Length - 1 - index] * radius;
+            float value = (halfSize - fromEdge) / halfSize;
+            return coordinate < 0f ? -value : value;
+        }
+
+        private static Vector3 Abs(Vector3 v) => new(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z));
+
+        // Adds a triangle wound so it faces outward.
+        private static void AddFacing(List<int> triangles, List<Vector3> vertices, Vector3 outward, int a, int b, int c)
+        {
+            Vector3 normal = Vector3.Cross(vertices[b] - vertices[a], vertices[c] - vertices[a]);
+            if (Vector3.Dot(normal, outward) >= 0f) triangles.AddRange(new[] { a, b, c });
+            else triangles.AddRange(new[] { a, c, b });
+        }
 
         private static Transform Sphere(Transform parent, string name, Vector3 position, Vector3 size, Color color) =>
             Primitive(parent, PrimitiveType.Sphere, name, position, size, color, false);

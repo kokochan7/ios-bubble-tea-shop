@@ -34,13 +34,17 @@ namespace BubbleTea.EditorTools
             float w = layout.HalfWidth, d = layout.HalfDepth;
 
             // Textures are drawn in near-white, so each material's own color still tints them.
-            ApplyTexture(floor, TileTexture(), new Vector2(w / 2f, d / 2f)); // 4 m pattern repeats
+            // Wooden planks everywhere you walk (half-meter boards), wood paneling on the walls.
+            ApplyTexture(floor, PlankTexture(), new Vector2(w, d));
             ApplyTexture(expansionFloor, PlankTexture(), new Vector2((layout.LaneOuterX - w) / 2f, d));
-            ApplyTexture(wall, StripeTexture(), new Vector2(w, 1f));
+            ApplyTexture(wall, PanelTexture(), new Vector2(w, 1f));
 
             var root = new GameObject("Dressing").transform;
             CreateStreet(root, style, layout);
             CreateTrim(root, style, 2f * w + 0.5f, 0f, d, 3f);
+            CreateWallCaps(GameObject.Find("Walls"));
+            CreateWallCaps(expansionArea);
+            CreateShelves(root, layout.Lamps, d);
             CreateWindows(root, style, layout.Windows, d);
             CreateSign(root, style, d);
             CreateBunting(root, style, -w + 0.5f, w - 0.5f, d);
@@ -61,6 +65,7 @@ namespace BubbleTea.EditorTools
                 CreateTrim(expansion, style, laneWall - w + 0.5f, (w + laneWall) / 2f, d, 3f);
                 CreateWindows(expansion, style, layout.ExpansionWindows, d);
                 CreateLamps(expansion, style, layout.ExpansionLamps, d);
+                CreateShelves(expansion, layout.ExpansionLamps, d);
                 CreateKitchenFloor(expansion, "KitchenFloorEast", w, laneWall, layout);
                 CreatePartition(expansion, w, laneWall, layout);
                 CreateDriveThruLane(expansion, style, layout);
@@ -81,8 +86,9 @@ namespace BubbleTea.EditorTools
 
             // A sidewalk along the front of the shop.
             float sidewalk = layout.SidewalkZ;
-            Part(root, PrimitiveType.Cube, "Sidewalk", new Vector3(8f, -0.01f, sidewalk), new Vector3(70f, 0.02f, 5f),
-                Mat("Sidewalk", new Color(0.86f, 0.85f, 0.83f), 0.1f));
+            Material cobbles = Mat("Cobbles", new Color(0.84f, 0.82f, 0.80f), 0.15f);
+            ApplyTexture(cobbles, CobbleTexture(), new Vector2(35f, 2.5f)); // stones about 25 cm across
+            Part(root, PrimitiveType.Cube, "Sidewalk", new Vector3(8f, -0.01f, sidewalk), new Vector3(70f, 0.02f, 5f), cobbles);
             Part(root, PrimitiveType.Cube, "Road", new Vector3(8f, -0.012f, sidewalk - 6f), new Vector3(70f, 0.02f, 7f),
                 Mat("Road", new Color(0.36f, 0.36f, 0.40f), 0.15f));
 
@@ -106,18 +112,67 @@ namespace BubbleTea.EditorTools
         // A dark wood baseboard and a cream cap along the back wall, and caps on the low walls.
         private static void CreateTrim(Transform root, Style style, float length, float centerX, float wallZ, float height)
         {
-            Material wood = Mat("TrimWood", new Color(0.62f, 0.43f, 0.30f), 0.3f);
-            Material cream = Mat("TrimCream", new Color(1f, 0.96f, 0.90f), 0.3f);
+            Material wood = Mat("TrimWood", new Color(0.45f, 0.29f, 0.22f), 0.3f);
+            Material cream = Mat("TrimRail", new Color(0.72f, 0.48f, 0.33f), 0.3f);
             float face = wallZ - 0.02f;
             Part(root, PrimitiveType.Cube, "Baseboard", new Vector3(centerX, 0.15f, face - 0.03f), new Vector3(length - 0.6f, 0.3f, 0.08f), wood);
             Part(root, PrimitiveType.Cube, "Chair Rail", new Vector3(centerX, 1.05f, face - 0.03f), new Vector3(length - 0.6f, 0.08f, 0.06f), cream);
-            Part(root, PrimitiveType.Cube, "Cap", new Vector3(centerX, height + 0.04f, wallZ + 0.25f), new Vector3(length + 0.1f, 0.08f, 0.7f), cream);
+        }
+
+        // A thick dark wooden cap along the top of every wall, like a cutaway dollhouse.
+        private static void CreateWallCaps(GameObject walls)
+        {
+            if (walls == null) return;
+            Material cap = Mat("WallCap", new Color(0.33f, 0.22f, 0.19f), 0.25f);
+            foreach (Transform wall in walls.transform)
+            {
+                if (wall.GetComponent<MeshRenderer>() == null || wall.name == "Floor") continue;
+                Vector3 scale = wall.localScale;
+                // A child of the wall, so it hides with it (the east wall goes when the shop expands).
+                GameObject part = Part(wall, PrimitiveType.Cube, "Cap", new Vector3(0f, 0.5f + 0.05f / scale.y, 0f),
+                    new Vector3(1f + 0.24f / scale.x, 0.1f / scale.y, 1f + 0.24f / scale.z), cap);
+                part.transform.localRotation = Quaternion.identity;
+            }
+        }
+
+        // Little wooden shelves on the back wall with rows of mugs and jars.
+        private static void CreateShelves(Transform root, float[] xs, float wallZ)
+        {
+            Material board = Mat("ShelfWood", new Color(0.62f, 0.40f, 0.27f), 0.3f);
+            Material[] mugs =
+            {
+                Mat("MugTeal", new Color(0.45f, 0.78f, 0.80f), 0.6f),
+                Mat("MugCream", new Color(0.98f, 0.94f, 0.86f), 0.6f),
+                Mat("JarGlass", new Color(0.85f, 0.93f, 0.95f), 0.9f),
+            };
+            foreach (float x in xs)
+            {
+                for (int row = 0; row < 2; row++)
+                {
+                    float y = 1.15f + row * 0.42f;
+                    Part(root, PrimitiveType.Cube, "Shelf", new Vector3(x, y, wallZ - 0.16f), new Vector3(1.3f, 0.05f, 0.3f), board);
+                    for (int i = 0; i < 4; i++)
+                    {
+                        Material mug = mugs[(i + row) % mugs.Length];
+                        bool jar = mug == mugs[2];
+                        Part(root, PrimitiveType.Cylinder, jar ? "Jar" : "Mug",
+                            new Vector3(x - 0.45f + i * 0.3f, y + (jar ? 0.13f : 0.09f), wallZ - 0.16f),
+                            jar ? new Vector3(0.14f, 0.1f, 0.14f) : new Vector3(0.13f, 0.065f, 0.13f), mug);
+                    }
+                }
+                // Brackets under the bottom shelf.
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    Part(root, PrimitiveType.Cube, "Bracket", new Vector3(x + side * 0.5f, 1.05f, wallZ - 0.1f),
+                        new Vector3(0.05f, 0.18f, 0.16f), board);
+                }
+            }
         }
 
         private static void CreateWindows(Transform root, Style style, float[] xs, float wallZ)
         {
-            Material frame = Mat("WindowFrame", new Color(1f, 0.98f, 0.95f), 0.4f);
-            Material glass = Mat("WindowGlass", new Color(0.70f, 0.88f, 0.98f), 0.95f);
+            Material frame = Mat("WindowFrameWood", new Color(0.42f, 0.27f, 0.21f), 0.35f);
+            Material glass = Mat("WindowGlass", new Color(0.62f, 0.80f, 0.70f), 0.95f); // a hint of garden outside
             Material sill = Mat("TrimWood", new Color(0.62f, 0.43f, 0.30f), 0.3f);
             const float width = 2.4f, height = 1.3f, centerY = 1.95f;
             float z = wallZ - 0.04f;
@@ -286,7 +341,7 @@ namespace BubbleTea.EditorTools
             PrototypeSceneBuilder.ShopLayout layout)
         {
             float z0 = layout.PartitionZ, z1 = layout.HalfDepth;
-            Material kitchen = Mat(materialName, new Color(0.84f, 0.86f, 0.88f), 0.35f);
+            Material kitchen = Mat(materialName, new Color(0.93f, 0.85f, 0.74f), 0.35f); // warm cream tiles
             ApplyTexture(kitchen, TileTexture(), new Vector2((toX - fromX) / 2f, (z1 - z0) / 2f)); // 1 m tiles
             Part(root, PrimitiveType.Cube, "Kitchen Floor", new Vector3((fromX + toX) / 2f, 0.003f, (z0 + z1) / 2f),
                 new Vector3(toX - fromX, 0.004f, z1 - z0), kitchen);
@@ -465,25 +520,51 @@ namespace BubbleTea.EditorTools
             return new Color(shade, shade, shade);
         });
 
-        // Planks running front to back, with staggered ends and a little grain.
+        // Planks running front to back, with staggered ends, dark seams, wavy grain and a few knots.
         private static Texture2D PlankTexture() => SaveTexture("WoodPlanks", 512, (x, y) =>
         {
             const int plankWidth = 128, plankLength = 512;
             int column = x / plankWidth;
             int along = (y + column * 197) % plankLength;
-            if (x % plankWidth < 3 || along < 3) return new Color(0.70f, 0.66f, 0.62f);
-            float shade = 0.92f + 0.06f * Mathf.Repeat(column * 0.37f, 1f);
-            shade += Mathf.Sin(x * 0.35f + Mathf.Sin(y * 0.02f + column) * 4f) * 0.02f;
-            shade -= Noise(x, y) * 0.02f;
+            int across = x % plankWidth;
+            if (across < 4 || along < 4) return new Color(0.42f, 0.38f, 0.36f);
+            float shade = 0.86f + 0.12f * Mathf.Repeat(column * 0.37f + (y + column * 197) / plankLength * 0.23f, 1f);
+            shade += Mathf.Sin(across * 0.28f + Mathf.Sin(y * 0.015f + column * 1.7f) * 5f) * 0.035f;
+            shade -= Noise(x, y) * 0.03f;
+            // A soft edge on each board and a knot here and there.
+            float edge = Mathf.Min(across, plankWidth - across);
+            if (edge < 10) shade -= (10 - edge) * 0.006f;
+            float knotX = across - 64f, knotY = along - 256f;
+            float knot = knotX * knotX + knotY * knotY * 0.3f;
+            if ((column % 3 == 1) && knot < 120f) shade -= 0.12f * (1f - knot / 120f);
+            return new Color(shade, shade * 0.97f, shade * 0.95f);
+        });
+
+        // Vertical wooden boards for the walls, with dark grooves between them.
+        private static Texture2D PanelTexture() => SaveTexture("WallBoards", 256, (x, y) =>
+        {
+            const int board = 64;
+            int across = x % board;
+            if (across < 3) return new Color(0.62f, 0.58f, 0.56f);
+            float shade = 0.9f + 0.07f * Mathf.Repeat((x / board) * 0.41f, 1f);
+            shade += Mathf.Sin(across * 0.4f + Mathf.Sin(y * 0.03f + x / board) * 3f) * 0.025f;
+            shade -= Noise(x, y) * 0.03f;
+            if (across < 8) shade -= (8 - across) * 0.01f;
             return new Color(shade, shade * 0.98f, shade * 0.96f);
         });
 
-        // Soft vertical wallpaper stripes.
-        private static Texture2D StripeTexture() => SaveTexture("WallStripes", 256, (x, y) =>
+        // Rounded paving stones in staggered rows.
+        private static Texture2D CobbleTexture() => SaveTexture("Cobbles", 256, (x, y) =>
         {
-            float shade = (x / 32) % 2 == 0 ? 1f : 0.92f;
-            if (x % 32 == 0) shade = 0.88f;
-            return new Color(shade, shade, shade);
+            const int stone = 64;
+            int row = y / stone;
+            int sx = (x + (row % 2) * stone / 2) % stone, sy = y % stone;
+            float dx = (sx - stone / 2f) / (stone / 2f), dy = (sy - stone / 2f) / (stone / 2f);
+            float d = Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) * 0.6f + Mathf.Sqrt(dx * dx + dy * dy) * 0.4f;
+            if (d > 0.92f) return new Color(0.55f, 0.53f, 0.52f);
+            int id = (x + (row % 2) * stone / 2) / stone + row * 7;
+            float shade = 0.86f + 0.1f * Mathf.Repeat(id * 0.618f, 1f) - d * 0.12f - Noise(x, y) * 0.04f;
+            return new Color(shade, shade, shade * 0.98f);
         });
 
         private static float Noise(int x, int y)

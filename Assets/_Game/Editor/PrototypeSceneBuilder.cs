@@ -168,18 +168,18 @@ namespace BubbleTea.EditorTools
             ScenePath = ScenePath,
             SaveFile = "save.json",
             FloorMaterial = "Floor",
-            FloorColor = new Color(0.93f, 0.87f, 0.78f),
+            FloorColor = new Color(0.56f, 0.42f, 0.42f),          // dark plum-brown planks
             WallMaterial = "Wall",
-            WallColor = new Color(0.85f, 0.78f, 0.70f),
+            WallColor = new Color(0.86f, 0.58f, 0.40f),           // warm wood boards
             ExpansionFloorMaterial = "ExpansionFloor",
-            ExpansionFloorColor = new Color(0.86f, 0.90f, 0.82f),
+            ExpansionFloorColor = new Color(0.60f, 0.45f, 0.42f),
             Look = new ShopDressing.Style
             {
                 ShopName = "Boba Shop",
                 Prefix = "Shop1",
                 Accent = new Color(0.91f, 0.51f, 0.60f),
                 Accent2 = new Color(0.66f, 0.88f, 0.80f),
-                Grass = new Color(0.62f, 0.80f, 0.52f),
+                Grass = new Color(0.36f, 0.55f, 0.28f),
             },
             Music = MusicMaker.Track.BobaShop,
             Layout = Small,
@@ -191,18 +191,18 @@ namespace BubbleTea.EditorTools
             ScenePath = Shop2ScenePath,
             SaveFile = "save-shop2.json",
             FloorMaterial = "Shop2Floor",
-            FloorColor = new Color(0.90f, 0.94f, 0.84f),
+            FloorColor = new Color(0.78f, 0.58f, 0.40f),          // honey oak planks
             WallMaterial = "Shop2Wall",
-            WallColor = new Color(0.66f, 0.80f, 0.60f),
+            WallColor = new Color(0.62f, 0.74f, 0.55f),           // sage green boards
             ExpansionFloorMaterial = "Shop2ExpansionFloor",
-            ExpansionFloorColor = new Color(0.97f, 0.88f, 0.90f),
+            ExpansionFloorColor = new Color(0.74f, 0.55f, 0.40f),
             Look = new ShopDressing.Style
             {
                 ShopName = "Matcha House",
                 Prefix = "Shop2",
                 Accent = new Color(0.42f, 0.66f, 0.42f),
                 Accent2 = new Color(0.98f, 0.86f, 0.62f),
-                Grass = new Color(0.70f, 0.82f, 0.56f),
+                Grass = new Color(0.42f, 0.58f, 0.30f),
             },
             Music = MusicMaker.Track.MatchaHouse,
             Layout = Large,
@@ -380,7 +380,11 @@ namespace BubbleTea.EditorTools
             }
 
             Layout = plan.Layout;
+            // Colors are set every build (the materials may already exist with older colors).
             Material floorMat = GetOrCreateMaterial(plan.FloorMaterial, plan.FloorColor);
+            floorMat.color = plan.FloorColor;
+            Material expansionFloorMat = GetOrCreateMaterial(plan.ExpansionFloorMaterial, plan.ExpansionFloorColor);
+            expansionFloorMat.color = plan.ExpansionFloorColor;
             Material playerMat = GetOrCreateMaterial("Player", new Color(0.36f, 0.62f, 0.95f));
             Material cashMat = GetOrCreateMaterial("Cash", new Color(0.35f, 0.78f, 0.38f));
             Material padMat = GetOrCreateMaterial("CashSpot", new Color(0.80f, 0.73f, 0.62f));
@@ -391,6 +395,7 @@ namespace BubbleTea.EditorTools
             CreateLight();
             CreateFloor(floorMat);
             Material wallMat = GetOrCreateMaterial(plan.WallMaterial, plan.WallColor);
+            wallMat.color = plan.WallColor;
             GameObject eastWall = CreateWalls(wallMat);
             GameObject expansionArea = CreateExpansionArea(wallMat,
                 GetOrCreateMaterial(plan.ExpansionFloorMaterial, plan.ExpansionFloorColor));
@@ -468,17 +473,17 @@ namespace BubbleTea.EditorTools
             var go = new GameObject("Sun");
             var light = go.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.intensity = 1.15f;
-            light.color = new Color(1f, 0.96f, 0.90f); // warm afternoon sun
+            light.intensity = 1.05f;
+            light.color = new Color(1f, 0.90f, 0.78f); // golden, cozy light
             light.shadows = LightShadows.Soft;
-            light.shadowStrength = 0.6f;
-            go.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            light.shadowStrength = 0.55f;
+            go.transform.rotation = Quaternion.Euler(55f, -35f, 0f);
 
-            // Sky, horizon and ground colors light the shop from all sides, softer than one flat color.
+            // Sky, horizon and ground colors light the shop from all sides, warm like lamplight.
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.78f, 0.80f, 0.88f);
-            RenderSettings.ambientEquatorColor = new Color(0.70f, 0.66f, 0.64f);
-            RenderSettings.ambientGroundColor = new Color(0.52f, 0.47f, 0.44f);
+            RenderSettings.ambientSkyColor = new Color(0.80f, 0.76f, 0.78f);
+            RenderSettings.ambientEquatorColor = new Color(0.74f, 0.62f, 0.54f);
+            RenderSettings.ambientGroundColor = new Color(0.50f, 0.40f, 0.36f);
         }
 
         private static void CreateFloor(Material material)
@@ -658,7 +663,7 @@ namespace BubbleTea.EditorTools
             var camera = go.AddComponent<Camera>();
             camera.fieldOfView = 40f;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.74f, 0.87f, 0.96f);
+            camera.backgroundColor = new Color(0.36f, 0.50f, 0.30f); // grass, past the edge of the ground
             camera.allowMSAA = true;
             go.AddComponent<AudioListener>();
 
@@ -668,6 +673,7 @@ namespace BubbleTea.EditorTools
             // Place it now too, so the Scene and Game views look right before pressing Play.
             go.transform.position = player.position + new Vector3(0f, 13f, -9f);
             go.transform.LookAt(player.position);
+            CozyLook.AddTo(camera);
             return camera;
         }
 

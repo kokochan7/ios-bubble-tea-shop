@@ -189,3 +189,10 @@ After the seventh playtest:
 - Customers and staff are men or women at random, with random shirt, hair and skin colors (`Scripts/Feedback/CharacterLook.cs`, on the Boba Art Kit characters).
 - The order above a customer is a bigger drink with no white plate.
 - Everything built from a pad shows its name above it ("Counter", "Tea Brewer", "Barista"...), and staff carry theirs around (`Scripts/Building/NameTag.cs`).
+
+Cozy art pass (in the style of Capybarista):
+
+- Every box in the Boba Art Kit has softly rounded edges (`RoundedBox` in `Editor/BobaArtKit.cs`).
+- Counters and stations are honey-wood cabinets with carved door panels, a lighter worktop and a band in each station's color. Café tables are round and wooden, with bentwood chairs.
+- Dark plank floors (honey oak in the Matcha House), wood-board walls with thick dark caps, warm cream kitchen tiles, wooden shelves of mugs and jars on the back wall, wood window frames, a cobblestone sidewalk and deeper green grass.
+- Warm golden lighting plus a cozy color grade: soft glow, gentle contrast, warmer colors and a light vignette (`Editor/CozyLook.cs`, saved as `Assets/_Game/Settings/CozyLook.asset`).
