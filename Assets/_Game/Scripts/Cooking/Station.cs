@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using BubbleTea.Core;
 using UnityEngine;
 
@@ -11,6 +12,9 @@ namespace BubbleTea.Cooking
     /// </summary>
     public class Station : MonoBehaviour
     {
+        // Stations currently in the shop, so customers only order drinks that can be made.
+        private static readonly List<Station> active = new();
+
         [SerializeField, Tooltip("What this station can make.")]
         private RecipeStep[] steps;
 
@@ -28,6 +32,24 @@ namespace BubbleTea.Cooking
 
         /// <summary>0 to 1 progress on the current item (for a future progress bar).</summary>
         public float Progress => current != null ? Mathf.Clamp01(workTimer / current.Seconds) : 0f;
+
+        private void OnEnable() => active.Add(this);
+        private void OnDisable() => active.Remove(this);
+
+        /// <summary>True if any station in the shop produces <paramref name="item"/>.</summary>
+        public static bool AnyCanMake(ItemDefinition item)
+        {
+            if (item == null) return false;
+            foreach (Station station in active)
+            {
+                if (station.steps == null) continue;
+                foreach (RecipeStep step in station.steps)
+                {
+                    if (step != null && step.Output == item) return true;
+                }
+            }
+            return false;
+        }
 
         private void Update()
         {

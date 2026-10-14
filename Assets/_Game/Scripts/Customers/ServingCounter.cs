@@ -7,8 +7,9 @@ using UnityEngine;
 namespace BubbleTea.Customers
 {
     /// <summary>
-    /// Where drinks are sold. The player drops finished drinks here, customers line up
-    /// on the other side, take one each, and pay into the counter's cash pile.
+    /// Where drinks are sold. Customers line up on the other side, each wanting one drink
+    /// from the menu. The player drops off drinks someone in line is waiting for, and each
+    /// customer takes theirs and pays into the counter's cash pile.
     /// </summary>
     public class ServingCounter : MonoBehaviour
     {
@@ -36,6 +37,7 @@ namespace BubbleTea.Customers
         private float queueSpacing = 1.1f;
 
         private readonly List<Customer> queue = new();
+        private readonly List<DrinkRecipe> orderChoices = new();
 
         private void OnEnable() => active.Add(this);
         private void OnDisable() => active.Remove(this);
@@ -58,23 +60,56 @@ namespace BubbleTea.Customers
         }
 
         /// <summary>
-        /// Hands the next drink to the customer and banks their payment.
-        /// Returns false if there's nothing to sell.
+        /// Picks a drink for a new customer: anything on the menu that a station in the shop
+        /// can make. Before any station exists, it falls back to the first menu item.
         /// </summary>
-        public bool TrySell(out CarriedItem drink)
+        public DrinkRecipe PickOrder()
         {
-            DrinkRecipe sold = null;
-            if (!drinks.TryTake(item => (sold = FindRecipe(item)) != null, out drink)) return false;
-            if (cashPile != null) cashPile.AddValue(Mathf.RoundToInt(sold.Price * Stats.Get(StatId.DrinkPrice, 1f)));
+            orderChoices.Clear();
+            DrinkRecipe fallback = null;
+            if (menu != null)
+            {
+                foreach (DrinkRecipe recipe in menu)
+                {
+                    if (recipe == null) continue;
+                    if (fallback == null) fallback = recipe;
+                    if (Station.AnyCanMake(recipe.Drink)) orderChoices.Add(recipe);
+                }
+            }
+            return orderChoices.Count > 0 ? orderChoices[Random.Range(0, orderChoices.Count)] : fallback;
+        }
+
+        /// <summary>
+        /// Hands the customer the drink they ordered and banks their payment.
+        /// Returns false if that drink isn't on the counter yet.
+        /// </summary>
+        public bool TrySell(DrinkRecipe order, out CarriedItem drink)
+        {
+            drink = null;
+            if (order == null || !drinks.TryTake(item => item == order.Drink, out drink)) return false;
+            if (cashPile != null) cashPile.AddValue(Mathf.RoundToInt(order.Price * Stats.Get(StatId.DrinkPrice, 1f)));
             return true;
         }
 
+        // Only takes drinks someone in line still needs, so the counter never fills up
+        // with drinks nobody will buy.
         private bool Handoff(ItemCarrier carrier)
         {
             if (drinks.IsFull) return false;
-            if (!carrier.Stack.TryTake(item => FindRecipe(item) != null, out CarriedItem drink)) return false;
+            if (!carrier.Stack.TryTake(IsStillWanted, out CarriedItem drink)) return false;
             drinks.Push(drink);
             return true;
+        }
+
+        private bool IsStillWanted(ItemDefinition item)
+        {
+            if (FindRecipe(item) == null) return false;
+            int wanted = 0;
+            foreach (Customer customer in queue)
+            {
+                if (customer != null && customer.Order != null && customer.Order.Drink == item) wanted++;
+            }
+            return drinks.CountOf(onCounter => onCounter == item) < wanted;
         }
 
         private DrinkRecipe FindRecipe(ItemDefinition item)

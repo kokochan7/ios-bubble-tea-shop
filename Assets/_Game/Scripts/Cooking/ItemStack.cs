@@ -53,6 +53,17 @@ namespace BubbleTea.Cooking
             return false;
         }
 
+        /// <summary>How many items in the stack match.</summary>
+        public int CountOf(Func<ItemDefinition, bool> match)
+        {
+            int count = 0;
+            foreach (CarriedItem item in Items)
+            {
+                if (item != null && match(item.Definition)) count++;
+            }
+            return count;
+        }
+
         /// <summary>True if any item in the stack matches.</summary>
         public bool Contains(Func<ItemDefinition, bool> match)
         {

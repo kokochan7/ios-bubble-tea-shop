@@ -19,6 +19,12 @@ namespace BubbleTea.Customers
         [SerializeField, Tooltip("Where the drink sits while the customer carries it.")]
         private Vector3 drinkHoldPosition = new(0f, 0.3f, 0.6f);
 
+        [SerializeField, Tooltip("The speech bubble above the head. A model of the ordered drink appears on it.")]
+        private Transform orderBubble;
+
+        [SerializeField, Tooltip("Size of the drink model shown in the bubble.")]
+        private float bubbleIconScale = 1.3f;
+
         private enum State { Queueing, Leaving }
 
         private ServingCounter counter;
@@ -27,13 +33,36 @@ namespace BubbleTea.Customers
         private State state;
         private float waitTimer;
 
+        /// <summary>The drink this customer wants.</summary>
+        public DrinkRecipe Order { get; private set; }
+
         public void Init(ServingCounter servingCounter, Vector3 exitPoint, Action<Customer> gone)
         {
             counter = servingCounter;
             exit = exitPoint;
             onGone = gone;
             state = State.Queueing;
+            Order = counter.PickOrder();
+            ShowOrder();
             counter.JoinQueue(this);
+        }
+
+        // Puts a copy of the ordered drink's model on the bubble so you can see what they want.
+        private void ShowOrder()
+        {
+            if (orderBubble == null) return;
+            if (Order == null || Order.Drink == null || Order.Drink.Prefab == null)
+            {
+                orderBubble.gameObject.SetActive(false);
+                return;
+            }
+
+            GameObject icon = Instantiate(Order.Drink.Prefab, orderBubble);
+            icon.transform.localPosition = Vector3.zero;
+            icon.transform.localRotation = Quaternion.identity;
+            icon.transform.localScale = Vector3.one * bubbleIconScale;
+            var item = icon.GetComponent<CarriedItem>();
+            if (item != null) Destroy(item); // just a picture, not a real drink
         }
 
         private void Update()
@@ -63,9 +92,10 @@ namespace BubbleTea.Customers
             if (toCounter.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(toCounter);
 
             waitTimer += Time.deltaTime;
-            if (waitTimer < pauseBeforeBuying || !counter.TrySell(out CarriedItem drink)) return;
+            if (waitTimer < pauseBeforeBuying || !counter.TrySell(Order, out CarriedItem drink)) return;
 
             drink.MoveTo(transform, drinkHoldPosition);
+            if (orderBubble != null) orderBubble.gameObject.SetActive(false);
             counter.LeaveQueue(this);
             state = State.Leaving;
         }

@@ -26,6 +26,8 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition Counter;
             public BuildableDefinition TeaBrewer;
             public BuildableDefinition ToppingBar;
+            public BuildableDefinition TaroStation;
+            public BuildableDefinition FruitBar;
             public BuildableDefinition UpgradeDesk;
             public UpgradeDefinition[] Upgrades;
             public Customer CustomerPrefab;
@@ -42,18 +44,32 @@ namespace BubbleTea.EditorTools
 
             ItemDefinition milkTea = GetOrCreateItem("Milk Tea", new Color(0.85f, 0.70f, 0.52f), null);
             ItemDefinition bobaTea = GetOrCreateItem("Boba Milk Tea", new Color(0.88f, 0.76f, 0.60f), new Color(0.12f, 0.08f, 0.06f));
+            ItemDefinition taroTea = GetOrCreateItem("Taro Milk Tea", new Color(0.66f, 0.50f, 0.84f), null);
+            ItemDefinition taroBoba = GetOrCreateItem("Taro Boba", new Color(0.70f, 0.55f, 0.88f), new Color(0.12f, 0.08f, 0.06f));
+            ItemDefinition mangoTea = GetOrCreateItem("Mango Fruit Tea", new Color(1f, 0.66f, 0.18f), null);
 
             RecipeStep brew = GetOrCreateStep("Brew Milk Tea", null, milkTea, 2f);
             RecipeStep addBoba = GetOrCreateStep("Add Boba", milkTea, bobaTea, 1.5f);
+            RecipeStep makeTaro = GetOrCreateStep("Make Taro Tea", null, taroTea, 2.5f);
+            RecipeStep addBobaToTaro = GetOrCreateStep("Add Boba To Taro", taroTea, taroBoba, 1.5f);
+            RecipeStep makeMango = GetOrCreateStep("Make Mango Tea", null, mangoTea, 2f);
 
             DrinkRecipe sellMilkTea = GetOrCreateDrink("Milk Tea", milkTea, 8);
             DrinkRecipe sellBobaTea = GetOrCreateDrink("Boba Milk Tea", bobaTea, 15);
+            DrinkRecipe sellTaroTea = GetOrCreateDrink("Taro Milk Tea", taroTea, 12);
+            DrinkRecipe sellTaroBoba = GetOrCreateDrink("Taro Boba", taroBoba, 20);
+            DrinkRecipe sellMangoTea = GetOrCreateDrink("Mango Fruit Tea", mangoTea, 14);
 
-            GameObject counter = BuildCounterPrefab(new[] { sellMilkTea, sellBobaTea }, billPrefab);
+            GameObject counter = BuildCounterPrefab(
+                new[] { sellMilkTea, sellBobaTea, sellTaroTea, sellTaroBoba, sellMangoTea }, billPrefab);
             GameObject brewer = BuildStationPrefab("TeaBrewer", new Color(0.30f, 0.30f, 0.34f), new Vector3(1.4f, 1f, 1f),
                 new Color(0.55f, 0.32f, 0.16f), new[] { brew }, inputCapacity: 0);
             GameObject toppingBar = BuildStationPrefab("ToppingBar", new Color(0.95f, 0.78f, 0.55f), new Vector3(2f, 1f, 1f),
-                new Color(0.15f, 0.10f, 0.08f), new[] { addBoba }, inputCapacity: 4);
+                new Color(0.15f, 0.10f, 0.08f), new[] { addBoba, addBobaToTaro }, inputCapacity: 4);
+            GameObject taroStation = BuildStationPrefab("TaroStation", new Color(0.45f, 0.32f, 0.62f), new Vector3(1.4f, 1f, 1f),
+                new Color(0.80f, 0.68f, 0.95f), new[] { makeTaro }, inputCapacity: 0);
+            GameObject fruitBar = BuildStationPrefab("FruitBar", new Color(0.95f, 0.55f, 0.20f), new Vector3(1.4f, 1f, 1f),
+                new Color(1f, 0.85f, 0.25f), new[] { makeMango }, inputCapacity: 0);
 
             // Values per level start at level 0; costs start at the price of level 1.
             UpgradeDefinition[] upgrades =
@@ -74,6 +90,8 @@ namespace BubbleTea.EditorTools
                 Counter = GetOrCreateBuildable("Counter", 30, counter),
                 TeaBrewer = GetOrCreateBuildable("Tea Brewer", 80, brewer),
                 ToppingBar = GetOrCreateBuildable("Topping Bar", 150, toppingBar),
+                TaroStation = GetOrCreateBuildable("Taro Station", 250, taroStation),
+                FruitBar = GetOrCreateBuildable("Fruit Bar", 400, fruitBar),
                 UpgradeDesk = GetOrCreateBuildable("Upgrades", 40, upgradeDesk),
                 Upgrades = upgrades,
                 CustomerPrefab = BuildCustomerPrefab(),
@@ -262,9 +280,15 @@ namespace BubbleTea.EditorTools
             AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
                 new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("Customer", new Color(0.98f, 0.55f, 0.35f)));
 
+            // A white disc above the head; the ordered drink's model sits on it.
+            Transform bubble = AddAnchor(root.transform, "OrderBubble", new Vector3(0f, 2.17f, 0f));
+            AddPart(bubble, PrimitiveType.Cylinder, "Disc", new Vector3(0f, -0.02f, 0f),
+                new Vector3(0.75f, 0.02f, 0.75f), GetOrCreateMaterial("OrderBubble", Color.white));
+
             var customer = root.AddComponent<Customer>();
             var serialized = new SerializedObject(customer);
             serialized.FindProperty("drinkHoldPosition").vector3Value = new Vector3(0f, 0.9f, 0.55f);
+            serialized.FindProperty("orderBubble").objectReferenceValue = bubble;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return SavePrefab(root, $"{PrefabFolder}/Customer.prefab").GetComponent<Customer>();
