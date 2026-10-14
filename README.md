@@ -64,7 +64,8 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 5. Once the Counter is built, customers walk in and line up behind it. Stand in front of the **Tea Brewer** to pick up the milk teas it makes, then stand in front of the **Counter** to drop them off. Each customer takes a drink and pays into the cash pile beside the counter, which you collect like any other cash.
 6. For a pricier drink, drop milk teas at the **Topping Bar** first. It turns them into boba milk tea, which sells for more.
 7. Each customer shows the drink they want on a bubble above their head and waits for exactly that one. The Topping Bar leads to the **Taro Station** and then the **Fruit Bar**, which add taro, taro boba and mango drinks to the orders.
-8. Buying the Counter also reveals the purple **Upgrades** desk. Pay for it, then stand in front of it to buy faster walking, bigger carry stacks, faster brewing and higher drink prices.
+8. The Topping Bar also reveals a **Hire Runner** pad. A runner keeps the counter stocked for you, so you can focus on collecting cash. A second runner pad appears after the first.
+9. Buying the Counter also reveals the purple **Upgrades** desk. Pay for it, then stand in front of it to buy faster walking, bigger carry stacks, faster brewing and higher drink prices.
 
 Your progress (money and unlocked stations) is saved as you play, so pressing Play again carries on where you stopped. To start over, stop Play and click **Bubble Tea > Delete Save Data**. If you rebuild the scene, delete the save too so the two match.
 
@@ -96,6 +97,7 @@ Assets/_Game/
     Customers/  Customer spawning, queueing, paying
     Saving/     Saving and loading progress
     Upgrades/   Upgrade levels and the upgrade desk
+    Staff/      Hired helpers (runners)
     UI/         HUD, money counter, joystick visuals
 ```
 

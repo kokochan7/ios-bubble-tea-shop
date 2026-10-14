@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using BubbleTea.Core;
 using UnityEngine;
@@ -17,7 +18,22 @@ namespace BubbleTea.Cooking
         [SerializeField, Tooltip("The stack in the player's hands.")]
         private ItemStack stack = new();
 
+        [SerializeField, Tooltip("Whether the Carry More upgrade adds room. On for the player, off for staff.")]
+        private bool usesCarryUpgrade = true;
+
         public ItemStack Stack => stack;
+
+        /// <summary>
+        /// When set, this carrier only hands items to this station or counter. Staff use it
+        /// so they don't drop things off at every station they walk past. Empty means anyone.
+        /// </summary>
+        public UnityEngine.Object GiveOnlyTo { get; set; }
+
+        /// <summary>When set, the carrier only picks up items that match. Empty means anything.</summary>
+        public Func<ItemDefinition, bool> TakeFilter { get; set; }
+
+        public bool WillGiveTo(UnityEngine.Object receiver) => GiveOnlyTo == null || GiveOnlyTo == receiver;
+        public bool WillTake(ItemDefinition item) => TakeFilter == null || TakeFilter(item);
 
         private void OnEnable()
         {
@@ -37,6 +53,9 @@ namespace BubbleTea.Cooking
             if (stat == StatId.CarryBonus) ApplyCarryBonus();
         }
 
-        private void ApplyCarryBonus() => stack.ExtraCapacity = Mathf.RoundToInt(Stats.Get(StatId.CarryBonus, 0f));
+        private void ApplyCarryBonus()
+        {
+            stack.ExtraCapacity = usesCarryUpgrade ? Mathf.RoundToInt(Stats.Get(StatId.CarryBonus, 0f)) : 0;
+        }
     }
 }

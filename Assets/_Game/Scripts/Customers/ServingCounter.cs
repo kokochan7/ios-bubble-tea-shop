@@ -38,6 +38,7 @@ namespace BubbleTea.Customers
 
         private readonly List<Customer> queue = new();
         private readonly List<DrinkRecipe> orderChoices = new();
+        private readonly Dictionary<ItemDefinition, int> reserved = new();
 
         private void OnEnable() => active.Add(this);
         private void OnDisable() => active.Remove(this);
@@ -52,6 +53,51 @@ namespace BubbleTea.Customers
         public void LeaveQueue(Customer customer) => queue.Remove(customer);
 
         public int QueueIndexOf(Customer customer) => queue.IndexOf(customer);
+
+        /// <summary>Where a worker stands to drop drinks off.</summary>
+        public Vector3 ZoneCenter => zone.Center(transform);
+
+        /// <summary>
+        /// The drink the line needs most: the first order (front of the line first) that isn't
+        /// already on the counter or being brought by a worker. Null if nothing is needed.
+        /// </summary>
+        public ItemDefinition NextNeeded()
+        {
+            foreach (Customer customer in queue)
+            {
+                ItemDefinition drink = customer != null && customer.Order != null ? customer.Order.Drink : null;
+                if (drink == null) continue;
+                if (Wanted(drink) - drinks.CountOf(i => i == drink) - Reserved(drink) > 0) return drink;
+            }
+            return null;
+        }
+
+        /// <summary>A worker calls this when they set off to bring <paramref name="drink"/>, so others don't bring it too.</summary>
+        public void Reserve(ItemDefinition drink)
+        {
+            if (drink != null) reserved[drink] = Reserved(drink) + 1;
+        }
+
+        /// <summary>Undoes <see cref="Reserve"/> once the drink is delivered or the worker gives up.</summary>
+        public void Release(ItemDefinition drink)
+        {
+            if (drink != null && Reserved(drink) > 0) reserved[drink] = Reserved(drink) - 1;
+        }
+
+        /// <summary>True if someone in line still needs this drink.</summary>
+        public bool Needs(ItemDefinition drink) => IsStillWanted(drink);
+
+        private int Reserved(ItemDefinition drink) => reserved.TryGetValue(drink, out int count) ? count : 0;
+
+        private int Wanted(ItemDefinition drink)
+        {
+            int wanted = 0;
+            foreach (Customer customer in queue)
+            {
+                if (customer != null && customer.Order != null && customer.Order.Drink == drink) wanted++;
+            }
+            return wanted;
+        }
 
         public Vector3 QueuePosition(int index)
         {
@@ -96,7 +142,7 @@ namespace BubbleTea.Customers
         private bool Handoff(ItemCarrier carrier)
         {
             if (drinks.IsFull) return false;
-            if (!carrier.Stack.TryTake(IsStillWanted, out CarriedItem drink)) return false;
+            if (!carrier.WillGiveTo(this) || !carrier.Stack.TryTake(IsStillWanted, out CarriedItem drink)) return false;
             drinks.Push(drink);
             return true;
         }
@@ -104,12 +150,7 @@ namespace BubbleTea.Customers
         private bool IsStillWanted(ItemDefinition item)
         {
             if (FindRecipe(item) == null) return false;
-            int wanted = 0;
-            foreach (Customer customer in queue)
-            {
-                if (customer != null && customer.Order != null && customer.Order.Drink == item) wanted++;
-            }
-            return drinks.CountOf(onCounter => onCounter == item) < wanted;
+            return drinks.CountOf(onCounter => onCounter == item) < Wanted(item);
         }
 
         private DrinkRecipe FindRecipe(ItemDefinition item)

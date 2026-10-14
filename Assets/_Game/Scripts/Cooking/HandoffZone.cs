@@ -21,6 +21,9 @@ namespace BubbleTea.Cooking
 
         private float timer;
 
+        /// <summary>Middle of the zone in world space, where a worker should stand.</summary>
+        public Vector3 Center(Transform owner) => owner.TransformPoint(offset);
+
         /// <summary>Calls <paramref name="handoff"/> for the first carrier in the zone when it's time.</summary>
         public void Tick(Transform owner, Func<ItemCarrier, bool> handoff)
         {
