@@ -49,6 +49,7 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition MoreSeating;
             public BuildableDefinition Seating;
             public BuildableDefinition Cashier;
+            public BuildableDefinition DriveThruCashier;
 
             /// <summary>Shop 1 only: the pad that opens the second shop. Null in other shops.</summary>
             public BuildableDefinition SecondShop;
@@ -142,7 +143,9 @@ namespace BubbleTea.EditorTools
                     GetOrCreateBuildable("Hire Barista 5", 1800, barista),
                 },
                 Cleaner = GetOrCreateBuildable("Hire Cleaner", 400, BuildCleanerPrefab()),
-                Cashier = GetOrCreateBuildable("Hire Cashier", 150, BuildCashierPrefab()),
+                Cashier = GetOrCreateBuildable("Hire Cashier", 150, BuildCashierPrefab("Cashier", "Main")),
+                DriveThruCashier = GetOrCreateBuildable("Hire Drive-Thru Cashier", 400,
+                    BuildCashierPrefab("DriveThruCashier", "DriveThru")),
                 Planter = GetOrCreateBuildable("Planter", 120,
                     BuildDecorPrefab("Planter", new Color(0.42f, 0.73f, 0.47f), new Vector3(1.2f, 1.3f, 1.2f))),
                 MenuBoard = GetOrCreateBuildable("Menu Board", 200,
@@ -586,9 +589,9 @@ namespace BubbleTea.EditorTools
 
         // A lavender barista who stands behind the busiest station and speeds it up.
         // A cashier who stands by the counter and banks customers' payments for you.
-        private static GameObject BuildCashierPrefab()
+        private static GameObject BuildCashierPrefab(string prefabName, string lane)
         {
-            var root = new GameObject("Cashier");
+            var root = new GameObject(prefabName);
             GameObject body = AddPart(root.transform, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.8f, 0f),
                 new Vector3(0.7f, 0.8f, 0.7f), GetOrCreateMaterial("Cashier", new Color(0.95f, 0.78f, 0.35f)));
             AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
@@ -597,7 +600,10 @@ namespace BubbleTea.EditorTools
             Transform hands = AddAnchor(root.transform, "Hands", new Vector3(0f, 0.9f, 0.4f));
             var cashier = root.AddComponent<Cashier>();
             SetReference(cashier, "hands", hands);
-            return SavePrefab(root, $"{PrefabFolder}/Cashier.prefab");
+            var serialized = new SerializedObject(cashier);
+            serialized.FindProperty("lane").stringValue = lane;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return SavePrefab(root, $"{PrefabFolder}/{prefabName}.prefab");
         }
 
         // A barista: carries drinks and ingredients where they're needed, and helps at the

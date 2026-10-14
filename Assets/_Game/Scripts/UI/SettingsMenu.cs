@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace BubbleTea.UI
 {
     /// <summary>
-    /// The settings panel opened by the button in the corner: sound and vibration on/off,
+    /// The settings panel opened by the button in the corner: sound, music and vibration on/off,
     /// and a reset button that asks for a second tap before wiping your progress.
     /// </summary>
     public class SettingsMenu : MonoBehaviour
@@ -24,6 +24,11 @@ namespace BubbleTea.UI
         private Button soundButton;
 
         [SerializeField] private Text soundLabel;
+
+        [SerializeField, Tooltip("Turns the background music on and off.")]
+        private Button musicButton;
+
+        [SerializeField] private Text musicLabel;
 
         [SerializeField, Tooltip("Turns vibration on and off.")]
         private Button vibrationButton;
@@ -45,6 +50,7 @@ namespace BubbleTea.UI
             if (openButton != null) openButton.onClick.AddListener(Toggle);
             if (closeButton != null) closeButton.onClick.AddListener(Close);
             if (soundButton != null) soundButton.onClick.AddListener(() => GameSettings.SoundOn = !GameSettings.SoundOn);
+            if (musicButton != null) musicButton.onClick.AddListener(() => GameSettings.MusicOn = !GameSettings.MusicOn);
             if (vibrationButton != null) vibrationButton.onClick.AddListener(() => GameSettings.VibrationOn = !GameSettings.VibrationOn);
             if (resetButton != null) resetButton.onClick.AddListener(OnResetPressed);
         }
@@ -85,6 +91,7 @@ namespace BubbleTea.UI
         private void Refresh()
         {
             if (soundLabel != null) soundLabel.text = GameSettings.SoundOn ? "Sound: ON" : "Sound: OFF";
+            if (musicLabel != null) musicLabel.text = GameSettings.MusicOn ? "Music: ON" : "Music: OFF";
             if (vibrationLabel != null) vibrationLabel.text = GameSettings.VibrationOn ? "Vibration: ON" : "Vibration: OFF";
             if (resetLabel != null) resetLabel.text = confirmingReset ? "Tap again to erase!" : "Reset Progress";
         }

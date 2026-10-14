@@ -50,6 +50,8 @@ namespace BubbleTea.EditorTools
             public Color WallColor;
             public string ExpansionFloorMaterial;
             public Color ExpansionFloorColor;
+            public ShopDressing.Style Look;
+            public MusicMaker.Track Music;
         }
 
         private static readonly ShopPlan FirstShop = new()
@@ -63,6 +65,15 @@ namespace BubbleTea.EditorTools
             WallColor = new Color(0.85f, 0.78f, 0.70f),
             ExpansionFloorMaterial = "ExpansionFloor",
             ExpansionFloorColor = new Color(0.86f, 0.90f, 0.82f),
+            Look = new ShopDressing.Style
+            {
+                ShopName = "Boba Shop",
+                Prefix = "Shop1",
+                Accent = new Color(0.91f, 0.51f, 0.60f),
+                Accent2 = new Color(0.66f, 0.88f, 0.80f),
+                Grass = new Color(0.62f, 0.80f, 0.52f),
+            },
+            Music = MusicMaker.Track.BobaShop,
         };
 
         private static readonly ShopPlan SecondShop = new()
@@ -76,6 +87,15 @@ namespace BubbleTea.EditorTools
             WallColor = new Color(0.66f, 0.80f, 0.60f),
             ExpansionFloorMaterial = "Shop2ExpansionFloor",
             ExpansionFloorColor = new Color(0.97f, 0.88f, 0.90f),
+            Look = new ShopDressing.Style
+            {
+                ShopName = "Matcha House",
+                Prefix = "Shop2",
+                Accent = new Color(0.42f, 0.66f, 0.42f),
+                Accent2 = new Color(0.98f, 0.86f, 0.62f),
+                Grass = new Color(0.70f, 0.82f, 0.56f),
+            },
+            Music = MusicMaker.Track.MatchaHouse,
         };
 
         // Where the bus stop stands: in the expansion for shop 1 (revealed after the
@@ -118,6 +138,9 @@ namespace BubbleTea.EditorTools
             GameObject expansionArea = CreateExpansionArea(wallMat,
                 GetOrCreateMaterial(plan.ExpansionFloorMaterial, plan.ExpansionFloorColor));
             CreateDecorations();
+            ShopDressing.Dress(plan.Look, floorMat, GetOrCreateMaterial(plan.ExpansionFloorMaterial, plan.ExpansionFloorColor),
+                wallMat, expansionArea);
+            CreateMusic(plan.Music);
 
             GameObject player = CreatePlayer(playerMat, out Wallet wallet);
             Camera camera = CreateCamera(player.transform);
@@ -174,12 +197,17 @@ namespace BubbleTea.EditorTools
             var go = new GameObject("Sun");
             var light = go.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.intensity = 1.2f;
+            light.intensity = 1.15f;
+            light.color = new Color(1f, 0.96f, 0.90f); // warm afternoon sun
             light.shadows = LightShadows.Soft;
+            light.shadowStrength = 0.6f;
             go.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.62f, 0.62f, 0.66f);
+            // Sky, horizon and ground colors light the shop from all sides, softer than one flat color.
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.78f, 0.80f, 0.88f);
+            RenderSettings.ambientEquatorColor = new Color(0.70f, 0.66f, 0.64f);
+            RenderSettings.ambientGroundColor = new Color(0.52f, 0.47f, 0.44f);
         }
 
         private static void CreateFloor(Material material)
@@ -195,7 +223,8 @@ namespace BubbleTea.EditorTools
         private static GameObject CreateWalls(Material wallMat)
         {
             var root = new GameObject("Walls");
-            CreateWall(root.transform, "North", new Vector3(0f, 0.5f, 15.25f), new Vector3(30.5f, 1f, 0.5f), wallMat);
+            // The back wall is tall (windows, sign); the others stay low so they never hide the shop.
+            CreateWall(root.transform, "North", new Vector3(0f, 1.5f, 15.25f), new Vector3(30.5f, 3f, 0.5f), wallMat);
             CreateWall(root.transform, "South", new Vector3(0f, 0.5f, -15.25f), new Vector3(30.5f, 1f, 0.5f), wallMat);
             CreateWall(root.transform, "West", new Vector3(-15.25f, 0.5f, 0f), new Vector3(0.5f, 1f, 30.5f), wallMat);
             return CreateWall(root.transform, "East (opens with Expand Shop)", new Vector3(15.25f, 0.5f, 0f),
@@ -214,7 +243,7 @@ namespace BubbleTea.EditorTools
             floor.transform.localScale = new Vector3(1.6f, 1f, 3f); // 16 x 30 meters
             floor.GetComponent<Renderer>().sharedMaterial = expansionFloor;
 
-            CreateWall(root.transform, "North", new Vector3(23f, 0.5f, 15.25f), new Vector3(16.5f, 1f, 0.5f), wallMat);
+            CreateWall(root.transform, "North", new Vector3(23f, 1.5f, 15.25f), new Vector3(16.5f, 3f, 0.5f), wallMat);
             CreateWall(root.transform, "South", new Vector3(23f, 0.5f, -15.25f), new Vector3(16.5f, 1f, 0.5f), wallMat);
             CreateWall(root.transform, "East", new Vector3(31.25f, 0.5f, 0f), new Vector3(0.5f, 1f, 30.5f), wallMat);
 
@@ -327,7 +356,8 @@ namespace BubbleTea.EditorTools
             var camera = go.AddComponent<Camera>();
             camera.fieldOfView = 40f;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.98f, 0.85f, 0.80f);
+            camera.backgroundColor = new Color(0.74f, 0.87f, 0.96f);
+            camera.allowMSAA = true;
             go.AddComponent<AudioListener>();
 
             var follow = go.AddComponent<CameraFollow>();
@@ -479,7 +509,10 @@ namespace BubbleTea.EditorTools
             UnlockPad secondShopPad = content.SecondShop != null
                 ? CreatePad(content.SecondShop, SecondShopPadPosition, billPrefab, wallet, padMat)
                 : null;
-            UnlockPad driveThruPad = CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat);
+            // The drive-thru cashier's pad sits beside the drive-thru's cash pile, like the main one.
+            UnlockPad driveThruCashierPad = CreatePad(content.DriveThruCashier, new Vector3(25f, 0f, 1.8f), billPrefab, wallet, padMat);
+            UnlockPad driveThruPad = CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat,
+                driveThruCashierPad);
             UnlockPad moreSeatingPad = CreatePad(content.MoreSeating, new Vector3(19f, 0f, 5f), billPrefab, wallet, padMat);
             UnlockPad expansionPad = CreatePad(content.Expansion, new Vector3(12f, 0f, 10f), billPrefab, wallet, padMat,
                 driveThruPad, moreSeatingPad);
@@ -525,12 +558,13 @@ namespace BubbleTea.EditorTools
             cashierPad.gameObject.SetActive(false);
             cleanerPad.gameObject.SetActive(false);
             moreSeatingPad.gameObject.SetActive(false);
+            driveThruCashierPad.gameObject.SetActive(false);
             // The first barista can be hired from the start; each one reveals the next.
             for (int i = 1; i < baristaPads.Length; i++) baristaPads[i].gameObject.SetActive(false);
             var all = new System.Collections.Generic.List<UnlockPad>
             {
                 counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad,
-                expansionPad, driveThruPad, seatingPad, cashierPad, cleanerPad, moreSeatingPad,
+                expansionPad, driveThruPad, seatingPad, cashierPad, cleanerPad, moreSeatingPad, driveThruCashierPad,
             };
             all.AddRange(baristaPads);
             if (secondShopPad != null)
@@ -839,6 +873,17 @@ namespace BubbleTea.EditorTools
             SetReference(popup, "earnings", earnings);
         }
 
+        // This shop's background music, looping.
+        private static void CreateMusic(MusicMaker.Track track)
+        {
+            var go = new GameObject("Music");
+            var source = go.AddComponent<AudioSource>();
+            source.clip = MusicMaker.Get(track);
+            source.loop = true;
+            source.playOnAwake = false;
+            go.AddComponent<MusicPlayer>();
+        }
+
         // "Shop closed" screen shown when the rating hits 0 stars, with a Start Over button.
         private static void CreateGameOverPopup(Transform hud, ShopRating rating, SaveManager saveManager)
         {
@@ -961,7 +1006,7 @@ namespace BubbleTea.EditorTools
 
             RectTransform panel = CreateUiObject("Panel", root);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
-            panel.sizeDelta = new Vector2(800f, 910f);
+            panel.sizeDelta = new Vector2(800f, 1060f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
             panelImage.type = Image.Type.Sliced;
@@ -974,21 +1019,25 @@ namespace BubbleTea.EditorTools
             var green = new Color(0.35f, 0.78f, 0.38f);
             Button sound = CreateMenuButton("Sound", panel, "Sound: ON", rounded, font, green, out Text soundLabel);
             SetTopRow((RectTransform)sound.transform, 160f, 120f, 60f, 60f);
+            Button music = CreateMenuButton("Music", panel, "Music: ON", rounded, font, green, out Text musicLabel);
+            SetTopRow((RectTransform)music.transform, 310f, 120f, 60f, 60f);
             Button vibration = CreateMenuButton("Vibration", panel, "Vibration: ON", rounded, font, green, out Text vibrationLabel);
-            SetTopRow((RectTransform)vibration.transform, 310f, 120f, 60f, 60f);
+            SetTopRow((RectTransform)vibration.transform, 460f, 120f, 60f, 60f);
             Button reset = CreateMenuButton("Reset", panel, "Reset Progress", rounded, font, new Color(0.85f, 0.35f, 0.35f),
                 out Text resetLabel);
-            SetTopRow((RectTransform)reset.transform, 460f, 120f, 60f, 60f);
+            SetTopRow((RectTransform)reset.transform, 610f, 120f, 60f, 60f);
             Button gmOpen = CreateMenuButton("GmTools", panel, "GM Tools", rounded, font, new Color(0.55f, 0.4f, 0.8f), out _);
-            SetTopRow((RectTransform)gmOpen.transform, 610f, 120f, 60f, 60f);
+            SetTopRow((RectTransform)gmOpen.transform, 760f, 120f, 60f, 60f);
             Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
-            SetTopRow((RectTransform)close.transform, 760f, 110f, 200f, 200f);
+            SetTopRow((RectTransform)close.transform, 910f, 110f, 200f, 200f);
 
             SetReference(menu, "panel", panel.gameObject);
             SetReference(menu, "openButton", openButton);
             SetReference(menu, "closeButton", close);
             SetReference(menu, "soundButton", sound);
             SetReference(menu, "soundLabel", soundLabel);
+            SetReference(menu, "musicButton", music);
+            SetReference(menu, "musicLabel", musicLabel);
             SetReference(menu, "vibrationButton", vibration);
             SetReference(menu, "vibrationLabel", vibrationLabel);
             SetReference(menu, "resetButton", reset);

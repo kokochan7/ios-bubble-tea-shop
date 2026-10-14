@@ -4,13 +4,14 @@ using UnityEngine;
 namespace BubbleTea.Core
 {
     /// <summary>
-    /// Player preferences (sound and vibration on or off). Stored in PlayerPrefs, separate
+    /// Player preferences (sound, music and vibration on or off). Stored in PlayerPrefs, separate
     /// from the save file, so resetting progress keeps your settings.
     /// </summary>
     public static class GameSettings
     {
         private const string SoundKey = "BubbleTea.SoundOn";
         private const string VibrationKey = "BubbleTea.VibrationOn";
+        private const string MusicKey = "BubbleTea.MusicOn";
 
         /// <summary>Raised whenever a setting changes.</summary>
         public static event Action Changed;
@@ -19,6 +20,12 @@ namespace BubbleTea.Core
         {
             get => PlayerPrefs.GetInt(SoundKey, 1) == 1;
             set => Set(SoundKey, value);
+        }
+
+        public static bool MusicOn
+        {
+            get => PlayerPrefs.GetInt(MusicKey, 1) == 1;
+            set => Set(MusicKey, value);
         }
 
         public static bool VibrationOn
