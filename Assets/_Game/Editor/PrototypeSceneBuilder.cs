@@ -309,7 +309,7 @@ namespace BubbleTea.EditorTools
             // Everything except the joystick lives inside the safe area, clear of the iPhone notch.
             RectTransform safeArea = CreateUiObject("SafeArea", canvasGo.transform);
             Stretch(safeArea);
-            safeArea.gameObject.AddComponent<SafeArea>();
+            safeArea.gameObject.AddComponent<BubbleTea.UI.SafeArea>();
             hud = safeArea;
 
             RectTransform panel = CreateUiObject("MoneyCounter", safeArea);
