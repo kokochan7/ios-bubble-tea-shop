@@ -55,10 +55,19 @@ In GitHub Desktop you'll see a lot of new files (everything under `Packages` and
 
 In the **Game** view, use the resolution dropdown to pick an iPhone size (or add a 1170x2532 portrait entry). Building to a real iPhone needs your Mac and Xcode; that comes after the prototype.
 
+## Try the prototype
+
+1. In Unity's menu bar, click **Bubble Tea > Build Prototype Scene**. It creates `Assets/_Game/Scenes/Prototype.unity` with everything wired up and opens it.
+2. Press **Play**.
+3. Click and drag anywhere in the Game view to use the joystick (or use WASD / arrow keys). Walk up to the green cash stacks and watch the bills fly to you while the counter at the top goes up.
+
+The piles refill every few seconds so there's always something to collect. You can tweak speeds and values by selecting objects in the Hierarchy and editing their fields in the Inspector. Rebuilding the scene from the menu resets those changes.
+
 ## Folder layout
 
 ```
 Assets/_Game/
+  Editor/       Editor-only tools, such as the scene builder menu
   Art/          Models, textures, icons
   Data/         ScriptableObject assets (station costs, recipes, prices)
   Materials/    Materials, including gray-box colors
