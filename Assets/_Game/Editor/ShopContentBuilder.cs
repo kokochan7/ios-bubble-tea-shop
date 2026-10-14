@@ -205,10 +205,25 @@ namespace BubbleTea.EditorTools
                 new Vector3(0.24f, 0.14f, 0.24f), GetOrCreateMaterial(name, cupColor));
             AddPart(root.transform, PrimitiveType.Cube, "Straw", new Vector3(0.04f, 0.34f, 0f),
                 new Vector3(0.03f, 0.18f, 0.03f), GetOrCreateMaterial("Straw", new Color(0.95f, 0.45f, 0.55f)));
+            GameObject pearls = null;
             if (pearlColor.HasValue)
             {
-                AddPart(root.transform, PrimitiveType.Cylinder, "Pearls", new Vector3(0f, 0.05f, 0f),
+                pearls = AddPart(root.transform, PrimitiveType.Cylinder, "Pearls", new Vector3(0f, 0.05f, 0f),
                     new Vector3(0.25f, 0.05f, 0.25f), GetOrCreateMaterial("Pearls", pearlColor.Value));
+            }
+
+            // With a cup model, the drink shows as a colored lid (with pearls on top for boba),
+            // so different drinks still look different.
+            if (ArtLibrary.Attach("Cup", root.transform, new Vector3(0.26f, 0.32f, 0.26f), ArtLibrary.Fit.Height) != null)
+            {
+                ArtLibrary.HideGrayBox(root.transform.Find("Cup").gameObject, root.transform.Find("Straw").gameObject, pearls);
+                AddPart(root.transform, PrimitiveType.Cylinder, "Lid", new Vector3(0f, 0.33f, 0f),
+                    new Vector3(0.22f, 0.01f, 0.22f), GetOrCreateMaterial(name, cupColor));
+                if (pearlColor.HasValue)
+                {
+                    AddPart(root.transform, PrimitiveType.Sphere, "PearlsOnTop", new Vector3(0f, 0.35f, 0f),
+                        new Vector3(0.1f, 0.04f, 0.1f), GetOrCreateMaterial("Pearls", pearlColor.Value));
+                }
             }
 
             var item = root.AddComponent<CarriedItem>();
@@ -302,6 +317,7 @@ namespace BubbleTea.EditorTools
                 new Vector3(0.7f, 0.8f, 0.7f), green);
             AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
                 new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
+            AddCharacterArt("Runner", root, body);
 
             Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.55f));
             var carrier = root.AddComponent<ItemCarrier>();
@@ -322,6 +338,7 @@ namespace BubbleTea.EditorTools
                 new Vector3(0.7f, 0.8f, 0.7f), GetOrCreateMaterial("Customer", new Color(0.98f, 0.55f, 0.35f)));
             AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
                 new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("Customer", new Color(0.98f, 0.55f, 0.35f)));
+            AddCharacterArt("Customer", root, body);
 
             // A white disc above the head; the ordered drink's model sits on it.
             Transform bubble = AddAnchor(root.transform, "OrderBubble", new Vector3(0f, 2.17f, 0f));
@@ -343,8 +360,14 @@ namespace BubbleTea.EditorTools
             var root = new GameObject("Car");
             Material paint = GetOrCreateMaterial("Car", new Color(0.90f, 0.30f, 0.35f));
             Material glass = GetOrCreateMaterial("CarWindow", new Color(0.55f, 0.75f, 0.90f));
-            AddPart(root.transform, PrimitiveType.Cube, "Body", new Vector3(0f, 0.5f, 0f), new Vector3(1.6f, 0.7f, 2.8f), paint);
-            AddPart(root.transform, PrimitiveType.Cube, "Cabin", new Vector3(0f, 1.05f, -0.2f), new Vector3(1.4f, 0.5f, 1.4f), glass);
+            GameObject carBody = AddPart(root.transform, PrimitiveType.Cube, "Body", new Vector3(0f, 0.5f, 0f),
+                new Vector3(1.6f, 0.7f, 2.8f), paint);
+            GameObject cabin = AddPart(root.transform, PrimitiveType.Cube, "Cabin", new Vector3(0f, 1.05f, -0.2f),
+                new Vector3(1.4f, 0.5f, 1.4f), glass);
+            if (ArtLibrary.Attach("Car", root.transform, new Vector3(1.6f, 1.3f, 2.8f), ArtLibrary.Fit.Footprint) != null)
+            {
+                ArtLibrary.HideGrayBox(carBody, cabin);
+            }
 
             Transform bubble = AddAnchor(root.transform, "OrderBubble", new Vector3(0f, 1.9f, 0f));
             AddPart(bubble, PrimitiveType.Cylinder, "Disc", new Vector3(0f, -0.02f, 0f),
@@ -358,6 +381,17 @@ namespace BubbleTea.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return SavePrefab(root, $"{PrefabFolder}/Car.prefab").GetComponent<Customer>();
+        }
+
+        // Swaps a capsule person for a character model (if there is one) and makes whichever
+        // is showing waddle as it walks.
+        private static void AddCharacterArt(string slotName, GameObject root, GameObject capsule)
+        {
+            GameObject model = ArtLibrary.Attach(slotName, root.transform, new Vector3(0.8f, 1.6f, 0.8f), ArtLibrary.Fit.Height);
+            if (model != null) ArtLibrary.HideGrayBox(capsule);
+
+            var bob = root.AddComponent<WalkBob>();
+            SetReference(bob, "visual", model != null ? model.transform : capsule.transform);
         }
 
         // ---------- Helpers ----------
@@ -374,10 +408,17 @@ namespace BubbleTea.EditorTools
             body.transform.localScale = bodySize;
             body.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial(name, bodyColor);
 
+            GameObject top = null;
             if (topColor.HasValue)
             {
-                AddPart(root.transform, PrimitiveType.Cylinder, "Top", new Vector3(0f, bodySize.y + 0.3f, -0.15f),
+                top = AddPart(root.transform, PrimitiveType.Cylinder, "Top", new Vector3(0f, bodySize.y + 0.3f, -0.15f),
                     new Vector3(0.5f, 0.3f, 0.5f), GetOrCreateMaterial(name + "Top", topColor.Value));
+            }
+
+            // A real model, if the Art Set has one, replaces the look but keeps the solid box.
+            if (ArtLibrary.Attach(name, root.transform, bodySize, ArtLibrary.Fit.Footprint) != null)
+            {
+                ArtLibrary.HideGrayBox(body, top);
             }
             return root;
         }
