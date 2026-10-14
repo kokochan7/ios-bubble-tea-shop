@@ -27,7 +27,7 @@ namespace BubbleTea.Customers
         private Transform orderBubble;
 
         [SerializeField, Tooltip("Size of the drink model shown in the bubble.")]
-        private float bubbleIconScale = 1.3f;
+        private float bubbleIconScale = 2.4f;
 
         [SerializeField, Min(0f), Tooltip("Seconds a customer will wait before leaving without buying. 0 = they wait forever.")]
         private float patienceSeconds = 20f;

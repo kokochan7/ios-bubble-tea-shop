@@ -94,10 +94,11 @@ namespace BubbleTea.EditorTools
                 { "UpgradeDesk", Save("UpgradeDesk", BuildUpgradeDesk()) },
                 { "Cup", Save("BobaCup", BuildCup()) },
                 { "Player", Save("Barista", BuildCharacter(Palette.Blush, Palette.Cream, CharacterStyle.Buns)) },
-                { "Customer", Save("Customer", BuildCharacter(Palette.Butter, null, CharacterStyle.Bob)) },
-                { "Barista", Save("BaristaHelper", BuildCharacter(Palette.Lavender, Palette.Cream, CharacterStyle.Headband)) },
-                { "Cashier", Save("Cashier", BuildCharacter(Palette.Butter, Palette.Cream, CharacterStyle.Buns)) },
-                { "Cleaner", Save("Cleaner", BuildCharacter(Palette.Mint, Palette.Cream, CharacterStyle.Cap)) },
+                // Customers and staff get a random look (man or woman, colors) when they appear.
+                { "Customer", Save("Customer", BuildCharacter(Palette.Butter, null, CharacterStyle.Bob, randomLook: true)) },
+                { "Barista", Save("BaristaHelper", BuildCharacter(Palette.Lavender, Palette.Cream, CharacterStyle.Headband, randomLook: true)) },
+                { "Cashier", Save("Cashier", BuildCharacter(Palette.Butter, Palette.Cream, CharacterStyle.Buns, randomLook: true)) },
+                { "Cleaner", Save("Cleaner", BuildCharacter(Palette.Mint, Palette.Cream, CharacterStyle.Cap, randomLook: true)) },
                 { "Car", Save("Car", BuildCar()) },
             };
             GameObject plant = Save("Plant", BuildPlant());
@@ -341,8 +342,10 @@ namespace BubbleTea.EditorTools
 
         private enum CharacterStyle { Buns, Cap, Bob, Headband }
 
-        // A chibi character about 1.6 m tall, facing +Z, with an optional apron.
-        private static GameObject BuildCharacter(Color shirt, Color? apron, CharacterStyle style)
+        // A chibi character about 1.6 m tall, facing +Z, with an optional apron. With randomLook,
+        // it has both long (woman) and short (man) hair and a CharacterLook that picks one, plus
+        // random colors, when it appears; the style then only adds the cap or bag.
+        private static GameObject BuildCharacter(Color shirt, Color? apron, CharacterStyle style, bool randomLook = false)
         {
             var root = new GameObject("Character").transform;
 
@@ -369,6 +372,11 @@ namespace BubbleTea.EditorTools
             Sphere(root, "CheekR", new Vector3(0.18f, 1.07f, 0.25f), new Vector3(0.09f, 0.05f, 0.03f), Palette.Cheek);
 
             Sphere(root, "Hair", new Vector3(0f, 1.22f, -0.04f), new Vector3(0.66f, 0.56f, 0.64f), Palette.Hair);
+            if (randomLook)
+            {
+                AddRandomLook(root, style);
+                return root.gameObject;
+            }
             switch (style)
             {
                 case CharacterStyle.Buns:
@@ -390,6 +398,50 @@ namespace BubbleTea.EditorTools
                     break;
             }
             return root.gameObject;
+        }
+
+        private static void AddRandomLook(Transform root, CharacterStyle style)
+        {
+            var female = new GameObject("Female").transform;
+            female.SetParent(root, false);
+            Sphere(female, "LongHair", new Vector3(0f, 1.0f, -0.12f), new Vector3(0.7f, 0.66f, 0.52f), Palette.Hair);
+            if (style != CharacterStyle.Cap) Sphere(female, "Bow", new Vector3(0.24f, 1.42f, 0.05f), new Vector3(0.16f, 0.1f, 0.06f), Palette.DeepPink);
+
+            var male = new GameObject("Male").transform;
+            male.SetParent(root, false);
+            Sphere(male, "Fringe", new Vector3(0f, 1.36f, 0.1f), new Vector3(0.54f, 0.2f, 0.36f), Palette.Hair);
+
+            switch (style)
+            {
+                case CharacterStyle.Cap:
+                    Sphere(root, "Cap", new Vector3(0f, 1.32f, -0.02f), new Vector3(0.64f, 0.42f, 0.64f), Palette.DeepMint);
+                    Box(root, "Visor", new Vector3(0f, 1.36f, 0.3f), new Vector3(0.4f, 0.03f, 0.22f), Palette.DeepMint);
+                    break;
+                case CharacterStyle.Bob:
+                    Box(root, "BagStrap", new Vector3(0f, 0.6f, 0f), new Vector3(0.06f, 0.5f, 0.47f), Palette.DarkWood);
+                    Box(root, "Bag", new Vector3(0f, 0.55f, -0.27f), new Vector3(0.3f, 0.32f, 0.14f), Palette.Peach);
+                    break;
+            }
+
+            var look = root.gameObject.AddComponent<BubbleTea.Feedback.CharacterLook>();
+            var serialized = new SerializedObject(look);
+            serialized.FindProperty("female").objectReferenceValue = female.gameObject;
+            serialized.FindProperty("male").objectReferenceValue = male.gameObject;
+            SetRenderers(serialized, "shirt", root, "Body", "ArmL", "ArmR");
+            SetRenderers(serialized, "hair", root, "Hair", "Female/LongHair", "Male/Fringe");
+            SetRenderers(serialized, "skin", root, "Head", "HandL", "HandR");
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetRenderers(SerializedObject serialized, string field, Transform root, params string[] paths)
+        {
+            SerializedProperty list = serialized.FindProperty(field);
+            list.arraySize = paths.Length;
+            for (int i = 0; i < paths.Length; i++)
+            {
+                Transform part = root.Find(paths[i]);
+                list.GetArrayElementAtIndex(i).objectReferenceValue = part != null ? part.GetComponent<Renderer>() : null;
+            }
         }
 
         // ---------- Car ----------

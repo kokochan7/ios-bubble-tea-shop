@@ -181,3 +181,11 @@ After the sixth playtest:
 - The Hire Cleaner pad sits right beside the café tables (it still appears once the Seating Area is built).
 - Swing doors on the staff entrance open as you or staff walk through (`Scripts/Building/SwingDoor.cs`).
 - You carry 1 drink at first, like baristas, plus 1 per Carry More level.
+
+After the seventh playtest:
+
+- Play in the Editor starts at the main menu, like the game on a phone (`Editor/PlayFromMenu.cs`; untick **Bubble Tea > Play From Main Menu** to start in the open scene).
+- The rug and its pink border under the first seating are gone, and both seating areas sit in one even row.
+- Customers and staff are men or women at random, with random shirt, hair and skin colors (`Scripts/Feedback/CharacterLook.cs`, on the Boba Art Kit characters).
+- The order above a customer is a bigger drink with no white plate.
+- Everything built from a pad shows its name above it ("Counter", "Tea Brewer", "Barista"...), and staff carry theirs around (`Scripts/Building/NameTag.cs`).

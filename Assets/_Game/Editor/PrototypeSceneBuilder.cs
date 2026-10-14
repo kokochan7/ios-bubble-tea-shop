@@ -91,7 +91,7 @@ namespace BubbleTea.EditorTools
             StaffDoorFrom = 3f, StaffDoorTo = 5.5f,
             LaneWallX = 18f,
             Counter = new(-2f, 0f, 0f),
-            Seating = new(5.5f, 0f, -6.8f),
+            Seating = new(5f, 0f, -6.5f),      // in line with More Seating
             DriveThru = new(17f, 0f, 4f),
             TrashCan = new(-9.5f, 0f, 1f),
             FloorCash = new(7.5f, 0f, 2.2f),
@@ -103,8 +103,8 @@ namespace BubbleTea.EditorTools
             UpgradeDesk = new(9f, 0f, 4.5f),
             Cashier = new(1f, 0f, 1.8f),
             Expansion = new(7f, 0f, 8.6f),
-            MoreSeating = new(14.5f, 0f, -6f),
-            Cleaner = new(0.8f, 0f, -5.5f), // just west of the café tables
+            MoreSeating = new(14.5f, 0f, -6.5f),
+            Cleaner = new(0.5f, 0f, -5.5f), // just west of the café tables
             DriveThruCashier = new(14f, 0f, 6.5f),
             SecondShopPad = new(16.6f, 0f, 8.2f),
             TravelBack = new(8f, 0f, -8f),
@@ -141,7 +141,7 @@ namespace BubbleTea.EditorTools
             UpgradeDesk = new(12.5f, 0f, 9f),
             Cashier = new(0f, 0f, 2.8f),
             Expansion = new(8f, 0f, 11.5f),
-            MoreSeating = new(20f, 0f, -8f),
+            MoreSeating = new(20f, 0f, -7f),   // in line with the first seating
             Cleaner = new(2f, 0f, -5.5f),
             DriveThruCashier = new(21.5f, 0f, 7.5f),
             SecondShopPad = new(18f, 0f, 11.5f),
@@ -349,6 +349,7 @@ namespace BubbleTea.EditorTools
 
             EditorSceneManager.SaveScene(scene, MenuScenePath);
             AddSceneToBuild(MenuScenePath, 0);
+            PlayFromMenu.Apply();
             Debug.Log($"Bubble Tea: main menu built at {MenuScenePath}. It's first in the build, so the game opens on it.");
         }
 
@@ -451,6 +452,10 @@ namespace BubbleTea.EditorTools
             Selection.activeGameObject = player;
 
             Debug.Log($"Bubble Tea: shop {plan.Number} built at {plan.ScenePath}. Press Play to try it.");
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(MenuScenePath) == null)
+            {
+                Debug.Log("Bubble Tea: click Bubble Tea > Build Main Menu Scene so the game (and Play) starts at the main menu.");
+            }
             if (plan.Number == 1 && AssetDatabase.LoadAssetAtPath<SceneAsset>(Shop2ScenePath) == null)
             {
                 Debug.Log("Bubble Tea: the second shop isn't built yet. Click Bubble Tea > Build Second Shop Scene " +

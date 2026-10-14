@@ -180,6 +180,9 @@ namespace BubbleTea.Building
             {
                 GameObject station = Instantiate(definition.Prefab, transform.position, transform.rotation);
                 station.name = definition.DisplayName;
+                // A name above it, so you can tell what's what (the bus stop has its own sign).
+                if (station.GetComponentInChildren<BubbleTea.Travel.ShopTravel>() == null)
+                    NameTag.Add(station, NameTag.NameFor(definition.DisplayName));
                 if (animate) station.AddComponent<PopIn>();
             }
             if (animate) GameEvents.RaiseUnlocked(transform.position);

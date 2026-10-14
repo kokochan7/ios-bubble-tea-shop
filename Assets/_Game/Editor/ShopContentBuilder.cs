@@ -658,8 +658,6 @@ namespace BubbleTea.EditorTools
 
             // A white disc above the head; the ordered drink's model sits on it.
             Transform bubble = AddAnchor(root.transform, "OrderBubble", new Vector3(0f, 2.17f, 0f));
-            AddPart(bubble, PrimitiveType.Cylinder, "Disc", new Vector3(0f, -0.02f, 0f),
-                new Vector3(0.75f, 0.02f, 0.75f), GetOrCreateMaterial("OrderBubble", Color.white));
 
             var customer = root.AddComponent<Customer>();
             var serialized = new SerializedObject(customer);
@@ -674,7 +672,7 @@ namespace BubbleTea.EditorTools
         // A round light beside the order bubble that shows the customer's mood (its color is set at runtime).
         private static Renderer AddMoodLight(Transform bubble)
         {
-            return AddPart(bubble, PrimitiveType.Sphere, "MoodLight", new Vector3(0.55f, 0.1f, 0f),
+            return AddPart(bubble, PrimitiveType.Sphere, "MoodLight", new Vector3(0.7f, 0.3f, 0f),
                 Vector3.one * 0.24f, GetOrCreateMaterial("MoodLight", Color.white)).GetComponent<Renderer>();
         }
 
@@ -694,8 +692,6 @@ namespace BubbleTea.EditorTools
             }
 
             Transform bubble = AddAnchor(root.transform, "OrderBubble", new Vector3(0f, 1.9f, 0f));
-            AddPart(bubble, PrimitiveType.Cylinder, "Disc", new Vector3(0f, -0.02f, 0f),
-                new Vector3(0.75f, 0.02f, 0.75f), GetOrCreateMaterial("OrderBubble", Color.white));
 
             var customer = root.AddComponent<Customer>();
             var serialized = new SerializedObject(customer);

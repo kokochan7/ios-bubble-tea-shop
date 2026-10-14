@@ -8,8 +8,8 @@ namespace BubbleTea.EditorTools
     /// <summary>
     /// The look of a shop beyond its gameplay pieces: tiled floors (gray tiles in the kitchen),
     /// striped wallpaper, wood planks in the expansion, glass walls between the dining room and
-    /// the kitchen, trim along the walls, windows, a shop sign, bunting, wall lamps, a rug under
-    /// the café tables, the front door, the drive-thru lane, and a street with trees outside. Everything is
+    /// the kitchen, trim along the walls, windows, a shop sign, bunting, wall lamps,
+    /// swing doors on the staff entrance, the front door, the drive-thru lane, and a street with trees outside. Everything is
     /// built from primitives and textures drawn in code, so nothing needs downloading.
     /// Called by <see cref="PrototypeSceneBuilder"/> each time a shop scene is built.
     /// </summary>
@@ -45,7 +45,6 @@ namespace BubbleTea.EditorTools
             CreateSign(root, style, d);
             CreateBunting(root, style, -w + 0.5f, w - 0.5f, d);
             CreateLamps(root, style, layout.Lamps, d);
-            CreateRug(root, style, layout.Seating + new Vector3(0f, 0f, 1.4f), new Vector2(8.4f, 5.6f));
             CreateFrontDoor(root, style, layout);
             CreateKitchenFloor(root, "KitchenFloor", -w, w, layout);
             float counterX = layout.Counter.x;
@@ -390,16 +389,6 @@ namespace BubbleTea.EditorTools
             glass.renderQueue = (int)RenderQueue.Transparent;
             EditorUtility.SetDirty(glass);
             return glass;
-        }
-
-        // ---------- Floor details ----------
-
-        private static void CreateRug(Transform root, Style style, Vector3 center, Vector2 size)
-        {
-            Part(root, PrimitiveType.Cube, "Rug Border", center + new Vector3(0f, 0.004f, 0f), new Vector3(size.x, 0.008f, size.y),
-                Mat(style.Prefix + "Accent", style.Accent, 0.4f));
-            Part(root, PrimitiveType.Cube, "Rug", center + new Vector3(0f, 0.006f, 0f), new Vector3(size.x - 0.5f, 0.008f, size.y - 0.5f),
-                Mat("RugCream", new Color(1f, 0.95f, 0.86f), 0.1f));
         }
 
         // ---------- Helpers ----------
