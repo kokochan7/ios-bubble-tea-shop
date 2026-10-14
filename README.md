@@ -71,6 +71,8 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 
 Your progress (money and unlocked stations) is saved as you play, so pressing Play again carries on where you stopped. To start over, stop Play and click **Bubble Tea > Delete Save Data**. If you rebuild the scene, delete the save too so the two match.
 
+Your shop keeps earning for up to 2 hours while you're away. Come back after a minute or more and a **Welcome back!** pop-up pays you. To see it without waiting, sell drinks for a couple of minutes, then click **Bubble Tea > Test Away Pop-Up (1 hour)** during Play.
+
 The piles refill every few seconds so there's always something to collect. You can tweak speeds and values by selecting objects in the Hierarchy and editing their fields in the Inspector. Rebuilding the scene from the menu resets changes made in the scene, but keeps the prices, recipes and timings you edited in `Assets/_Game/Data`. The gray-box prefabs are rebuilt each time.
 
 To swap the gray boxes for real 3D models (free packs), follow [docs/ART.md](docs/ART.md).

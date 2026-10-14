@@ -78,3 +78,11 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 - The money counter, MENU and upgrade buttons stay inside the iPhone's safe area, clear of the notch and home bar.
 - The game runs at 60 frames per second and the screen doesn't sleep while you play.
 - Step-by-step Mac and Xcode guide: [IOS_BUILD.md](IOS_BUILD.md). TestFlight waits for the paid Apple Developer account at milestone 10.
+
+## Milestone 9: Offline earnings
+
+- While you play, the game measures how much your shop earns per minute from drink sales (runners and upgrades count too).
+- When you come back, a **Welcome back!** pop-up pays half that speed for the time you were gone, up to 2 hours. Tap **COLLECT** to add it to your money. It shows on a fresh launch and when the app returns from the background on iPhone.
+- The share (50%), the 2-hour cap and the 1-minute minimum are fields on the **OfflineEarnings** object.
+- **Bubble Tea > Test Away Pop-Up (1 hour)** shows the pop-up during Play without waiting.
+- Still to come: an optional rewarded ad to double the amount. It needs an ad network account (such as Unity LevelPlay) first, so it is a separate step.
