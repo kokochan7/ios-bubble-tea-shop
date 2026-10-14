@@ -75,7 +75,7 @@ Your shop keeps earning for up to 2 hours while you're away. Come back after a m
 
 The piles refill every few seconds so there's always something to collect. You can tweak speeds and values by selecting objects in the Hierarchy and editing their fields in the Inspector. Rebuilding the scene from the menu resets changes made in the scene, but keeps the prices, recipes and timings you edited in `Assets/_Game/Data`. The gray-box prefabs are rebuilt each time.
 
-To swap the gray boxes for real 3D models (free packs), follow [docs/ART.md](docs/ART.md).
+For the bubble tea shop look, click **Bubble Tea > Art > Build Boba Art Kit** and rebuild the scene. Other models (free packs, Meshy) are covered in [docs/ART.md](docs/ART.md) and [docs/MESHY.md](docs/MESHY.md).
 
 To play on your iPhone (needs your Mac), follow [docs/IOS_BUILD.md](docs/IOS_BUILD.md).
 

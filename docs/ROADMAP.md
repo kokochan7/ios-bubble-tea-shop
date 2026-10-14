@@ -88,6 +88,7 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 - **Bubble Tea > Art > Auto-Fill From Art Folder** finds matching models by name. It's tuned for Kenney's free kits (Furniture, Food, Mini Characters, Car).
 - Characters waddle when they walk, and plants decorate the corners if you add some.
 - Step-by-step download guide: [ART.md](ART.md).
+- **Boba Art Kit** (added later): **Bubble Tea > Art > Build Boba Art Kit** fills every slot with code-built pastel bubble tea shop models and recolors the floor and walls. Hero pieces can be upgraded with Meshy models: [MESHY.md](MESHY.md).
 
 ## Milestone 8: iPhone build
 
