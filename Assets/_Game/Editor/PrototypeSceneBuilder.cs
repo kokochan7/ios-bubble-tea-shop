@@ -35,7 +35,7 @@ namespace BubbleTea.EditorTools
         // One spot of floor money to get the shop started.
         private static readonly Vector3[] CashPilePositions =
         {
-            new(-4f, 0f, 3f),
+            new(8f, 0f, 3f),
         };
 
         // What differs between shops. Everything else (layout, pads, staff) is shared.
@@ -100,9 +100,17 @@ namespace BubbleTea.EditorTools
 
         // Where the bus stop stands: in the expansion for shop 1 (revealed after the
         // drive-through), and near the front door from the start in the second shop.
-        private static readonly Vector3 SecondShopPadPosition = new(24f, 0f, 10f);
+        private static readonly Vector3 SecondShopPadPosition = new(18f, 0f, 11.5f);
         private static readonly Vector3 TravelBackPosition = new(12f, 0f, -12f);
-        private static readonly Vector3 TrashCanPosition = new(-8f, 0f, -2f);
+        private static readonly Vector3 TrashCanPosition = new(-8f, 0f, 2.2f);
+
+        // The floor plan (see CreateUnlockPads). The counter's customer side faces the front door.
+        internal static readonly Vector3 CounterPosition = new(-3f, 0f, 1f);
+        internal static readonly Vector3 SeatingPosition = new(7f, 0f, -7f);
+        internal static readonly Vector3 DriveThruPosition = new(24.5f, 0f, 5f);
+        internal const float PartitionZ = 1f;     // glass wall between the dining room and the kitchen
+        internal const float LaneWallX = 25.5f;   // wall between the expansion and the drive-thru lane
+        internal const float LaneX = 28f;         // middle of the drive-thru lane
 
         [MenuItem("Bubble Tea/Build Prototype Scene")]
         public static void Build() => BuildShop(FirstShop);
@@ -160,10 +168,12 @@ namespace BubbleTea.EditorTools
                 var stop = (GameObject)PrefabUtility.InstantiatePrefab(content.TravelBack);
                 stop.transform.position = TravelBackPosition;
             }
+            // Customers come in off the sidewalk through the front door and leave the same way.
             CreateCustomerSpawner("CustomerSpawner", "Main", content.CustomerPrefab,
-                new Vector3(-5f, 0f, -14f), new Vector3(-14f, 0f, -8f), secondsBetween: 3f, max: 4);
+                new Vector3(CounterPosition.x, 0f, -18f), new Vector3(1f, 0f, -18f), secondsBetween: 3f, max: 4);
+            // Cars turn in from the road, drive up the lane past the window and out the far end.
             CreateCustomerSpawner("CarSpawner", "DriveThru", content.CarPrefab,
-                new Vector3(22f, 0f, -14f), new Vector3(30f, 0f, -1.5f), secondsBetween: 6f, max: 3);
+                new Vector3(LaneX, 0f, -22f), new Vector3(LaneX, 0f, 24f), secondsBetween: 6f, max: 3);
             UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
             CreateUpgradePanel(hud, upgrades, content.Upgrades);
             OfflineEarnings offlineEarnings = CreateOfflineEarnings(wallet);
@@ -224,8 +234,12 @@ namespace BubbleTea.EditorTools
         {
             var root = new GameObject("Walls");
             // The back wall is tall (windows, sign); the others stay low so they never hide the shop.
+            // The front (south) wall has a wide doorway; an invisible bar across it keeps the
+            // player inside (customers don't use physics, so they walk through it).
             CreateWall(root.transform, "North", new Vector3(0f, 1.5f, 15.25f), new Vector3(30.5f, 3f, 0.5f), wallMat);
-            CreateWall(root.transform, "South", new Vector3(0f, 0.5f, -15.25f), new Vector3(30.5f, 1f, 0.5f), wallMat);
+            CreateWall(root.transform, "South (west of door)", new Vector3(-10.375f, 0.5f, -15.25f), new Vector3(9.75f, 1f, 0.5f), wallMat);
+            CreateWall(root.transform, "South (east of door)", new Vector3(10.875f, 0.5f, -15.25f), new Vector3(8.75f, 1f, 0.5f), wallMat);
+            CreateBlocker(root.transform, "Door (keeps the player in)", new Vector3(0.5f, 1f, -15.25f), new Vector3(12f, 2f, 0.5f));
             CreateWall(root.transform, "West", new Vector3(-15.25f, 0.5f, 0f), new Vector3(0.5f, 1f, 30.5f), wallMat);
             return CreateWall(root.transform, "East (opens with Expand Shop)", new Vector3(15.25f, 0.5f, 0f),
                 new Vector3(0.5f, 1f, 30.5f), wallMat);
@@ -243,9 +257,18 @@ namespace BubbleTea.EditorTools
             floor.transform.localScale = new Vector3(1.6f, 1f, 3f); // 16 x 30 meters
             floor.GetComponent<Renderer>().sharedMaterial = expansionFloor;
 
-            CreateWall(root.transform, "North", new Vector3(23f, 1.5f, 15.25f), new Vector3(16.5f, 3f, 0.5f), wallMat);
-            CreateWall(root.transform, "South", new Vector3(23f, 0.5f, -15.25f), new Vector3(16.5f, 1f, 0.5f), wallMat);
-            CreateWall(root.transform, "East", new Vector3(31.25f, 0.5f, 0f), new Vector3(0.5f, 1f, 30.5f), wallMat);
+            // The building ends at the lane wall; the lane outside runs the full length, open at both ends.
+            float buildingLength = LaneWallX - 15f;
+            CreateWall(root.transform, "North", new Vector3(15f + buildingLength / 2f, 1.5f, 15.25f), new Vector3(buildingLength, 3f, 0.5f), wallMat);
+            CreateWall(root.transform, "South", new Vector3(15f + buildingLength / 2f, 0.5f, -15.25f), new Vector3(buildingLength, 1f, 0.5f), wallMat);
+            // The lane wall, with a gap for the drive-thru window.
+            float windowFrom = DriveThruPosition.z - 1.2f, windowTo = DriveThruPosition.z + 1.2f;
+            CreateWall(root.transform, "Lane Wall (south)", new Vector3(LaneWallX + 0.25f, 1.2f, (-15.5f + windowFrom) / 2f),
+                new Vector3(0.5f, 2.4f, windowFrom + 15.5f), wallMat);
+            CreateWall(root.transform, "Lane Wall (north)", new Vector3(LaneWallX + 0.25f, 1.2f, (windowTo + 15.5f) / 2f),
+                new Vector3(0.5f, 2.4f, 15.5f - windowTo), wallMat);
+            CreateBlocker(root.transform, "Window (keeps the player in)", new Vector3(LaneWallX + 0.25f, 1f, DriveThruPosition.z),
+                new Vector3(0.5f, 2f, 2.4f));
 
             root.SetActive(false);
             return root;
@@ -254,7 +277,7 @@ namespace BubbleTea.EditorTools
         // Plants (or whatever the Art Set lists as decorations) in the corners of the shop.
         private static readonly Vector3[] DecorationSpots =
         {
-            new(-14f, 0f, 14f), new(14f, 0f, 14f), new(-14f, 0f, 9f), new(14f, 0f, -14f), new(-14f, 0f, -3f), new(6f, 0f, 14f),
+            new(-14f, 0f, 14f), new(14f, 0f, 14f), new(-14f, 0f, -14f), new(14.2f, 0f, -14.2f), new(-14f, 0f, -2f), new(14f, 0f, -2f),
         };
 
         private static void CreateDecorations()
@@ -288,6 +311,23 @@ namespace BubbleTea.EditorTools
             instance.transform.localPosition = -(new Vector3(bounds.center.x, bounds.min.y, bounds.center.z) - spot.position) * scale;
         }
 
+        // An invisible wall: only the player (who moves with physics) bumps into it.
+        private static void CreateBlocker(Transform parent, string name, Vector3 position, Vector3 size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = position;
+            go.AddComponent<BoxCollider>().size = size;
+        }
+
+        // Turns a pad (and what it builds) to face another way, keeping its label readable.
+        private static void Turn(UnlockPad pad, float yaw)
+        {
+            pad.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            Transform label = pad.transform.Find("Label");
+            if (label != null) label.rotation = Quaternion.Euler(90f, 0f, 0f);
+        }
+
         private static GameObject CreateWall(Transform parent, string name, Vector3 position, Vector3 size, Material material)
         {
             GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -303,7 +343,7 @@ namespace BubbleTea.EditorTools
         {
             GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             player.name = "Player";
-            player.transform.position = new Vector3(0f, 1f, 0f);
+            player.transform.position = new Vector3(5f, 1f, 3f);
             player.GetComponent<Renderer>().sharedMaterial = material;
 
             // The CharacterController brings its own collider.
@@ -500,6 +540,14 @@ namespace BubbleTea.EditorTools
         // reveals the seating area, which reveals
         // the cleaner. The fruit bar reveals Expand Shop, which opens the east wall and reveals
         // the drive-through and more seating.
+        //
+        // The floor plan works like a real café, seen from the street (south):
+        //   - the dining room at the front: the door, the line at the counter, café tables;
+        //   - the counter across the middle, with a glass wall either side and a staff door;
+        //   - the kitchen behind it: the bars in a row facing the counter, the baristas' pads
+        //     along the back wall, the upgrade desk, the trash can and the starting cash;
+        //   - Expand Shop adds more kitchen and dining space to the east, and a drive-thru
+        //     window onto a car lane outside the east wall.
         private static UnlockPad[] CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet,
             GameObject eastWall, GameObject expansionArea)
         {
@@ -510,20 +558,25 @@ namespace BubbleTea.EditorTools
                 ? CreatePad(content.SecondShop, SecondShopPadPosition, billPrefab, wallet, padMat)
                 : null;
             // The drive-thru cashier's pad sits beside the drive-thru's cash pile, like the main one.
-            UnlockPad driveThruCashierPad = CreatePad(content.DriveThruCashier, new Vector3(25f, 0f, 1.8f), billPrefab, wallet, padMat);
-            UnlockPad driveThruPad = CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat,
+            UnlockPad driveThruCashierPad = CreatePad(content.DriveThruCashier, new Vector3(21.5f, 0f, 7.5f), billPrefab, wallet, padMat);
+            // The drive-thru window sits in the lane wall, its customer side facing the cars outside.
+            UnlockPad driveThruPad = CreatePad(content.DriveThru, DriveThruPosition, billPrefab, wallet, padMat,
                 driveThruCashierPad);
-            UnlockPad moreSeatingPad = CreatePad(content.MoreSeating, new Vector3(19f, 0f, 5f), billPrefab, wallet, padMat);
-            UnlockPad expansionPad = CreatePad(content.Expansion, new Vector3(12f, 0f, 10f), billPrefab, wallet, padMat,
+            Turn(driveThruPad, -90f);
+            UnlockPad moreSeatingPad = CreatePad(content.MoreSeating, new Vector3(20f, 0f, -8f), billPrefab, wallet, padMat);
+            UnlockPad expansionPad = CreatePad(content.Expansion, new Vector3(8f, 0f, 11.5f), billPrefab, wallet, padMat,
                 driveThruPad, moreSeatingPad);
             SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
             SetObjectList(expansionPad, "hideWhenUnlocked", eastWall);
-            UnlockPad fruitPad = CreatePad(content.FruitBar, new Vector3(10f, 0f, -5f), billPrefab, wallet, padMat,
+            // The bars stand in a row behind the counter, turned so you serve them from the counter side.
+            UnlockPad fruitPad = CreatePad(content.FruitBar, new Vector3(6f, 0f, 7f), billPrefab, wallet, padMat,
                 expansionPad);
-            UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(5f, 0f, -8f), billPrefab, wallet, padMat, fruitPad);
+            Turn(fruitPad, 180f);
+            UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(1f, 0f, 7f), billPrefab, wallet, padMat, fruitPad);
+            Turn(taroPad, 180f);
 
-            // Baristas along the west wall, each pad revealing the next.
-            Vector3[] baristaSpots = { new(-10f, 0f, 0f), new(-10f, 0f, 5f), new(-10f, 0f, 10f), new(-6f, 0f, 9f), new(-6f, 0f, 13f) };
+            // Baristas along the back wall of the kitchen, each pad revealing the next.
+            Vector3[] baristaSpots = { new(-12f, 0f, 12f), new(-8f, 0f, 12f), new(-4f, 0f, 12f), new(0f, 0f, 12f), new(4f, 0f, 12f) };
             var baristaPads = new UnlockPad[content.Baristas.Length];
             for (int i = baristaPads.Length - 1; i >= 0; i--)
             {
@@ -534,16 +587,19 @@ namespace BubbleTea.EditorTools
 
             // The decorations (Planter, Menu Board, Boba Statue) are left out for now; their
             // prefabs and data are still built, so they can come back as pads later.
-            UnlockPad cleanerPad = CreatePad(content.Cleaner, new Vector3(-2f, 0f, 9f), billPrefab, wallet, padMat);
-            UnlockPad seatingPad = CreatePad(content.Seating, new Vector3(6f, 0f, 6f), billPrefab, wallet, padMat, cleanerPad);
-            UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat,
+            // Dining room: café tables beside the line, the cleaner's pad by the west wall.
+            UnlockPad cleanerPad = CreatePad(content.Cleaner, new Vector3(-10f, 0f, -11f), billPrefab, wallet, padMat);
+            UnlockPad seatingPad = CreatePad(content.Seating, SeatingPosition, billPrefab, wallet, padMat, cleanerPad);
+            UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(-4f, 0f, 7f), billPrefab, wallet, padMat,
                 taroPad, seatingPad);
-            // The cashier stands beside the counter's cash pile (the counter's pad is at -5, -3).
-            UnlockPad cashierPad = CreatePad(content.Cashier, new Vector3(-2f, 0f, -1.2f), billPrefab, wallet, padMat);
-            UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad,
+            Turn(toppingPad, 180f);
+            // The cashier stands behind the counter beside its cash pile.
+            UnlockPad cashierPad = CreatePad(content.Cashier, CounterPosition + new Vector3(3f, 0f, 1.8f), billPrefab, wallet, padMat);
+            UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(-9f, 0f, 7f), billPrefab, wallet, padMat, toppingPad,
                 cashierPad);
-            UnlockPad upgradePad = CreatePad(content.UpgradeDesk, new Vector3(9f, 0f, 1f), billPrefab, wallet, padMat);
-            UnlockPad counterPad = CreatePad(content.Counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat,
+            Turn(brewerPad, 180f);
+            UnlockPad upgradePad = CreatePad(content.UpgradeDesk, new Vector3(12.5f, 0f, 9f), billPrefab, wallet, padMat);
+            UnlockPad counterPad = CreatePad(content.Counter, CounterPosition, billPrefab, wallet, padMat,
                 brewerPad, upgradePad);
 
             // Only the first pad is visible at the start.

@@ -47,6 +47,9 @@ namespace BubbleTea.Customers
         [SerializeField, Range(0f, 2f), Tooltip("Small tip, as a share of the drink's price.")]
         private float smallTip = 0.2f;
 
+        [SerializeField, Tooltip("Whether they turn to face the counter at the front of the line (cars keep facing the lane).")]
+        private bool faceCounter = true;
+
         [SerializeField, Tooltip("Whether this customer can sit at a café table after buying (cars can't).")]
         private bool canSit = true;
 
@@ -195,7 +198,7 @@ namespace BubbleTea.Customers
             // At the front of the line: face the counter and buy once a drink is there.
             Vector3 toCounter = counter.transform.position - transform.position;
             toCounter.y = 0f;
-            if (toCounter.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(toCounter);
+            if (faceCounter && toCounter.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(toCounter);
 
             waitTimer += Time.deltaTime;
             if (waitTimer < pauseBeforeBuying || !counter.TrySell(Order, out CarriedItem drink, TipShare())) return;

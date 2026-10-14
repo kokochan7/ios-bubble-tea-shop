@@ -156,3 +156,10 @@ Polish pass:
 - Tiled floors, wooden planks in the expansion, striped wallpaper, a tall back wall with windows, trim, wall lamps, bunting and the shop's name on a sign, a rug under the café tables, door mats, and a street with trees outside. All built in code (`Editor/ShopDressing.cs`).
 - Sharper picture: full render resolution on phones (was 80%), 4x anti-aliasing, crisper soft shadows, warmer lighting.
 - Background music for each shop, composed in code (`Editor/MusicMaker.cs`): a bouncy pop tune in the Boba Shop and a mellow lo-fi one in the Matcha House. MENU has a Music on/off button. **Bubble Tea > Audio > Rebuild Music** rewrites the tracks.
+
+Real-café layout:
+
+- The dining room is at the front: customers come in through the front door, line up at the counter, and sit at café tables beside the line.
+- The counter runs across the middle with waist-high glass walls on either side; you walk between the rooms through the staff door to the right of the counter.
+- The kitchen is behind the counter: the bars stand in a row facing it, the baristas' pads line the back wall, and the upgrade desk, trash can and starting cash are back there too.
+- Expand Shop adds more kitchen and dining space to the east (More Seating is in the new dining space). The drive-thru window is in the east wall, and cars drive up a lane outside it, stop at the window and drive off the far end.

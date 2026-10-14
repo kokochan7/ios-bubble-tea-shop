@@ -100,7 +100,10 @@ namespace BubbleTea.EditorTools
             GameObject counter = BuildCounterPrefab("Counter", new Color(0.62f, 0.42f, 0.28f), menu, billPrefab,
                 "Main", priceMultiplier: 1f, queueSpacing: 1.1f);
             GameObject driveThru = BuildCounterPrefab("DriveThru", new Color(0.35f, 0.55f, 0.75f), menu, billPrefab,
-                "DriveThru", priceMultiplier: 1.5f, queueSpacing: 3.2f);
+                "DriveThru", priceMultiplier: 1.5f, queueSpacing: 3.2f,
+                // The window faces the car lane: cars queue along the lane, which runs past the
+                // counter's customer side, instead of straight out from it.
+                queueOffset: new Vector3(0f, 0f, -3.5f), queueYaw: -90f);
 
             // Values per level start at level 0; costs start at the price of level 1.
             UpgradeDefinition[] upgrades =
@@ -418,7 +421,7 @@ namespace BubbleTea.EditorTools
         // and their money piles up beside it.
         // Used for both the main counter and the drive-through window.
         private static GameObject BuildCounterPrefab(string name, Color color, DrinkRecipe[] menu, CashBill billPrefab,
-            string lane, float priceMultiplier, float queueSpacing)
+            string lane, float priceMultiplier, float queueSpacing, Vector3? queueOffset = null, float queueYaw = 180f)
         {
             var bodySize = new Vector3(2.2f, 1f, 1f);
             GameObject root = BuildStationBody(name, color, bodySize, null);
@@ -434,8 +437,8 @@ namespace BubbleTea.EditorTools
             serializedPile.FindProperty("maxBills").intValue = 90;
             serializedPile.ApplyModifiedPropertiesWithoutUndo();
 
-            Transform queueStart = AddAnchor(root.transform, "QueueStart", new Vector3(0f, 0f, -1.5f));
-            queueStart.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            Transform queueStart = AddAnchor(root.transform, "QueueStart", queueOffset ?? new Vector3(0f, 0f, -1.5f));
+            queueStart.localRotation = Quaternion.Euler(0f, queueYaw, 0f);
 
             var counter = root.AddComponent<ServingCounter>();
             var serialized = new SerializedObject(counter);
@@ -698,7 +701,8 @@ namespace BubbleTea.EditorTools
             var serialized = new SerializedObject(customer);
             serialized.FindProperty("speed").floatValue = 5f;
             serialized.FindProperty("canSit").boolValue = false;
-            serialized.FindProperty("drinkHoldPosition").vector3Value = new Vector3(0.9f, 1f, 0.4f);
+            serialized.FindProperty("faceCounter").boolValue = false; // cars keep facing up the lane
+            serialized.FindProperty("drinkHoldPosition").vector3Value = new Vector3(-0.9f, 1f, 0.4f); // driver's side, at the window
             serialized.FindProperty("orderBubble").objectReferenceValue = bubble;
             serialized.FindProperty("moodLight").objectReferenceValue = AddMoodLight(bubble);
             serialized.ApplyModifiedPropertiesWithoutUndo();
