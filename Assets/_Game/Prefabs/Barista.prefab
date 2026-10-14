@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8229127145052713417}
   - component: {fileID: 707220131121428062}
+  - component: {fileID: 4713018128488786546}
   - component: {fileID: 4215193928494802036}
   m_Layer: 0
   m_Name: Barista
@@ -33,6 +34,7 @@ Transform:
   m_Children:
   - {fileID: 2104163937396738405}
   - {fileID: 963718162264915043}
+  - {fileID: 2778589410185478516}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &707220131121428062
@@ -51,6 +53,23 @@ MonoBehaviour:
   hopHeight: 0.08
   stepsPerMeter: 1.6
   rockDegrees: 6
+--- !u!114 &4713018128488786546
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3484554984479512730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9205a287658a41bd8fadeffc0b565d76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BubbleTea.Cooking.ItemCarrier
+  stack:
+    anchor: {fileID: 2778589410185478516}
+    capacity: 1
+    itemHeight: 0.32
+  usesCarryUpgrade: 1
 --- !u!114 &4215193928494802036
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -64,6 +83,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BubbleTea.Staff.Barista
   speed: 3.5
+  secondsBetweenPlans: 0.25
+  giveUpSeconds: 4
+  discardSeconds: 8
   rethinkSeconds: 8
   standDistance: 1.1
 --- !u!1 &4259732825029078775
@@ -156,6 +178,37 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &4605508636867853357
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2778589410185478516}
+  m_Layer: 0
+  m_Name: HandStack
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2778589410185478516
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4605508636867853357}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.9, z: 0.55}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8229127145052713417}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8244507983292741057
 GameObject:
   m_ObjectHideFlags: 0
