@@ -75,6 +75,8 @@ The piles refill every few seconds so there's always something to collect. You c
 
 To swap the gray boxes for real 3D models (free packs), follow [docs/ART.md](docs/ART.md).
 
+To play on your iPhone (needs your Mac), follow [docs/IOS_BUILD.md](docs/IOS_BUILD.md).
+
 To add new content without code, right-click in the Project window and use the **Create > Bubble Tea** menu:
 - **Item**: something that can be carried, like a cup of taro tea.
 - **Recipe Step**: what a station turns into what, and how long it takes. Leave the input empty for a station that makes things from nothing.

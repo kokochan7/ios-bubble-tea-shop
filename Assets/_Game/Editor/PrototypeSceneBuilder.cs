@@ -275,7 +275,6 @@ namespace BubbleTea.EditorTools
             scaler.referenceResolution = new Vector2(1080f, 1920f);
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
-            hud = canvasGo.transform;
 
             Sprite circle = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
             Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
@@ -305,7 +304,13 @@ namespace BubbleTea.EditorTools
             SetReference(joystick, "handle", knob);
 
             // Money counter at the top of the screen.
-            RectTransform panel = CreateUiObject("MoneyCounter", canvasGo.transform);
+            // Everything except the joystick lives inside the safe area, clear of the iPhone notch.
+            RectTransform safeArea = CreateUiObject("SafeArea", canvasGo.transform);
+            Stretch(safeArea);
+            safeArea.gameObject.AddComponent<SafeArea>();
+            hud = safeArea;
+
+            RectTransform panel = CreateUiObject("MoneyCounter", safeArea);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 1f);
             panel.pivot = new Vector2(0.5f, 1f);
             panel.anchoredPosition = new Vector2(0f, -110f);

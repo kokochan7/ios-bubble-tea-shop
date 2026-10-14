@@ -71,3 +71,10 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 - **Bubble Tea > Art > Auto-Fill From Art Folder** finds matching models by name. It's tuned for Kenney's free kits (Furniture, Food, Mini Characters, Car).
 - Characters waddle when they walk, and plants decorate the corners if you add some.
 - Step-by-step download guide: [ART.md](ART.md).
+
+## Milestone 8: iPhone build
+
+- **Bubble Tea > Apply iPhone Settings** sets the app name, bundle ID, portrait only, iOS 15+ and automatic signing in one click.
+- The money counter, MENU and upgrade buttons stay inside the iPhone's safe area, clear of the notch and home bar.
+- The game runs at 60 frames per second and the screen doesn't sleep while you play.
+- Step-by-step Mac and Xcode guide: [IOS_BUILD.md](IOS_BUILD.md). TestFlight waits for the paid Apple Developer account at milestone 10.
