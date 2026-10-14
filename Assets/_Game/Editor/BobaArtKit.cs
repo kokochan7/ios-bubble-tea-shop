@@ -97,6 +97,7 @@ namespace BubbleTea.EditorTools
                 { "Runner", Save("Runner", BuildCharacter(Palette.Mint, Palette.Cream, CharacterStyle.Cap)) },
                 { "Customer", Save("Customer", BuildCharacter(Palette.Butter, null, CharacterStyle.Bob)) },
                 { "Barista", Save("BaristaHelper", BuildCharacter(Palette.Lavender, Palette.Cream, CharacterStyle.Headband)) },
+                { "Cashier", Save("Cashier", BuildCharacter(Palette.Butter, Palette.Cream, CharacterStyle.Buns)) },
                 { "Car", Save("Car", BuildCar()) },
             };
             GameObject plant = Save("Plant", BuildPlant());

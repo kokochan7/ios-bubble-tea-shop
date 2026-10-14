@@ -26,7 +26,6 @@ namespace BubbleTea.EditorTools
             string[] files = SaveManager.AllSaveFiles();
             foreach (string path in files) File.Delete(path);
             PlayerPrefs.DeleteKey(SaveManager.LastShopKey);
-            PlayerPrefs.DeleteKey(SaveManager.TutorialDoneKey);
             bool existed = files.Length > 0;
             Debug.Log(existed ? "Bubble Tea: save deleted. The next Play starts a fresh game." : "Bubble Tea: there was no save to delete.");
         }

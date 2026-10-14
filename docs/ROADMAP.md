@@ -62,9 +62,9 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 
 - Buying the Topping Bar reveals a **Hire Runner** pad ($300) on the left, and that one reveals **Hire Runner 2** ($600).
 - A runner (green) keeps the counter stocked: they fetch the drink the line needs from the station where it's ready. If it isn't ready anywhere, they carry the ingredient to the station that makes it, like plain milk tea to the Topping Bar for a boba order.
-- Runners carry one item at a time, never drop things at stations they just walk past, and don't double up on the same order. An item nobody needs gets thrown away after a few seconds.
+- Runners carry one item at a time (more with Carry More since milestone 10), never drop things at stations they just walk past, and don't double up on the same order. An item nobody needs gets thrown away after a few seconds.
 - Hired runners come back when you load your save, like stations do.
-- There's no separate cashier: customers already pay at the counter on their own, so the only manual job left is collecting the cash.
+- A cashier came later (milestone 10) to collect the counter's cash for you.
 
 ## Milestone 5: Shop expansion
 
@@ -115,4 +115,13 @@ Kenny picked these, built one pull request at a time in this order:
 4. **Barista staff** (done): two Hire Barista pads appear after the Taro Station. A barista walks to the station your customers need most, stands behind it, and makes it work twice as fast. Every few seconds they check whether another station is busier and move if so. Only one barista works at each station.
 5. **Seating area** (done): a Seating Area pad ($500) appears after the Planter and builds two café tables with four seats. After buying, many customers sit for a few seconds and leave a few extra dollars in the pile by the tables, plus an empty cup. A seat with a cup on it can't be used until you walk up to the table to clean it ("Clean!"), and every messy seat costs a quarter star until you do.
 6. **Second shop** (done): after the Drive Thru, an **Open Matcha House** pad ($2,500) builds a bus stop. Stand on it and the ring fills, then you travel to the Matcha House: a green-walled shop with its own money, pads and upgrades, selling matcha, brown sugar and strawberry drinks at about twice the price (and everything costs three times as much). A bus stop there takes you back. Both shops keep their own progress, and whichever one you open pays you for the time you were away. On a phone the game reopens in the shop you were last in.
-7. **First-minute tutorial** (done): a new game shows one instruction at a time in a banner near the bottom (walk, grab the cash, build the Counter, build the Tea Brewer, pick up a milk tea, serve it, collect the money) while the yellow arrow points at the right spot. Each step checks what you've actually done, so it never gets stuck, and it only shows once (Delete Save Data or Reset Progress brings it back).
+7. **First-minute tutorial** (built, then removed after playtesting along with the guide arrow: Kenny prefers players to find their own way).
+
+## Milestone 10: Fixes and polish
+
+After Kenny's first playtest of features 1-7:
+
+- The tutorial and the yellow guide arrow are gone.
+- **Hire Cashier** ($150, appears after the Tea Brewer): stands by the counter and banks customers' payments for you, so you don't have to walk to the cash pile.
+- The counter now takes any drink on the menu you carry to it and keeps up to 8 for later customers, who order a waiting drink first.
+- Walk Speed now speeds up runners, baristas and the cashier too, and Carry More lets runners carry several of the same drink per trip. Brew Speed already sped up every station.
