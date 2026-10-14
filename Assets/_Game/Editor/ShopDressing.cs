@@ -56,8 +56,8 @@ namespace BubbleTea.EditorTools
             CreateBamboo(root, new Vector3(layout.DoorTo + 1f, 0f, -d + 0.7f));
             CreateKitchenFloor(root, "KitchenFloor", -w, w, layout);
             float counterX = layout.Counter.x;
-            CreatePartition(root, -w, counterX - 1.3f, layout);
-            CreatePartition(root, counterX + 1.3f, layout.StaffDoorFrom, layout);
+            CreatePartition(root, -w, counterX - 1.4f, layout); // the counter is 2.75 m wide
+            CreatePartition(root, counterX + 1.4f, layout.StaffDoorFrom, layout);
             CreatePartition(root, layout.StaffDoorTo, w, layout);
             CreateStaffDoor(root, layout);
 

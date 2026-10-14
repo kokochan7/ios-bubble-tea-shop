@@ -7,8 +7,8 @@ using UnityEngine;
 namespace BubbleTea.Customers
 {
     /// <summary>
-    /// Where drinks are sold. Customers line up on the other side, each wanting one drink
-    /// from the menu. The player drops off any drink on the menu (ones someone in line is
+    /// Where drinks are sold. Customers line up on the other side, each wanting one to five
+    /// drinks from the menu (only drinks the shop can already make). The player drops off any drink on the menu (ones someone in line is
     /// waiting for go first); extras wait on the counter for a later customer who orders
     /// them, and are thrown out one by one if nobody does within a few seconds. When the
     /// counter is full, a drink someone in line wants goes straight to that customer.
@@ -113,9 +113,8 @@ namespace BubbleTea.Customers
         /// </summary>
         public ItemDefinition NextNeeded()
         {
-            foreach (Customer customer in queue)
+            foreach (ItemDefinition drink in QueuedOrders())
             {
-                ItemDefinition drink = customer != null && customer.Order != null ? customer.Order.Drink : null;
                 if (drink == null) continue;
                 if (Wanted(drink) - drinks.CountOf(i => i == drink) - Reserved(drink) > 0) return drink;
             }
@@ -161,25 +160,42 @@ namespace BubbleTea.Customers
 
         private int Reserved(ItemDefinition drink) => reserved.TryGetValue(drink, out int count) ? count : 0;
 
-        /// <summary>The drink each customer in line ordered, front of the line first.</summary>
+        /// <summary>Every drink the customers in line still want, front of the line first.</summary>
         public IEnumerable<ItemDefinition> QueuedOrders()
         {
             foreach (Customer customer in queue)
             {
-                if (customer != null && customer.Order != null) yield return customer.Order.Drink;
+                if (customer == null) continue;
+                foreach (DrinkRecipe order in customer.Orders)
+                {
+                    if (order != null) yield return order.Drink;
+                }
             }
         }
 
-        /// <summary>How many customers in line ordered <paramref name="drink"/>.</summary>
+        /// <summary>How many of <paramref name="drink"/> the customers in line still want.</summary>
         public int Wanted(ItemDefinition drink)
         {
             int wanted = 0;
             foreach (Customer customer in queue)
             {
-                if (customer != null && customer.Order != null && customer.Order.Drink == drink) wanted++;
+                if (customer != null) wanted += CountIn(customer.Orders, drink);
             }
             return wanted;
         }
+
+        private static int CountIn(IReadOnlyList<DrinkRecipe> orders, ItemDefinition drink)
+        {
+            int count = 0;
+            foreach (DrinkRecipe order in orders)
+            {
+                if (order != null && order.Drink == drink) count++;
+            }
+            return count;
+        }
+
+        /// <summary>The customer at the front of the line, or null.</summary>
+        public Customer FrontCustomer => queue.Count > 0 ? queue[0] : null;
 
         public Vector3 QueuePosition(int index)
         {
@@ -188,44 +204,51 @@ namespace BubbleTea.Customers
         }
 
         /// <summary>
-        /// Picks a drink for a new customer: anything on the menu that a station in the shop
-        /// can make. Before any station exists, it falls back to the first menu item.
-        /// A drink left on the counter by someone who walked out is ordered first, so it isn't wasted.
+        /// Picks the drinks a new customer wants, into <paramref name="into"/>: only drinks the shop
+        /// can make right now (see <see cref="Station.AnyCanMake"/>). The more kinds it can make,
+        /// the bigger orders can get, up to 5; small orders stay the most common. A drink left on
+        /// the counter by someone who walked out is ordered first, so it isn't wasted.
         /// </summary>
-        public DrinkRecipe PickOrder()
+        public void PickOrders(List<DrinkRecipe> into)
         {
-            if (menu != null)
-            {
-                foreach (DrinkRecipe recipe in menu)
-                {
-                    if (recipe != null && drinks.CountOf(item => item == recipe.Drink) > Wanted(recipe.Drink)) return recipe;
-                }
-            }
-
+            into.Clear();
             orderChoices.Clear();
-            DrinkRecipe fallback = null;
-            if (menu != null)
+            foreach (DrinkRecipe recipe in Menu)
             {
-                foreach (DrinkRecipe recipe in menu)
-                {
-                    if (recipe == null) continue;
-                    if (fallback == null) fallback = recipe;
-                    if (Station.AnyCanMake(recipe.Drink)) orderChoices.Add(recipe);
-                }
+                if (recipe != null && Station.AnyCanMake(recipe.Drink)) orderChoices.Add(recipe);
             }
-            return orderChoices.Count > 0 ? orderChoices[Random.Range(0, orderChoices.Count)] : fallback;
+            if (orderChoices.Count == 0) return;
+
+            int most = Mathf.Clamp(orderChoices.Count, 1, MaxDrinksPerCustomer);
+            int count = Mathf.Min(most, 1 + Mathf.FloorToInt(Mathf.Pow(Random.value, 1.5f) * most));
+
+            foreach (DrinkRecipe recipe in orderChoices)
+            {
+                int spare = drinks.CountOf(item => item == recipe.Drink) - Wanted(recipe.Drink);
+                for (int i = 0; i < spare && into.Count < count; i++) into.Add(recipe);
+            }
+            while (into.Count < count) into.Add(orderChoices[Random.Range(0, orderChoices.Count)]);
         }
 
+        /// <summary>The most drinks one customer orders.</summary>
+        public const int MaxDrinksPerCustomer = 5;
+
         /// <summary>
-        /// Hands the customer the drink they ordered and banks their payment, plus a tip of
-        /// <paramref name="tipShare"/> times the price. Returns false if that drink isn't on the counter yet.
+        /// Hands over one of the <paramref name="orders"/> if it's on the counter, and banks its
+        /// payment plus a tip of <paramref name="tipShare"/> times the price.
         /// </summary>
-        public bool TrySell(DrinkRecipe order, out CarriedItem drink, float tipShare = 0f)
+        public bool TrySellAny(IReadOnlyList<DrinkRecipe> orders, out CarriedItem drink, out DrinkRecipe sold, float tipShare = 0f)
         {
             drink = null;
-            if (order == null || !drinks.TryTake(item => item == order.Drink, out drink)) return false;
-            Bank(order, tipShare);
-            return true;
+            sold = null;
+            foreach (DrinkRecipe order in orders)
+            {
+                if (order == null || !drinks.TryTake(item => item == order.Drink, out drink)) continue;
+                sold = order;
+                Bank(order, tipShare);
+                return true;
+            }
+            return false;
         }
 
         /// <summary>What this drink sells for here: its normal price (with upgrades) times the price you set.</summary>
@@ -274,8 +297,14 @@ namespace BubbleTea.Customers
             int covered = drinks.CountOf(onCounter => onCounter == drink.Definition);
             foreach (Customer customer in queue)
             {
-                if (customer == null || customer.Order == null || customer.Order.Drink != drink.Definition) continue;
-                if (covered-- > 0) continue;
+                if (customer == null) continue;
+                int wants = CountIn(customer.Orders, drink.Definition);
+                if (wants == 0) continue;
+                if (covered >= wants)
+                {
+                    covered -= wants;
+                    continue;
+                }
                 if (customer.ServeNow(drink)) return true;
                 break;
             }

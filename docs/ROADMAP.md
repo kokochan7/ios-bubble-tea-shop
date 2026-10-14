@@ -205,4 +205,12 @@ Taiwanese tea house pass and playtest fixes:
 - Bars hold 3 finished drinks to start; the new **Bigger Bars** upgrade adds 1 per level (`StatId.StationCapacity`).
 - The topping bar pad appears after hiring the first barista. Customers wait 30 seconds.
 - Money: bigger bills ($5 at the counter, $10 on the floor), a quieter tick at most about 8 times a second, and a cash register "ka-ching" on every sale.
-- Smaller HUD in the top corners: clock, money and stars on the left; MENU and GOALS on the right.
+- Smaller HUD: money at the top center, clock and stars top-left, MENU and GOALS top-right.
+
+Orders pass:
+
+- Customers only order drinks the shop can make from start to finish (`Station.AnyCanMake` follows the whole recipe chain).
+- Customers order 1 to 5 drinks. The cap is the number of drinks the shop can make, so orders grow as stations unlock; small orders stay most common. Each extra drink adds 40% patience. They take each drink as it lands and leave with the last.
+- An order board over each counter shows what the customer at the front still wants; drinks vanish from it as they're handed over (`Customers/OrderBoard`).
+- Drink prices are 15% higher (rounded up). Hire Barista costs $150, Hire Barista 2 $500.
+- Bars and counters are 1.25x bigger, and drinks on them are 2x size.

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BubbleTea.Cooking;
 using BubbleTea.Core;
 using UnityEngine;
@@ -6,8 +7,8 @@ using UnityEngine;
 namespace BubbleTea.Customers
 {
     /// <summary>
-    /// Walks in, waits in line at a <see cref="ServingCounter"/>, buys a drink when it's
-    /// their turn, and walks out with it. Gray-box movement: straight lines, no pathfinding.
+    /// Walks in, waits in line at a <see cref="ServingCounter"/>, buys their drinks (one to
+    /// five, more as the shop can make more kinds) when it's their turn, and walks out with them. Gray-box movement: straight lines, no pathfinding.
     /// Customers lose patience while they wait: a light by their order turns from green to
     /// yellow to red. Quick service earns a tip; a customer who runs out of patience leaves
     /// without buying.
@@ -31,6 +32,9 @@ namespace BubbleTea.Customers
 
         [SerializeField, Min(0f), Tooltip("Seconds a customer will wait before leaving without buying. 0 = they wait forever.")]
         private float patienceSeconds = 30f;
+
+        [SerializeField, Range(0f, 2f), Tooltip("Extra patience for each drink after the first, as a share of the patience above.")]
+        private float patiencePerExtraDrink = 0.4f;
 
         [SerializeField, Range(0f, 1f), Tooltip("How fast patience drains for customers behind the front of the line (0.5 = half speed).")]
         private float backOfLineDrain = 0.5f;
@@ -89,11 +93,19 @@ namespace BubbleTea.Customers
         private float tolerance;
         private bool checkedPrice;
 
-        /// <summary>The drink this customer wants.</summary>
-        public DrinkRecipe Order { get; private set; }
+        private readonly List<DrinkRecipe> orders = new();
+        private readonly List<CarriedItem> held = new();
+        private readonly List<GameObject> icons = new();
+        private float patience;
+
+        /// <summary>The drinks this customer still wants.</summary>
+        public IReadOnlyList<DrinkRecipe> Orders => orders;
+
+        /// <summary>The next drink this customer wants, or null once they have them all.</summary>
+        public DrinkRecipe Order => orders.Count > 0 ? orders[0] : null;
 
         /// <summary>1 = just arrived and happy, 0 = out of patience.</summary>
-        public float Mood => patienceSeconds <= 0f ? 1f : Mathf.Clamp01(1f - waited / patienceSeconds);
+        public float Mood => patience <= 0f ? 1f : Mathf.Clamp01(1f - waited / patience);
 
         public void Init(ServingCounter servingCounter, Vector3 exitPoint, Action<Customer> gone)
         {
@@ -104,27 +116,27 @@ namespace BubbleTea.Customers
             waited = 0f;
             tolerance = UnityEngine.Random.Range(priceTolerance.x, priceTolerance.y);
             checkedPrice = false;
-            Order = counter.PickOrder();
+            counter.PickOrders(orders);
+            patience = patienceSeconds * (1f + patiencePerExtraDrink * Mathf.Max(0, orders.Count - 1));
             ShowOrder();
             counter.JoinQueue(this);
+            if (orders.Count == 0) StopWaiting(); // nothing on the menu can be made yet
         }
 
-        // Puts a copy of the ordered drink's model on the bubble so you can see what they want.
+        // Puts copies of the ordered drinks' models on the bubble so you can see what they want.
+        // Several drinks are shown side by side, a little smaller.
         private void ShowOrder()
         {
             if (orderBubble == null) return;
-            if (Order == null || Order.Drink == null || Order.Drink.Prefab == null)
+            float scale = orders.Count > 1 ? bubbleIconScale * 0.65f : bubbleIconScale;
+            DrinkIcons.Show(orderBubble, orders, scale, scale * 0.26f, icons);
+            if (moodLight != null && moodLight.transform.parent == orderBubble)
             {
-                orderBubble.gameObject.SetActive(false);
-                return;
+                // Keep the mood light just past the last drink.
+                Vector3 spot = moodLight.transform.localPosition;
+                spot.x = Mathf.Max(0.7f, (orders.Count - 1) * 0.5f * scale * 0.26f + 0.45f);
+                moodLight.transform.localPosition = spot;
             }
-
-            GameObject icon = Instantiate(Order.Drink.Prefab, orderBubble);
-            icon.transform.localPosition = Vector3.zero;
-            icon.transform.localRotation = Quaternion.identity;
-            icon.transform.localScale = Vector3.one * bubbleIconScale;
-            var item = icon.GetComponent<CarriedItem>();
-            if (item != null) Destroy(item); // just a picture, not a real drink
         }
 
         private void Update()
@@ -190,7 +202,7 @@ namespace BubbleTea.Customers
             int index = counter.QueueIndexOf(this);
             waited += Time.deltaTime * (index <= 0 ? 1f : backOfLineDrain);
             ShowMood();
-            if (patienceSeconds > 0f && waited >= patienceSeconds)
+            if (patience > 0f && waited >= patience)
             {
                 GiveUp();
                 return;
@@ -202,12 +214,13 @@ namespace BubbleTea.Customers
                 return;
             }
 
-            // At the front of the line they read the price; too expensive and they leave.
+            // At the front of the line they read the prices; too expensive and they leave.
             if (!checkedPrice)
             {
                 checkedPrice = true;
-                if (TooExpensive())
+                foreach (DrinkRecipe order in orders)
                 {
+                    if (!TooExpensive(order)) continue;
                     RefusePrice();
                     return;
                 }
@@ -218,9 +231,11 @@ namespace BubbleTea.Customers
             toCounter.y = 0f;
             if (faceCounter && toCounter.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(toCounter);
 
+            // Take each ordered drink as soon as it's on the counter.
             waitTimer += Time.deltaTime;
-            if (waitTimer < pauseBeforeBuying || !counter.TrySell(Order, out CarriedItem drink, TipShare())) return;
-            TakeDrink(drink);
+            if (waitTimer < pauseBeforeBuying || !counter.TrySellAny(orders, out CarriedItem drink, out DrinkRecipe sold, TipShare())) return;
+            waitTimer = 0f;
+            TakeDrink(drink, sold);
         }
 
         /// <summary>
@@ -230,19 +245,32 @@ namespace BubbleTea.Customers
         public bool ServeNow(CarriedItem drink)
         {
             if (state != State.Queueing || counter == null || drink == null) return false;
-            if (TooExpensive())
+            DrinkRecipe order = orders.Find(o => o != null && o.Drink == drink.Definition);
+            if (order == null) return false;
+            if (TooExpensive(order))
             {
                 RefusePrice();
                 return false;
             }
-            counter.Bank(Order, TipShare());
-            TakeDrink(drink);
+            counter.Bank(order, TipShare());
+            TakeDrink(drink, order);
             return true;
         }
 
-        private void TakeDrink(CarriedItem drink)
+        // Takes one ordered drink; with the last one they're done and head off.
+        private void TakeDrink(CarriedItem drink, DrinkRecipe order)
         {
-            drink.MoveTo(transform, drinkHoldPosition);
+            orders.Remove(order);
+            held.Add(drink);
+            for (int i = 0; i < held.Count; i++)
+            {
+                // Several drinks are carried side by side.
+                Vector3 spot = drinkHoldPosition + Vector3.right * ((i - (held.Count - 1) * 0.5f) * 0.26f);
+                if (held[i] != null) held[i].MoveTo(transform, spot);
+            }
+            ShowOrder();
+            if (orders.Count > 0) return;
+
             GameEvents.RaiseCustomerServed(transform.position, Mood);
             StopWaiting();
             if (canSit && UnityEngine.Random.value < sitChance && SeatingTable.TryReserve(this, out table, out seat)) state = State.ToSeat;
@@ -257,7 +285,7 @@ namespace BubbleTea.Customers
             return 0f;
         }
 
-        private bool TooExpensive() => counter.PriceOf(Order) > counter.FairPriceOf(Order) * tolerance + 0.01f;
+        private bool TooExpensive(DrinkRecipe order) => counter.PriceOf(order) > counter.FairPriceOf(order) * tolerance + 0.01f;
 
         // The price is more than this customer will pay: they leave without buying (costs a star).
         private void RefusePrice()

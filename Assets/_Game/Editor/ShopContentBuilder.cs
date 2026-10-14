@@ -141,8 +141,8 @@ namespace BubbleTea.EditorTools
                 MoreSeating = GetOrCreateBuildable("More Seating", 1200, BuildSeatingPrefab(billPrefab)),
                 Baristas = new[]
                 {
-                    GetOrCreateBuildable("Hire Barista", 200, barista, keepPriceUpToDate: true),
-                    GetOrCreateBuildable("Hire Barista 2", 600, barista),
+                    GetOrCreateBuildable("Hire Barista", 150, barista, keepPriceUpToDate: true),
+                    GetOrCreateBuildable("Hire Barista 2", 500, barista, keepPriceUpToDate: true),
                     GetOrCreateBuildable("Hire Barista 3", 900, barista),
                     GetOrCreateBuildable("Hire Barista 4", 1300, barista),
                     GetOrCreateBuildable("Hire Barista 5", 1800, barista),
@@ -187,19 +187,19 @@ namespace BubbleTea.EditorTools
             {
                 Menu = new[]
                 {
-                    GetOrCreateDrink("Milk Tea", milkTea, 8),
-                    GetOrCreateDrink("Boba Milk Tea", bobaTea, 15),
-                    GetOrCreateDrink("Taro Milk Tea", taroTea, 12),
-                    GetOrCreateDrink("Taro Boba", taroBoba, 20),
-                    GetOrCreateDrink("Mango Fruit Tea", mangoTea, 14),
+                    GetOrCreateDrink("Milk Tea", milkTea, 10),
+                    GetOrCreateDrink("Boba Milk Tea", bobaTea, 18),
+                    GetOrCreateDrink("Taro Milk Tea", taroTea, 14),
+                    GetOrCreateDrink("Taro Boba", taroBoba, 23),
+                    GetOrCreateDrink("Mango Fruit Tea", mangoTea, 17),
                 },
-                Brewer = BuildStationPrefab("TeaBrewer", new Color(0.30f, 0.30f, 0.34f), new Vector3(1.4f, 1f, 1f),
+                Brewer = BuildStationPrefab("TeaBrewer", new Color(0.30f, 0.30f, 0.34f), new Vector3(1.4f, 1f, 1f) * BarScale,
                     new Color(0.55f, 0.32f, 0.16f), new[] { brew }, inputCapacity: 0),
-                ToppingBar = BuildStationPrefab("ToppingBar", new Color(0.95f, 0.78f, 0.55f), new Vector3(2f, 1f, 1f),
+                ToppingBar = BuildStationPrefab("ToppingBar", new Color(0.95f, 0.78f, 0.55f), new Vector3(2f, 1f, 1f) * BarScale,
                     new Color(0.15f, 0.10f, 0.08f), new[] { addBoba, addBobaToTaro }, inputCapacity: 4),
-                TaroStation = BuildStationPrefab("TaroStation", new Color(0.45f, 0.32f, 0.62f), new Vector3(1.4f, 1f, 1f),
+                TaroStation = BuildStationPrefab("TaroStation", new Color(0.45f, 0.32f, 0.62f), new Vector3(1.4f, 1f, 1f) * BarScale,
                     new Color(0.80f, 0.68f, 0.95f), new[] { makeTaro }, inputCapacity: 0),
-                FruitBar = BuildStationPrefab("FruitBar", new Color(0.95f, 0.55f, 0.20f), new Vector3(1.4f, 1f, 1f),
+                FruitBar = BuildStationPrefab("FruitBar", new Color(0.95f, 0.55f, 0.20f), new Vector3(1.4f, 1f, 1f) * BarScale,
                     new Color(1f, 0.85f, 0.25f), new[] { makeMango }, inputCapacity: 0),
                 BrewerName = "Tea Brewer",
                 TaroName = "Taro Station",
@@ -228,19 +228,19 @@ namespace BubbleTea.EditorTools
             {
                 Menu = new[]
                 {
-                    GetOrCreateDrink("Matcha Latte", matcha, 16),
-                    GetOrCreateDrink("Matcha Boba", matchaBoba, 28),
-                    GetOrCreateDrink("Brown Sugar Milk", brownSugar, 22),
-                    GetOrCreateDrink("Brown Sugar Boba", brownSugarBoba, 36),
-                    GetOrCreateDrink("Strawberry Milk", strawberry, 26),
+                    GetOrCreateDrink("Matcha Latte", matcha, 19),
+                    GetOrCreateDrink("Matcha Boba", matchaBoba, 33),
+                    GetOrCreateDrink("Brown Sugar Milk", brownSugar, 26),
+                    GetOrCreateDrink("Brown Sugar Boba", brownSugarBoba, 42),
+                    GetOrCreateDrink("Strawberry Milk", strawberry, 30),
                 },
-                Brewer = BuildStationPrefab("MatchaBar", new Color(0.36f, 0.52f, 0.32f), new Vector3(1.4f, 1f, 1f),
+                Brewer = BuildStationPrefab("MatchaBar", new Color(0.36f, 0.52f, 0.32f), new Vector3(1.4f, 1f, 1f) * BarScale,
                     new Color(0.55f, 0.75f, 0.38f), new[] { whisk }, inputCapacity: 0, artSlot: "TeaBrewer"),
-                ToppingBar = BuildStationPrefab("ToppingBar", new Color(0.95f, 0.78f, 0.55f), new Vector3(2f, 1f, 1f),
+                ToppingBar = BuildStationPrefab("ToppingBar", new Color(0.95f, 0.78f, 0.55f), new Vector3(2f, 1f, 1f) * BarScale,
                     new Color(0.15f, 0.10f, 0.08f), new[] { addBoba, addBobaToBrownSugar }, inputCapacity: 4),
-                TaroStation = BuildStationPrefab("BrownSugarBar", new Color(0.50f, 0.33f, 0.20f), new Vector3(1.4f, 1f, 1f),
+                TaroStation = BuildStationPrefab("BrownSugarBar", new Color(0.50f, 0.33f, 0.20f), new Vector3(1.4f, 1f, 1f) * BarScale,
                     new Color(0.78f, 0.56f, 0.36f), new[] { makeBrownSugar }, inputCapacity: 0, artSlot: "TaroStation"),
-                FruitBar = BuildStationPrefab("StrawberryBar", new Color(0.92f, 0.45f, 0.55f), new Vector3(1.4f, 1f, 1f),
+                FruitBar = BuildStationPrefab("StrawberryBar", new Color(0.92f, 0.45f, 0.55f), new Vector3(1.4f, 1f, 1f) * BarScale,
                     new Color(0.98f, 0.62f, 0.72f), new[] { makeStrawberry }, inputCapacity: 0, artSlot: "FruitBar"),
                 BrewerName = "Matcha Bar",
                 TaroName = "Brown Sugar Bar",
@@ -280,13 +280,17 @@ namespace BubbleTea.EditorTools
             });
         }
 
+        // Prices are 15% above the original menu (rounded up) and are kept up to date on every build.
         private static DrinkRecipe GetOrCreateDrink(string name, ItemDefinition drink, int price)
         {
-            return GetOrCreateAsset<DrinkRecipe>($"{DataFolder}/Menu/{FileName(name)}.asset", serialized =>
+            DrinkRecipe recipe = GetOrCreateAsset<DrinkRecipe>($"{DataFolder}/Menu/{FileName(name)}.asset", serialized =>
             {
                 serialized.FindProperty("drink").objectReferenceValue = drink;
-                serialized.FindProperty("price").intValue = price;
             });
+            var serializedRecipe = new SerializedObject(recipe);
+            serializedRecipe.FindProperty("price").intValue = price;
+            serializedRecipe.ApplyModifiedPropertiesWithoutUndo();
+            return recipe;
         }
 
         private static UpgradeDefinition GetOrCreateUpgrade(string displayName, StatId stat, float[] values, int[] costs)
@@ -392,6 +396,36 @@ namespace BubbleTea.EditorTools
             return SavePrefab(root, $"{PrefabFolder}/Items/{name}.prefab");
         }
 
+        // The bars and the counter are built this much bigger than their art, so the drinks on
+        // them can be big too.
+        private const float BarScale = 1.25f;
+
+        // Size of the drinks on the bars and the counter (the order bubbles show 2.4).
+        private const float DrinkSizeOnBars = 2f;
+
+        // A sign over the counter showing what the customer at the front still wants.
+        private static void AddOrderBoard(GameObject root, ServingCounter counter, float counterTop)
+        {
+            Transform board = AddAnchor(root.transform, "OrderBoard", new Vector3(0f, counterTop + 1.75f, 0f));
+            GameObject backing = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            backing.name = "Backing";
+            Object.DestroyImmediate(backing.GetComponent<Collider>());
+            backing.transform.SetParent(board, false);
+            backing.transform.localPosition = new Vector3(0f, 0.32f, 0.08f);
+            backing.transform.localScale = new Vector3(1f, 0.95f, 0.04f);
+            backing.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial("OrderBoard", new Color(1f, 0.95f, 0.84f));
+            Transform icons = AddAnchor(board, "Icons", Vector3.zero);
+            board.gameObject.SetActive(false);
+
+            var view = root.AddComponent<OrderBoard>();
+            var serialized = new SerializedObject(view);
+            serialized.FindProperty("counter").objectReferenceValue = counter;
+            serialized.FindProperty("board").objectReferenceValue = board;
+            serialized.FindProperty("iconRow").objectReferenceValue = icons;
+            serialized.FindProperty("backing").objectReferenceValue = backing.transform;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static GameObject BuildStationPrefab(string name, Color bodyColor, Vector3 bodySize, Color topColor,
             RecipeStep[] steps, int inputCapacity, string artSlot = null)
         {
@@ -405,19 +439,19 @@ namespace BubbleTea.EditorTools
 
             // Finished drinks stand side by side along the front of the bar (the machines are at
             // the back), big enough to read at a glance. 3 to start; Bigger Bars adds one per level.
-            float edgeX = bodySize.x * 0.5f - 0.3f;
-            float outputX = inputCapacity > 0 ? bodySize.x * 0.5f - 0.62f : 0f;
+            float halfWidth = bodySize.x * 0.5f;
+            float outputX = inputCapacity > 0 ? halfWidth - 0.8f : 0f;
             serialized.FindProperty("output.anchor").objectReferenceValue =
-                AddAnchor(root.transform, "OutputStack", new Vector3(outputX, bodySize.y, 0.18f));
+                AddAnchor(root.transform, "OutputStack", new Vector3(outputX, bodySize.y, 0.22f));
             serialized.FindProperty("output.capacity").intValue = 3;
-            SetStackGrid(serialized, "output", 4, 2, 0.3f, 1.5f);
+            SetStackGrid(serialized, "output", 4, 2, 0.4f, DrinkSizeOnBars);
 
             serialized.FindProperty("input.capacity").intValue = inputCapacity;
             if (inputCapacity > 0)
             {
                 serialized.FindProperty("input.anchor").objectReferenceValue =
-                    AddAnchor(root.transform, "InputStack", new Vector3(-edgeX + 0.05f, bodySize.y, 0.18f));
-                SetStackGrid(serialized, "input", 2, 2, 0.3f, 1.5f);
+                    AddAnchor(root.transform, "InputStack", new Vector3(-halfWidth + 0.42f, bodySize.y, 0.22f));
+                SetStackGrid(serialized, "input", 2, 2, 0.4f, DrinkSizeOnBars);
             }
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
@@ -430,12 +464,12 @@ namespace BubbleTea.EditorTools
         private static GameObject BuildCounterPrefab(string name, Color color, DrinkRecipe[] menu, CashBill billPrefab,
             string lane, float priceMultiplier, float queueSpacing, Vector3? queueOffset = null, float queueYaw = 180f)
         {
-            var bodySize = new Vector3(2.2f, 1f, 1f);
+            var bodySize = new Vector3(2.2f, 1f, 1f) * BarScale;
             GameObject root = BuildStationBody(name, color, bodySize, null);
 
             var cashGo = new GameObject("CashPile");
             cashGo.transform.SetParent(root.transform, false);
-            cashGo.transform.localPosition = new Vector3(1.8f, 0f, 1.4f);
+            cashGo.transform.localPosition = new Vector3(2f, 0f, 1.4f);
             var cashPile = cashGo.AddComponent<CashPile>();
             var serializedPile = new SerializedObject(cashPile);
             serializedPile.FindProperty("billPrefab").objectReferenceValue = billPrefab;
@@ -453,9 +487,9 @@ namespace BubbleTea.EditorTools
             menuList.arraySize = menu.Length;
             for (int i = 0; i < menu.Length; i++) menuList.GetArrayElementAtIndex(i).objectReferenceValue = menu[i];
             serialized.FindProperty("drinks.anchor").objectReferenceValue =
-                AddAnchor(root.transform, "DrinkStack", new Vector3(-0.48f, bodySize.y, 0f));
+                AddAnchor(root.transform, "DrinkStack", new Vector3(-0.62f, bodySize.y, 0f));
             serialized.FindProperty("drinks.capacity").intValue = 8;
-            SetStackGrid(serialized, "drinks", 4, 2, 0.3f, 1.5f); // side by side, as big as the order bubbles
+            SetStackGrid(serialized, "drinks", 4, 2, 0.4f, DrinkSizeOnBars); // side by side, nearly as big as the order bubbles
             serialized.FindProperty("cashPile").objectReferenceValue = cashPile;
             serialized.FindProperty("queueStart").objectReferenceValue = queueStart;
             serialized.FindProperty("lane").stringValue = lane;
@@ -465,6 +499,7 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("zone.offset").vector3Value = new Vector3(-0.5f, 0f, 1.4f);
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
+            AddOrderBoard(root, counter, bodySize.y);
             return SavePrefab(root, $"{PrefabFolder}/Stations/{name}.prefab");
         }
 

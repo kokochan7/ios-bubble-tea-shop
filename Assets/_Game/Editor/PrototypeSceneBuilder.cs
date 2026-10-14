@@ -725,12 +725,12 @@ namespace BubbleTea.EditorTools
             safeArea.gameObject.AddComponent<BubbleTea.UI.SafeArea>();
             hud = safeArea;
 
-            // The top bar is kept small and in the corners so it doesn't hide the shop: clock,
-            // money and stars down the top-left, MENU and GOALS down the top-right.
+            // The top bar is kept small so it doesn't hide the shop: money at the top center,
+            // clock and stars down the top-left, MENU and GOALS down the top-right.
             RectTransform panel = CreateUiObject("MoneyCounter", safeArea);
-            panel.anchorMin = panel.anchorMax = new Vector2(0f, 1f);
-            panel.pivot = new Vector2(0f, 1f);
-            panel.anchoredPosition = new Vector2(HudMargin, -HudMargin - 120f * HudScale - 10f);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 1f);
+            panel.pivot = new Vector2(0.5f, 1f);
+            panel.anchoredPosition = new Vector2(0f, -HudMargin);
             panel.sizeDelta = new Vector2(330f, 120f);
             panel.localScale = Vector3.one * HudScale;
             var panelImage = panel.gameObject.AddComponent<Image>();
@@ -1086,7 +1086,7 @@ namespace BubbleTea.EditorTools
             RectTransform root = CreateUiObject("Rating", hud);
             root.anchorMin = root.anchorMax = new Vector2(0f, 1f);
             root.pivot = new Vector2(0f, 1f);
-            root.anchoredPosition = new Vector2(HudMargin, -HudMargin - 240f * HudScale - 20f);
+            root.anchoredPosition = new Vector2(HudMargin, -HudMargin - 120f * HudScale - 10f); // under the clock
             root.sizeDelta = new Vector2(5 * starSize + 130f, starSize + 10f);
             root.localScale = Vector3.one * HudScale;
             var hitArea = root.gameObject.AddComponent<Image>();

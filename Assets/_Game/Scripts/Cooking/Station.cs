@@ -112,16 +112,23 @@ namespace BubbleTea.Cooking
             return null;
         }
 
-        /// <summary>True if any station in the shop produces <paramref name="item"/>.</summary>
-        public static bool AnyCanMake(ItemDefinition item)
+        /// <summary>
+        /// True if the stations built so far can make <paramref name="item"/> from start to
+        /// finish: some station produces it, and whatever that step needs can be made too
+        /// (boba milk tea needs both the topping bar and the tea brewer).
+        /// </summary>
+        public static bool AnyCanMake(ItemDefinition item) => CanMake(item, 0);
+
+        private static bool CanMake(ItemDefinition item, int depth)
         {
-            if (item == null) return false;
+            if (item == null || depth > 8) return false;
             foreach (Station station in active)
             {
                 if (station.steps == null) continue;
                 foreach (RecipeStep step in station.steps)
                 {
-                    if (step != null && step.Output == item) return true;
+                    if (step == null || step.Output != item) continue;
+                    if (step.Input == null || CanMake(step.Input, depth + 1)) return true;
                 }
             }
             return false;
