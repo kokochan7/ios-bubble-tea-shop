@@ -61,8 +61,16 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 2. Press **Play**.
 3. Click and drag anywhere in the Game view to use the joystick (or use WASD / arrow keys). Walk up to the green cash stacks and watch the bills fly to you while the counter at the top goes up.
 4. Stand on the white **Counter** pad. Your money drains into it, and when it's paid off the counter pops up and the next pad (Tea Brewer) appears. That one unlocks the Topping Bar.
+5. Once the Counter is built, customers walk in and line up behind it. Stand in front of the **Tea Brewer** to pick up the milk teas it makes, then stand in front of the **Counter** to drop them off. Each customer takes a drink and pays into the cash pile beside the counter, which you collect like any other cash.
+6. For a pricier drink, drop milk teas at the **Topping Bar** first. It turns them into boba milk tea, which sells for more.
 
-The piles refill every few seconds so there's always something to collect. You can tweak speeds and values by selecting objects in the Hierarchy and editing their fields in the Inspector. Rebuilding the scene from the menu resets changes made in the scene, but keeps prices and prefabs you edited in `Assets/_Game/Data` and `Assets/_Game/Prefabs/Stations`. To add a new station, right-click in the Project window, choose **Create > Bubble Tea > Buildable**, and fill in its name, price and prefab.
+The piles refill every few seconds so there's always something to collect. You can tweak speeds and values by selecting objects in the Hierarchy and editing their fields in the Inspector. Rebuilding the scene from the menu resets changes made in the scene, but keeps the prices, recipes and timings you edited in `Assets/_Game/Data`. The gray-box prefabs are rebuilt each time.
+
+To add new content without code, right-click in the Project window and use the **Create > Bubble Tea** menu:
+- **Item**: something that can be carried, like a cup of taro tea.
+- **Recipe Step**: what a station turns into what, and how long it takes. Leave the input empty for a station that makes things from nothing.
+- **Drink**: an item customers will buy, and its price. Add it to the counter's menu.
+- **Buildable**: a station's name, unlock price and prefab, for use on an unlock pad.
 
 ## Folder layout
 

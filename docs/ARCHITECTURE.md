@@ -14,11 +14,11 @@ This is the plan for how the prototype's code fits together. It's written so a n
 | Module | Folder | Responsibility | Arrives in |
 |--------|--------|----------------|-----------|
 | Core | `Scripts/Core` | Small shared helpers such as the pop-in animation (pooling lives inside each system for now) | Step 3 |
-| Player | `Scripts/Player` | Joystick input, movement, the stack of items the player carries | Step 2 |
+| Player | `Scripts/Player` | Joystick input, movement, camera | Step 2 |
 | Economy | `Scripts/Economy` | Wallet (current money), cash piles, cash flying to the player | Step 2 |
 | UI | `Scripts/UI` | Money counter, joystick visuals, unlock pad labels | Steps 2-3 |
 | Building | `Scripts/Building` | Unlock pads that drain money and reveal stations | Step 3 |
-| Cooking | `Scripts/Cooking` | Ingredients, recipes, stations that turn inputs into outputs | Step 4 |
+| Cooking | `Scripts/Cooking` | Items, recipe steps, drinks, item stacks (including the one the player carries), stations | Step 4 |
 | Customers | `Scripts/Customers` | Spawning, queueing at the counter, buying drinks, dropping cash | Step 4 |
 
 Dependencies only point one way: Player, Economy, Building, Cooking and Customers may use Core, and UI may read from any of them, but Core never depends on gameplay code.
@@ -40,6 +40,10 @@ The cooking system is built from three kinds of data and one kind of station.
 - **RecipeStep** (ScriptableObject): "take these inputs, wait this long, produce this output". Example: *Cup + Black Tea -> Tea Cup, 1.5 s*.
 - **DrinkRecipe** (ScriptableObject): the finished drink a customer orders, its sale price, and the item that represents it. Example: *Brown Sugar Boba, $12*.
 - **Station** (MonoBehaviour): has an input slot, an output slot and a list of RecipeSteps it can perform. When its inputs match a step, it runs the timer and produces the output. A tea brewer, milk dispenser and topping bar are all the same component with different RecipeSteps assigned.
+
+Items move between **ItemStacks** (the player's hands, a station's input and output, the counter). A station's **HandoffZone** is the square in front of it: while the player stands there, the station takes any item it can use and hands back finished ones.
+
+The **ServingCounter** (Customers module) accepts any drink on its menu. **Customers** queue behind it, take a drink, pay its price into the counter's cash pile, and walk out.
 
 Because stations only care about "do my inputs match a step I know", new drinks and new station types are added entirely in the Inspector. Upgrades later (faster brewing, more output slots, higher prices) become extra fields on the same assets.
 

@@ -60,6 +60,13 @@ namespace BubbleTea.Economy
             }
         }
 
+        /// <summary>Adds enough bills to be worth at least <paramref name="amount"/>.</summary>
+        public void AddValue(int amount)
+        {
+            if (amount <= 0) return;
+            AddBills(Mathf.CeilToInt((float)amount / Mathf.Max(valuePerBill, 1)));
+        }
+
         /// <summary>
         /// Sends the top bill flying to <paramref name="flyTarget"/> and pays it into
         /// <paramref name="wallet"/> when it lands. Returns false if the pile is empty.
