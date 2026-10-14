@@ -6,9 +6,10 @@ using UnityEngine;
 namespace BubbleTea.Rating
 {
     /// <summary>
-    /// The shop's star rating, from 1 to 5. Half comes from service (happy customers raise it,
-    /// customers who walk out lower it) and half from how built-up and decorated the shop is.
-    /// Messy café tables take stars away until they're cleaned.
+    /// The shop's star rating, from 0 to 5. Half comes from service (happy customers raise it)
+    /// and half from how built-up the shop is. Messy café tables take stars away until they're
+    /// cleaned. Every customer who walks out costs a whole star, earned back a little with each
+    /// customer served. At 0 stars the shop closes and the game starts over.
     /// More stars bring customers more often and let more of them line up.
     /// </summary>
     public class ShopRating : MonoBehaviour
@@ -27,8 +28,11 @@ namespace BubbleTea.Rating
         [SerializeField, Range(0.01f, 0.5f), Tooltip("How much one happy customer moves the service score.")]
         private float serveWeight = 0.05f;
 
-        [SerializeField, Range(0.01f, 0.5f), Tooltip("How much one customer walking out lowers the service score.")]
-        private float walkoutWeight = 0.12f;
+        [SerializeField, Tooltip("Stars lost each time a customer walks out.")]
+        private float starsPerWalkout = 1f;
+
+        [SerializeField, Tooltip("Lost stars earned back with each customer served.")]
+        private float starsBackPerServe = 0.2f;
 
         [SerializeField, Tooltip("Stars lost for each messy café seat.")]
         private float starsPerMess = 0.25f;
@@ -42,18 +46,29 @@ namespace BubbleTea.Rating
         [SerializeField, Tooltip("Extra customers allowed in line at 5 stars.")]
         private int maxExtraCustomers = 2;
 
-        private float service = 0.5f;
+        private float service = 1f;
+        private float lost;
         private int messes;
         private float stars = -1f;
+        private bool closed;
 
-        /// <summary>Stars from 1 to 5, to one decimal place.</summary>
-        public float Stars => Mathf.Max(1f, stars);
+        /// <summary>Stars from 0 to 5, to one decimal place.</summary>
+        public float Stars => Mathf.Max(0f, stars);
 
         /// <summary>0 to 1: how happy recent customers were. Saved with the game.</summary>
         public float Service => service;
 
+        /// <summary>Stars lost to walkouts and not yet earned back. Saved with the game.</summary>
+        public float Lost => lost;
+
+        /// <summary>True once the rating has hit 0 stars.</summary>
+        public bool IsClosed => closed;
+
         /// <summary>Raised with the new star count when it changes.</summary>
         public event Action<float> Changed;
+
+        /// <summary>Raised once when the rating hits 0 stars: the game is lost.</summary>
+        public event Action ShopClosed;
 
         private void OnEnable()
         {
@@ -79,22 +94,24 @@ namespace BubbleTea.Rating
 
         private void Start() => Recalculate();
 
-        /// <summary>Puts back the saved service score.</summary>
-        public void Restore(float savedService)
+        /// <summary>Puts back the saved service score and stars lost to walkouts.</summary>
+        public void Restore(float savedService, float savedLost)
         {
             service = Mathf.Clamp01(savedService);
+            lost = Mathf.Max(0f, savedLost);
             Recalculate();
         }
 
         private void OnServed(Vector3 _, float mood)
         {
             service = Mathf.Lerp(service, Mathf.Clamp01(mood), serveWeight);
+            lost = Mathf.Max(0f, lost - starsBackPerServe);
             Recalculate();
         }
 
         private void OnWalkout(Vector3 _)
         {
-            service = Mathf.Lerp(service, 0f, walkoutWeight);
+            lost += starsPerWalkout;
             Recalculate();
         }
 
@@ -124,15 +141,23 @@ namespace BubbleTea.Rating
 
         private void Recalculate()
         {
+            // Messy tables alone never take the shop below 1 star; only walkouts can close it.
             float penalty = Mathf.Min(maxMessPenalty, messes * starsPerMess);
-            float value = Mathf.Round(Mathf.Max(1f, 1f + 2f * service + 2f * Decor - penalty) * 10f) / 10f;
+            float earned = Mathf.Max(1f, 1f + 2f * service + 2f * Decor - penalty);
+            float value = Mathf.Round(Mathf.Clamp(earned - lost, 0f, 5f) * 10f) / 10f;
             if (Mathf.Approximately(value, stars)) return;
             stars = value;
 
-            float t = (stars - 1f) / 4f;
+            float t = Mathf.Clamp01((stars - 1f) / 4f);
             Stats.Set(StatId.CustomerRate, Mathf.Lerp(1f, maxRateBoost, t));
             Stats.Set(StatId.ExtraCustomers, Mathf.Floor(t * maxExtraCustomers + 0.001f));
             Changed?.Invoke(stars);
+
+            if (stars <= 0f && !closed)
+            {
+                closed = true;
+                ShopClosed?.Invoke();
+            }
         }
     }
 }

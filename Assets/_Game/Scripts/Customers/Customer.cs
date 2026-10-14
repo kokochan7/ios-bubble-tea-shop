@@ -30,7 +30,7 @@ namespace BubbleTea.Customers
         private float bubbleIconScale = 1.3f;
 
         [SerializeField, Min(0f), Tooltip("Seconds a customer will wait before leaving without buying. 0 = they wait forever.")]
-        private float patienceSeconds = 60f;
+        private float patienceSeconds = 30f;
 
         [SerializeField, Range(0f, 1f), Tooltip("How fast patience drains for customers behind the front of the line (0.5 = half speed).")]
         private float backOfLineDrain = 0.5f;
@@ -199,7 +199,23 @@ namespace BubbleTea.Customers
 
             waitTimer += Time.deltaTime;
             if (waitTimer < pauseBeforeBuying || !counter.TrySell(Order, out CarriedItem drink, TipShare())) return;
+            TakeDrink(drink);
+        }
 
+        /// <summary>
+        /// Handed their drink directly (the counter was full), wherever they are in line.
+        /// They pay at the counter as usual.
+        /// </summary>
+        public bool ServeNow(CarriedItem drink)
+        {
+            if (state != State.Queueing || counter == null || drink == null) return false;
+            counter.Bank(Order, TipShare());
+            TakeDrink(drink);
+            return true;
+        }
+
+        private void TakeDrink(CarriedItem drink)
+        {
             drink.MoveTo(transform, drinkHoldPosition);
             GameEvents.RaiseCustomerServed(transform.position, Mood);
             StopWaiting();

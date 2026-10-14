@@ -15,6 +15,7 @@ namespace BubbleTea.Staff
     /// <item>when nobody is waiting, stock the counter with whatever drink is ready, the one
     /// it has fewest of first, so later customers are served straight away.</item>
     /// </list>
+    /// Anything they hold that nobody needs goes in the nearest trash can.
     /// With nothing to carry, they stand behind the station customers need most and make it work
     /// faster (one barista per station). They swap items through the same floor zones the player
     /// uses. The Walk Speed and Carry More upgrades apply to baristas too: they walk faster and
@@ -33,7 +34,7 @@ namespace BubbleTea.Staff
         private float giveUpSeconds = 4f;
 
         [SerializeField, Tooltip("Seconds to hold an item nobody needs before throwing it away.")]
-        private float discardSeconds = 8f;
+        private float discardSeconds = 2f;
 
         [SerializeField, Tooltip("Seconds between looking for a busier station while helping at one.")]
         private float rethinkSeconds = 8f;
@@ -41,7 +42,7 @@ namespace BubbleTea.Staff
         [SerializeField, Tooltip("How far behind a station they stand to help, in meters.")]
         private float standDistance = 1.1f;
 
-        private enum Job { None, Fetch, Deliver }
+        private enum Job { None, Fetch, Deliver, Trash }
 
         private ItemCarrier carrier;
         private Job job;
@@ -51,6 +52,7 @@ namespace BubbleTea.Staff
         private Station pickupFrom;
         private Station deliverToStation;
         private ServingCounter deliverToCounter;
+        private TrashCan trash;
         private float timer;
         private float holdingUselessTimer;
         private Station helping;      // the station they stand behind while there's nothing to carry
@@ -74,6 +76,7 @@ namespace BubbleTea.Staff
                     break;
                 case Job.Fetch: Fetch(); break;
                 case Job.Deliver: Deliver(); break;
+                case Job.Trash: EmptyHands(); break;
             }
         }
 
@@ -302,7 +305,31 @@ namespace BubbleTea.Staff
             holdingUselessTimer += secondsBetweenPlans;
             if (holdingUselessTimer < discardSeconds) return;
             holdingUselessTimer = 0f;
-            if (carrier.Stack.TryTake(_ => true, out CarriedItem junk)) Destroy(junk.gameObject);
+
+            trash = TrashCan.Nearest(transform.position);
+            if (trash != null)
+            {
+                carrier.GiveOnlyTo = trash;
+                timer = 0f;
+                job = Job.Trash;
+            }
+            else if (carrier.Stack.TryTake(_ => true, out CarriedItem junk))
+            {
+                Destroy(junk.gameObject);
+            }
+        }
+
+        // Walks to the trash can and stands there until their hands are empty.
+        private void EmptyHands()
+        {
+            if (trash == null || carrier.Stack.Count == 0)
+            {
+                Finish();
+                return;
+            }
+            if (!WalkTo(trash.ZoneCenter)) return;
+            timer += Time.deltaTime;
+            if (timer >= giveUpSeconds) Finish();
         }
 
         // ---------- Doing the job ----------
@@ -388,6 +415,7 @@ namespace BubbleTea.Staff
             pickupFrom = null;
             deliverToStation = null;
             deliverToCounter = null;
+            trash = null;
             timer = 0f;
             job = Job.None;
         }

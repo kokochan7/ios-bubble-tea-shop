@@ -145,6 +145,7 @@ namespace BubbleTea.Saving
                 earningsPerMinute = offlineEarnings != null ? offlineEarnings.RatePerMinute : 0f,
                 goalsDay = dailyGoals != null ? dailyGoals.Day : null,
                 ratingService = rating != null ? rating.Service : -1f,
+                ratingLost = rating != null ? rating.Lost : 0f,
                 floorCashGiven = floorCash != null ? floorCash.Given : 0,
             };
             if (dailyGoals != null) data.goals.AddRange(dailyGoals.Goals);
@@ -182,6 +183,17 @@ namespace BubbleTea.Saving
         /// <summary>Deletes every shop's save and starts a brand-new game in the first shop.</summary>
         public void ResetProgress()
         {
+            EraseSave();
+            BubbleTea.Core.Stats.Clear();
+            SceneManager.LoadScene(0);
+        }
+
+        /// <summary>
+        /// Deletes every shop's save and stops saving, without leaving the scene (the game-over
+        /// screen does this straight away, so quitting there can't keep a lost game).
+        /// </summary>
+        public void EraseSave()
+        {
             resetting = true;
             try
             {
@@ -192,8 +204,6 @@ namespace BubbleTea.Saving
                 Debug.LogWarning("Bubble Tea: couldn't delete the save. " + e.Message);
             }
             PlayerPrefs.DeleteKey(LastShopKey);
-            BubbleTea.Core.Stats.Clear();
-            SceneManager.LoadScene(0);
         }
 
         private void Load()
@@ -231,7 +241,7 @@ namespace BubbleTea.Saving
             }
 
             if (dailyGoals != null) dailyGoals.Restore(data.goalsDay, data.goals);
-            if (rating != null && data.ratingService >= 0f) rating.Restore(data.ratingService);
+            if (rating != null && data.ratingService >= 0f) rating.Restore(data.ratingService, data.ratingLost);
             if (floorCash != null) floorCash.Restore(data.floorCashGiven);
 
             if (offlineEarnings != null && data.savedAtUnix > 0)
