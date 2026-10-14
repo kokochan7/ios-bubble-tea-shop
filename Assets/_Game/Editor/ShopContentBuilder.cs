@@ -135,7 +135,7 @@ namespace BubbleTea.EditorTools
                 MoreSeating = GetOrCreateBuildable("More Seating", 1200, BuildSeatingPrefab(billPrefab)),
                 Baristas = new[]
                 {
-                    GetOrCreateBuildable("Hire Barista", 300, barista),
+                    GetOrCreateBuildable("Hire Barista", 200, barista, keepPriceUpToDate: true),
                     GetOrCreateBuildable("Hire Barista 2", 600, barista),
                     GetOrCreateBuildable("Hire Barista 3", 900, barista),
                     GetOrCreateBuildable("Hire Barista 4", 1300, barista),
@@ -298,7 +298,10 @@ namespace BubbleTea.EditorTools
             });
         }
 
-        private static BuildableDefinition GetOrCreateBuildable(string displayName, int cost, GameObject prefab)
+        // keepPriceUpToDate: also reset the price of an existing asset (for a price change that
+        // should reach scenes built before it).
+        private static BuildableDefinition GetOrCreateBuildable(string displayName, int cost, GameObject prefab,
+            bool keepPriceUpToDate = false)
         {
             var buildable = GetOrCreateAsset<BuildableDefinition>($"{DataFolder}/{FileName(displayName)}.asset", serialized =>
             {
@@ -309,6 +312,7 @@ namespace BubbleTea.EditorTools
             // Always point at the freshly built prefab, but leave name and price alone.
             var serializedBuildable = new SerializedObject(buildable);
             serializedBuildable.FindProperty("prefab").objectReferenceValue = prefab;
+            if (keepPriceUpToDate) serializedBuildable.FindProperty("cost").intValue = cost * costScale;
             serializedBuildable.ApplyModifiedPropertiesWithoutUndo();
             return buildable;
         }

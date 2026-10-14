@@ -5,8 +5,8 @@ using UnityEngine;
 namespace BubbleTea.Customers
 {
     /// <summary>
-    /// Sends customers to the serving counter for its lane once that counter is built,
-    /// keeping up to a set number inside at once. A better shop rating brings customers
+    /// Sends customers to the serving counter for its lane once that counter is built and a
+    /// station can make something on its menu (so nobody walks out before the shop can serve), keeping up to a set number inside at once. A better shop rating brings customers
     /// more often and lets more of them line up.
     /// </summary>
     public class CustomerSpawner : MonoBehaviour
@@ -32,7 +32,7 @@ namespace BubbleTea.Customers
         private void Update()
         {
             ServingCounter counter = ServingCounter.FindLane(lane);
-            if (customerPrefab == null || counter == null) return;
+            if (customerPrefab == null || counter == null || !counter.CanMakeAnything) return;
 
             timer += Time.deltaTime * Stats.Get(StatId.CustomerRate, 1f);
             int max = maxCustomers + Mathf.RoundToInt(Stats.Get(StatId.ExtraCustomers, 0f));

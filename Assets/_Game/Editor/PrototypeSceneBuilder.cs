@@ -82,6 +82,7 @@ namespace BubbleTea.EditorTools
         // drive-through), and near the front door from the start in the second shop.
         private static readonly Vector3 SecondShopPadPosition = new(24f, 0f, 10f);
         private static readonly Vector3 TravelBackPosition = new(12f, 0f, -12f);
+        private static readonly Vector3 TrashCanPosition = new(-8f, 0f, -2f);
 
         [MenuItem("Bubble Tea/Build Prototype Scene")]
         public static void Build() => BuildShop(FirstShop);
@@ -127,6 +128,7 @@ namespace BubbleTea.EditorTools
             SetReference(player.GetComponent<PlayerMovement>(), "cameraTransform", camera.transform);
 
             CashPile[] piles = CreateCashPiles(billPrefab, padMat);
+            CreateTrashCan(padMat);
             CashPileRefiller floorCash = CreateRefiller(piles);
             ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab, plan.Number);
             UnlockPad[] pads = CreateUnlockPads(content, billPrefab, wallet, eastWall, expansionArea);
@@ -153,6 +155,7 @@ namespace BubbleTea.EditorTools
             CreateGoalsPanel(hud, dailyGoals);
             CreateRatingView(hud, rating);
             CreateWelcomeBackPopup(hud, offlineEarnings);
+            CreateGameOverPopup(hud, rating, saveManager);
 
             EditorSceneManager.SaveScene(scene, plan.ScenePath);
             AddSceneToBuild(plan.ScenePath, first: plan.Number == 1);
@@ -464,7 +467,7 @@ namespace BubbleTea.EditorTools
 
         // Pads in a chain: the counter reveals the tea brewer and the upgrade desk, then
         // tea brewer -> topping bar -> taro station -> fruit bar. The topping bar also
-        // reveals the first barista (each reveals the next) and the seating area, which reveals
+        // reveals the seating area, which reveals
         // the cleaner. The fruit bar reveals Expand Shop, which opens the east wall and reveals
         // the drive-through and more seating.
         private static UnlockPad[] CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet,
@@ -501,7 +504,7 @@ namespace BubbleTea.EditorTools
             UnlockPad cleanerPad = CreatePad(content.Cleaner, new Vector3(-2f, 0f, 9f), billPrefab, wallet, padMat);
             UnlockPad seatingPad = CreatePad(content.Seating, new Vector3(6f, 0f, 6f), billPrefab, wallet, padMat, cleanerPad);
             UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat,
-                taroPad, baristaPads[0], seatingPad);
+                taroPad, seatingPad);
             // The cashier stands beside the counter's cash pile (the counter's pad is at -5, -3).
             UnlockPad cashierPad = CreatePad(content.Cashier, new Vector3(-2f, 0f, -1.2f), billPrefab, wallet, padMat);
             UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad,
@@ -522,7 +525,8 @@ namespace BubbleTea.EditorTools
             cashierPad.gameObject.SetActive(false);
             cleanerPad.gameObject.SetActive(false);
             moreSeatingPad.gameObject.SetActive(false);
-            foreach (UnlockPad pad in baristaPads) pad.gameObject.SetActive(false);
+            // The first barista can be hired from the start; each one reveals the next.
+            for (int i = 1; i < baristaPads.Length; i++) baristaPads[i].gameObject.SetActive(false);
             var all = new System.Collections.Generic.List<UnlockPad>
             {
                 counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad,
@@ -754,7 +758,7 @@ namespace BubbleTea.EditorTools
             hint.rectTransform.anchoredPosition = new Vector2(0f, -10f);
             hint.rectTransform.sizeDelta = new Vector2(900f, 100f);
             hint.horizontalOverflow = HorizontalWrapMode.Wrap;
-            hint.text = "Serve customers fast and buy decorations\nfor more stars. More stars, more customers!";
+            hint.text = "Every customer who walks out costs a star.\nAt 0 stars your shop closes and you start over!";
             hint.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.7f);
 
             SetReference(view, "rating", rating);
@@ -833,6 +837,97 @@ namespace BubbleTea.EditorTools
             SetReference(popup, "awayLabel", away);
             SetReference(popup, "collectButton", collect);
             SetReference(popup, "earnings", earnings);
+        }
+
+        // "Shop closed" screen shown when the rating hits 0 stars, with a Start Over button.
+        private static void CreateGameOverPopup(Transform hud, ShopRating rating, SaveManager saveManager)
+        {
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform root = CreateUiObject("GameOver", hud);
+            Stretch(root);
+            var popup = root.gameObject.AddComponent<GameOverPopup>();
+
+            RectTransform backdrop = CreateUiObject("Backdrop", root);
+            Stretch(backdrop);
+            backdrop.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.7f);
+
+            RectTransform panel = CreateUiObject("Panel", backdrop);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = new Vector2(860f, 620f);
+            var panelImage = panel.gameObject.AddComponent<Image>();
+            panelImage.sprite = rounded;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.97f);
+
+            Text title = CreateHudText("Title", panel, font, 64, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 40f, 110f, 0f, 0f);
+            title.color = new Color(0.95f, 0.45f, 0.45f);
+            title.text = "SHOP CLOSED";
+
+            Text reason = CreateHudText("Reason", panel, font, 38, TextAnchor.MiddleCenter);
+            SetTopRow(reason.rectTransform, 170f, 180f, 50f, 50f);
+            reason.horizontalOverflow = HorizontalWrapMode.Wrap;
+            reason.fontStyle = FontStyle.Normal;
+            reason.color = new Color(0.85f, 0.85f, 0.9f);
+            reason.text = "Too many customers walked out and your rating hit 0 stars.";
+
+            Button startOver = CreateMenuButton("StartOver", panel, "START OVER", rounded, font, new Color(0.35f, 0.78f, 0.38f), out _);
+            SetTopRow((RectTransform)startOver.transform, 420f, 140f, 160f, 160f);
+
+            SetReference(popup, "panel", backdrop.gameObject);
+            SetReference(popup, "startOverButton", startOver);
+            SetReference(popup, "rating", rating);
+            SetReference(popup, "saveManager", saveManager);
+        }
+
+        // A bin beside the counter. Stand next to it to throw away what you're carrying.
+        private static void CreateTrashCan(Material spotMaterial)
+        {
+            var go = new GameObject("TrashCan");
+            go.transform.position = TrashCanPosition;
+
+            GameObject bin = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            bin.name = "Bin";
+            bin.transform.SetParent(go.transform, false);
+            bin.transform.localPosition = new Vector3(0f, 0.45f, 0f);
+            bin.transform.localScale = new Vector3(0.8f, 0.45f, 0.8f);
+            bin.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial("TrashCan", new Color(0.35f, 0.38f, 0.42f));
+
+            var opening = new GameObject("Opening").transform;
+            opening.SetParent(go.transform, false);
+            opening.localPosition = new Vector3(0f, 0.8f, 0f);
+
+            // A tile on the floor showing where to stand.
+            GameObject spot = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            spot.name = "Spot";
+            Object.DestroyImmediate(spot.GetComponent<BoxCollider>());
+            spot.transform.SetParent(go.transform, false);
+            spot.transform.localPosition = new Vector3(0f, 0.005f, 1.2f);
+            spot.transform.localScale = new Vector3(1.4f, 0.01f, 1.2f);
+            spot.GetComponent<Renderer>().sharedMaterial = spotMaterial;
+
+            var label = new GameObject("Label").AddComponent<TextMesh>();
+            label.transform.SetParent(go.transform, false);
+            label.transform.localPosition = new Vector3(0f, 1.3f, 0f);
+            label.transform.localRotation = Quaternion.Euler(45f, 0f, 0f);
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.font = font;
+            label.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            label.text = "TRASH";
+            label.characterSize = 0.04f;
+            label.fontSize = 64;
+            label.anchor = TextAnchor.MiddleCenter;
+            label.color = Color.white;
+
+            var trash = go.AddComponent<TrashCan>();
+            SetReference(trash, "opening", opening);
+            var serialized = new SerializedObject(trash);
+            serialized.FindProperty("zone.offset").vector3Value = new Vector3(0f, 0f, 1.2f);
+            serialized.FindProperty("zone.halfSize").floatValue = 0.8f;
+            serialized.FindProperty("zone.secondsPerHandoff").floatValue = 0.25f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // Sounds, vibration, confetti and sale pop-ups.

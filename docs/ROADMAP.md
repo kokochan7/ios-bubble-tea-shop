@@ -141,3 +141,11 @@ After the third playtest:
 - The Seating Area has four tables, and **More Seating** ($1200, after Expand Shop) adds four more in the new area.
 - **Hire Cleaner** ($400, after the Seating Area): wipes the tables customers leave messy and banks the tips left on them.
 - There is one floor cash spot instead of three, and it stops refilling after handing out $500 (saved, so it doesn't start over).
+
+After the fourth playtest:
+
+- When the counter is full, a drink someone in line wants goes straight to that customer (from you or a barista), so a counter full of the wrong drinks no longer blocks the line.
+- Drinks on the counter that nobody in line wants are thrown out one by one, every 5 seconds.
+- A **Trash** bin by the counter: stand next to it to throw away what you carry, one item at a time. Baristas take unneeded items there too.
+- The first **Hire Barista** pad costs $200 and is there from the start.
+- Customers wait about 30 seconds instead of 60. Every customer who walks out costs a star (earned back a little with each customer served); at 0 stars the shop closes and the game starts over with fresh saves. Customers only start coming once a station can make a drink, so you can't lose before the Tea Brewer is built.

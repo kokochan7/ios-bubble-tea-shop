@@ -53,6 +53,21 @@ namespace BubbleTea.Cooking
             return false;
         }
 
+        /// <summary>Removes the bottom-most (oldest) item that matches, letting the rest settle down.</summary>
+        public bool TryTakeOldest(Func<ItemDefinition, bool> match, out CarriedItem item)
+        {
+            for (int i = 0; i < Items.Count; i++)
+            {
+                if (Items[i] == null || !match(Items[i].Definition)) continue;
+                item = Items[i];
+                Items.RemoveAt(i);
+                for (int j = i; j < Items.Count; j++) Items[j].MoveTo(anchor, SlotPosition(j));
+                return true;
+            }
+            item = null;
+            return false;
+        }
+
         /// <summary>How many items in the stack match.</summary>
         public int CountOf(Func<ItemDefinition, bool> match)
         {

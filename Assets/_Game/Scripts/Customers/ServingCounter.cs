@@ -10,7 +10,9 @@ namespace BubbleTea.Customers
     /// Where drinks are sold. Customers line up on the other side, each wanting one drink
     /// from the menu. The player drops off any drink on the menu (ones someone in line is
     /// waiting for go first); extras wait on the counter for a later customer who orders
-    /// them. Each customer takes theirs and pays into the counter's cash pile.
+    /// them, and are thrown out one by one if nobody does within a few seconds. When the
+    /// counter is full, a drink someone in line wants goes straight to that customer.
+    /// Each customer takes theirs and pays into the counter's cash pile.
     /// </summary>
     public class ServingCounter : MonoBehaviour
     {
@@ -43,6 +45,11 @@ namespace BubbleTea.Customers
         [SerializeField, Tooltip("Gap between customers in line, in meters.")]
         private float queueSpacing = 1.1f;
 
+        [SerializeField, Min(0f), Tooltip("Seconds before a drink nobody in line wants is thrown out (one at a time). 0 = never.")]
+        private float expireSeconds = 5f;
+
+        private float expireTimer;
+
         private readonly List<Customer> queue = new();
         private readonly List<DrinkRecipe> orderChoices = new();
         private readonly Dictionary<ItemDefinition, int> reserved = new();
@@ -65,7 +72,28 @@ namespace BubbleTea.Customers
         private void OnEnable() => active.Add(this);
         private void OnDisable() => active.Remove(this);
 
-        private void Update() => zone.Tick(transform, Handoff);
+        private void Update()
+        {
+            zone.Tick(transform, Handoff);
+            ExpireExtras();
+        }
+
+        // Every few seconds, throws out the oldest drink that nobody in line is waiting for.
+        private void ExpireExtras()
+        {
+            if (expireSeconds <= 0f || !drinks.Contains(IsExtra))
+            {
+                expireTimer = 0f;
+                return;
+            }
+            expireTimer += Time.deltaTime;
+            if (expireTimer < expireSeconds) return;
+            expireTimer = 0f;
+            if (drinks.TryTakeOldest(IsExtra, out CarriedItem old)) Destroy(old.gameObject);
+        }
+
+        // More of this drink on the counter than the line wants.
+        private bool IsExtra(ItemDefinition item) => drinks.CountOf(onCounter => onCounter == item) > Wanted(item);
 
         public void JoinQueue(Customer customer)
         {
@@ -111,6 +139,19 @@ namespace BubbleTea.Customers
 
         /// <summary>How many of this drink are waiting on the counter.</summary>
         public int Stored(ItemDefinition drink) => drinks.CountOf(item => item == drink);
+
+        /// <summary>True once some station in the shop can make a drink on this counter's menu.</summary>
+        public bool CanMakeAnything
+        {
+            get
+            {
+                foreach (DrinkRecipe recipe in Menu)
+                {
+                    if (recipe != null && Station.AnyCanMake(recipe.Drink)) return true;
+                }
+                return false;
+            }
+        }
 
         /// <summary>The drinks this counter sells.</summary>
         public IEnumerable<DrinkRecipe> Menu => menu ?? System.Array.Empty<DrinkRecipe>();
@@ -183,21 +224,30 @@ namespace BubbleTea.Customers
         {
             drink = null;
             if (order == null || !drinks.TryTake(item => item == order.Drink, out drink)) return false;
+            Bank(order, tipShare);
+            return true;
+        }
+
+        /// <summary>Banks the payment (and tip) for a drink handed straight to a customer.</summary>
+        public void Bank(DrinkRecipe order, float tipShare)
+        {
+            if (order == null) return;
             int price = Mathf.RoundToInt(order.Price * priceMultiplier * Stats.Get(StatId.DrinkPrice, 1f));
             int tip = Mathf.RoundToInt(price * Mathf.Max(0f, tipShare));
             if (cashPile != null) cashPile.AddValue(price + tip);
             GameEvents.RaiseDrinkSold(transform.position, price + tip);
             GameEvents.RaiseDrinkServed(order.Drink.name);
             if (tip > 0) GameEvents.RaiseTipped(transform.position, tip);
-            return true;
         }
 
         // Takes drinks someone in line is waiting for first, then any other drink on the menu,
         // which waits on the counter. New customers order a waiting drink first (see PickOrder),
-        // so nothing sits there for long.
+        // so nothing sits there for long. When the counter is full, a wanted drink is handed
+        // straight to the customer who ordered it.
         private bool Handoff(ItemCarrier carrier)
         {
-            if (drinks.IsFull || !carrier.WillGiveTo(this)) return false;
+            if (!carrier.WillGiveTo(this)) return false;
+            if (drinks.IsFull) return ServeDirectly(carrier);
             if (!carrier.Stack.TryTake(IsStillWanted, out CarriedItem drink) &&
                 !carrier.Stack.TryTake(item => FindRecipe(item) != null, out drink))
             {
@@ -205,6 +255,24 @@ namespace BubbleTea.Customers
             }
             drinks.Push(drink);
             return true;
+        }
+
+        private bool ServeDirectly(ItemCarrier carrier)
+        {
+            if (!carrier.Stack.TryTake(IsStillWanted, out CarriedItem drink)) return false;
+
+            // The first customers who ordered this drink get the copies already on the counter,
+            // so hand this one to the next customer in line who ordered it.
+            int covered = drinks.CountOf(onCounter => onCounter == drink.Definition);
+            foreach (Customer customer in queue)
+            {
+                if (customer == null || customer.Order == null || customer.Order.Drink != drink.Definition) continue;
+                if (covered-- > 0) continue;
+                if (customer.ServeNow(drink)) return true;
+                break;
+            }
+            carrier.Stack.Push(drink); // nobody to give it to after all
+            return false;
         }
 
         private bool IsStillWanted(ItemDefinition item)
