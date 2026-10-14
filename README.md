@@ -43,9 +43,12 @@ Unity Hub won't create a project inside a folder that already has files, so you 
 
 ### 4. Use Cursor as your code editor
 
-1. In Unity: **Edit > Preferences > External Tools > External Script Editor > Browse**, and pick `Cursor.exe` (usually in `C:\Users\<you>\AppData\Local\Programs\cursor`).
-2. Click **Regenerate project files**.
-3. In Cursor, install the **Unity** extension (it pulls in C# support). Double-clicking a script in Unity now opens it in Cursor.
+Unity doesn't recognize Cursor on its own, so first add a small free community package that teaches it how.
+
+1. In Unity, open **Window > Package Management > Package Manager** (on some versions it's **Window > Package Manager**).
+2. Click **+** in the top left, choose **Install package from git URL**, paste `https://github.com/boxqkrtm/com.unity.ide.cursor.git`, and click **Install**.
+3. Open **Edit > Preferences > External Tools**, choose **Cursor** in the **External Script Editor** dropdown, and click **Regenerate project files**.
+4. In Cursor, install the **Unity** extension (it pulls in C# support). Double-clicking a script in Unity now opens it in Cursor with autocomplete.
 
 ### 5. Save the project files to GitHub
 
