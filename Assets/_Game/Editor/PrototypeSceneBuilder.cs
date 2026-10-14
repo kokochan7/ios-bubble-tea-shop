@@ -3,6 +3,7 @@ using BubbleTea.Cooking;
 using BubbleTea.Customers;
 using BubbleTea.Economy;
 using BubbleTea.Player;
+using BubbleTea.Saving;
 using BubbleTea.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -67,8 +68,9 @@ namespace BubbleTea.EditorTools
             CashPile[] piles = CreateCashPiles(billPrefab, padMat);
             CreateRefiller(piles);
             ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab);
-            CreateUnlockPads(content, billPrefab, wallet);
+            UnlockPad[] pads = CreateUnlockPads(content, billPrefab, wallet);
             CreateCustomerSpawner(content.CustomerPrefab);
+            CreateSaveManager(wallet, pads);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuild(ScenePath);
@@ -270,17 +272,32 @@ namespace BubbleTea.EditorTools
         }
 
         // Three pads in a chain: buying the counter reveals the tea brewer, which reveals the topping bar.
-        private static void CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet)
+        private static UnlockPad[] CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet)
         {
             Material padMat = GetOrCreateMaterial("UnlockPad", new Color(0.97f, 0.97f, 0.97f));
 
             UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat, null);
             UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad);
-            CreatePad(content.Counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat, brewerPad);
+            UnlockPad counterPad = CreatePad(content.Counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat, brewerPad);
 
             // Only the first pad is visible at the start.
             toppingPad.gameObject.SetActive(false);
             brewerPad.gameObject.SetActive(false);
+            return new[] { counterPad, brewerPad, toppingPad };
+        }
+
+        // Loads progress on Play and keeps saving it. Delete it with Bubble Tea > Delete Save Data.
+        private static void CreateSaveManager(Wallet wallet, UnlockPad[] pads)
+        {
+            var go = new GameObject("SaveManager");
+            var saveManager = go.AddComponent<SaveManager>();
+            SetReference(saveManager, "wallet", wallet);
+
+            var serialized = new SerializedObject(saveManager);
+            SerializedProperty list = serialized.FindProperty("pads");
+            list.arraySize = pads.Length;
+            for (int i = 0; i < pads.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = pads[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // Customers walk in from the bottom-left, queue behind the counter, and leave to the left.
@@ -314,6 +331,9 @@ namespace BubbleTea.EditorTools
             SetReference(pad, "definition", definition);
             SetReference(pad, "wallet", wallet);
             SetReference(pad, "billPrefab", billPrefab);
+            var serializedPad = new SerializedObject(pad);
+            serializedPad.FindProperty("saveId").stringValue = definition.name;
+            serializedPad.ApplyModifiedPropertiesWithoutUndo();
             if (next != null)
             {
                 var serialized = new SerializedObject(pad);

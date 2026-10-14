@@ -20,8 +20,9 @@ This is the plan for how the prototype's code fits together. It's written so a n
 | Building | `Scripts/Building` | Unlock pads that drain money and reveal stations | Step 3 |
 | Cooking | `Scripts/Cooking` | Items, recipe steps, drinks, item stacks (including the one the player carries), stations | Step 4 |
 | Customers | `Scripts/Customers` | Spawning, queueing at the counter, buying drinks, dropping cash | Step 4 |
+| Saving | `Scripts/Saving` | Writing progress to a JSON file and putting it back on start | Milestone 1 |
 
-Dependencies only point one way: Player, Economy, Building, Cooking and Customers may use Core, and UI may read from any of them, but Core never depends on gameplay code.
+Dependencies only point one way: Player, Economy, Building, Cooking and Customers may use Core, UI and Saving may read from any of them, but Core never depends on gameplay code.
 
 ## The core loop as data flow
 
@@ -46,6 +47,10 @@ Items move between **ItemStacks** (the player's hands, a station's input and out
 The **ServingCounter** (Customers module) accepts any drink on its menu. **Customers** queue behind it, take a drink, pay its price into the counter's cash pile, and walk out.
 
 Because stations only care about "do my inputs match a step I know", new drinks and new station types are added entirely in the Inspector. Upgrades later (faster brewing, more output slots, higher prices) become extra fields on the same assets.
+
+## Saving (milestone 1)
+
+`SaveManager` is the only script that knows about the save file. Gameplay scripts just expose their state and a way to put it back (`Wallet.SetMoney`, `UnlockPad.Restore`), and raise the events they already had; the save manager listens and decides when to write. Each pad is found in the file by its **Save Id**, so renaming GameObjects never breaks a save. The file has a `version` number so later milestones can add fields and upgrade old saves instead of wiping them.
 
 ## Conventions
 

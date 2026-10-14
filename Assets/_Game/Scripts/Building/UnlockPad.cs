@@ -17,6 +17,10 @@ namespace BubbleTea.Building
         [SerializeField, Tooltip("What this pad builds and how much it costs.")]
         private BuildableDefinition definition;
 
+        [SerializeField, Tooltip("Unique name used in the save file. Leave empty to use the buildable's asset name. " +
+            "Give each pad its own ID if two pads build the same thing.")]
+        private string saveId;
+
         [SerializeField, Tooltip("The player's wallet. The pad drains it while the player stands here.")]
         private Wallet wallet;
 
@@ -54,6 +58,26 @@ namespace BubbleTea.Building
         public BuildableDefinition Definition => definition;
         public int Cost => definition != null ? definition.Cost : 0;
         public int Remaining => Mathf.Max(0, Cost - paid);
+        public int Paid => paid;
+        public bool IsUnlocked => completed;
+        public string SaveId => !string.IsNullOrEmpty(saveId) ? saveId : definition != null ? definition.name : name;
+
+        /// <summary>
+        /// Puts the pad back the way a saved game left it: unlocked pads build their
+        /// station instantly (no flying money, no pop), others keep their partial payment.
+        /// </summary>
+        public void Restore(int savedPaid, bool savedUnlocked)
+        {
+            if (completed || definition == null) return;
+
+            paid = savedUnlocked ? Cost : Mathf.Clamp(savedPaid, 0, Cost);
+            if (Remaining == 0)
+            {
+                Build(animate: false);
+                return;
+            }
+            ProgressChanged?.Invoke(Remaining, Cost);
+        }
 
         private void Update()
         {
@@ -111,18 +135,24 @@ namespace BubbleTea.Building
         private void TryComplete()
         {
             if (completed || Remaining > 0 || billsInFlight > 0) return;
+            Build(animate: true);
+        }
+
+        private void Build(bool animate)
+        {
             completed = true;
 
             if (definition.Prefab != null)
             {
                 GameObject station = Instantiate(definition.Prefab, transform.position, transform.rotation);
                 station.name = definition.DisplayName;
-                station.AddComponent<PopIn>();
+                if (animate) station.AddComponent<PopIn>();
             }
 
+            // Skip pads that are already unlocked, so loading a save can't bring them back.
             foreach (UnlockPad next in unlocksNext)
             {
-                if (next != null) next.gameObject.SetActive(true);
+                if (next != null && !next.completed) next.gameObject.SetActive(true);
             }
 
             Unlocked?.Invoke(this);
