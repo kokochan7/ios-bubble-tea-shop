@@ -10,7 +10,9 @@ namespace BubbleTea.Staff
     /// <list type="bullet">
     /// <item>bring a drink someone in line is waiting for from the station where it's ready, or</item>
     /// <item>if it isn't ready anywhere, carry the ingredient it needs to the station that makes it
-    /// (for example plain milk tea to the topping bar, to become boba).</item>
+    /// (for example plain milk tea to the topping bar, to become boba), or</item>
+    /// <item>when nobody is waiting, stock the counter with whatever drink is ready, the one
+    /// it has fewest of first, so later customers are served straight away.</item>
     /// </list>
     /// They swap items through the same floor zones the player uses. The Walk Speed and
     /// Carry More upgrades apply to runners too: they walk faster and carry several of the
@@ -23,7 +25,7 @@ namespace BubbleTea.Staff
         private float speed = 3.5f;
 
         [SerializeField, Tooltip("Seconds between looking for a new job while idle.")]
-        private float secondsBetweenPlans = 0.5f;
+        private float secondsBetweenPlans = 0.25f;
 
         [SerializeField, Tooltip("Seconds to wait at a zone for the hand-off before giving up on the job.")]
         private float giveUpSeconds = 4f;
@@ -37,6 +39,7 @@ namespace BubbleTea.Staff
         private Job job;
         private ItemDefinition item;
         private int want = 1; // how many of the item to pick up this trip
+        private bool reserved; // whether this job holds a reservation on deliverToCounter
         private Station pickupFrom;
         private Station deliverToStation;
         private ServingCounter deliverToCounter;
@@ -84,7 +87,11 @@ namespace BubbleTea.Staff
                 counter = candidate;
                 break;
             }
-            if (counter == null) return;
+            if (counter == null)
+            {
+                PlanStocking();
+                return;
+            }
 
             // Is the drink ready somewhere? Fetch it for the counter.
             Station ready = Station.FindReady(needed);
@@ -92,6 +99,7 @@ namespace BubbleTea.Staff
             {
                 counter.Reserve(needed);
                 StartFetch(needed, ready, null, counter, CarryLimit());
+                reserved = true;
                 return;
             }
 
@@ -103,6 +111,35 @@ namespace BubbleTea.Staff
                 Station source = Station.FindReady(ingredient);
                 if (source == null || source == maker) continue;
                 StartFetch(ingredient, source, maker, null, CarryLimit());
+                return;
+            }
+
+            // Nothing to fetch for that order yet: keep busy stocking the counter meanwhile.
+            PlanStocking();
+        }
+
+        // Nobody is waiting on anything we can help with, so bring a ready drink to a counter
+        // that has room, picking the drink it has fewest of.
+        private void PlanStocking()
+        {
+            foreach (ServingCounter counter in ServingCounter.All)
+            {
+                ItemDefinition best = null;
+                Station bestSource = null;
+                int fewest = int.MaxValue;
+                foreach (DrinkRecipe recipe in counter.Menu)
+                {
+                    if (recipe == null || recipe.Drink == null || !counter.CanStore(recipe.Drink)) continue;
+                    Station source = Station.FindReady(recipe.Drink);
+                    if (source == null) continue;
+                    int stored = counter.Stored(recipe.Drink);
+                    if (stored >= fewest) continue;
+                    fewest = stored;
+                    best = recipe.Drink;
+                    bestSource = source;
+                }
+                if (best == null) continue;
+                StartFetch(best, bestSource, null, counter, CarryLimit());
                 return;
             }
         }
@@ -118,6 +155,7 @@ namespace BubbleTea.Staff
                 if (!counter.Needs(held)) continue;
                 counter.Reserve(held);
                 StartDeliver(held, null, counter);
+                reserved = true;
                 return;
             }
             // Nobody is waiting for it, but the counter can keep it for a later customer.
@@ -202,16 +240,18 @@ namespace BubbleTea.Staff
             if (timer >= giveUpSeconds) Finish();
         }
 
-        private void Cancel()
-        {
-            if (deliverToCounter != null) deliverToCounter.Release(item);
-            Clear();
-        }
+        private void Cancel() => Finish();
 
         private void Finish()
         {
-            if (deliverToCounter != null) deliverToCounter.Release(item);
+            ReleaseReservation();
             Clear();
+        }
+
+        private void ReleaseReservation()
+        {
+            if (reserved && deliverToCounter != null) deliverToCounter.Release(item);
+            reserved = false;
         }
 
         private void Clear()
@@ -232,10 +272,7 @@ namespace BubbleTea.Staff
             carrier.GiveOnlyTo = this;
         }
 
-        private void OnDestroy()
-        {
-            if (deliverToCounter != null) deliverToCounter.Release(item);
-        }
+        private void OnDestroy() => ReleaseReservation();
 
         // One item, plus whatever the Carry More upgrade adds.
         private static int CarryLimit() => 1 + Mathf.RoundToInt(Stats.Get(StatId.CarryBonus, 0f));

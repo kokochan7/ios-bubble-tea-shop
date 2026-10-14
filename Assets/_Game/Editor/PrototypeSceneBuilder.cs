@@ -465,13 +465,11 @@ namespace BubbleTea.EditorTools
         {
             Material padMat = GetOrCreateMaterial("UnlockPad", new Color(0.97f, 0.97f, 0.97f));
 
-            // Shop 1 only: once the drive-through is built, a pad opens the second shop.
+            // Shop 1 only: once everything else in the shop is built, a pad opens level 2 (see below).
             UnlockPad secondShopPad = content.SecondShop != null
                 ? CreatePad(content.SecondShop, SecondShopPadPosition, billPrefab, wallet, padMat)
                 : null;
-            UnlockPad driveThruPad = secondShopPad != null
-                ? CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat, secondShopPad)
-                : CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat);
+            UnlockPad driveThruPad = CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat);
             UnlockPad expansionPad = CreatePad(content.Expansion, new Vector3(12f, 0f, 10f), billPrefab, wallet, padMat,
                 driveThruPad);
             SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
@@ -484,13 +482,11 @@ namespace BubbleTea.EditorTools
                 barista1Pad);
             UnlockPad runner2Pad = CreatePad(content.Runner2, new Vector3(-10f, 0f, 5f), billPrefab, wallet, padMat);
             UnlockPad runner1Pad = CreatePad(content.Runner1, new Vector3(-10f, 0f, 0f), billPrefab, wallet, padMat, runner2Pad);
-            UnlockPad statuePad = CreatePad(content.Statue, new Vector3(-11f, 0f, -9f), billPrefab, wallet, padMat);
-            UnlockPad menuBoardPad = CreatePad(content.MenuBoard, new Vector3(3f, 0f, 9f), billPrefab, wallet, padMat, statuePad);
+            // The decorations (Planter, Menu Board, Boba Statue) are left out for now; their
+            // prefabs and data are still built, so they can come back as pads later.
             UnlockPad seatingPad = CreatePad(content.Seating, new Vector3(6f, 0f, 6f), billPrefab, wallet, padMat);
-            UnlockPad planterPad = CreatePad(content.Planter, new Vector3(-3f, 0f, 9f), billPrefab, wallet, padMat, menuBoardPad,
-                seatingPad);
             UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat,
-                taroPad, runner1Pad, planterPad);
+                taroPad, runner1Pad, seatingPad);
             // The cashier stands beside the counter's cash pile (the counter's pad is at -5, -3).
             UnlockPad cashierPad = CreatePad(content.Cashier, new Vector3(-2f, 0f, -1.2f), billPrefab, wallet, padMat);
             UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad,
@@ -509,21 +505,21 @@ namespace BubbleTea.EditorTools
             runner2Pad.gameObject.SetActive(false);
             expansionPad.gameObject.SetActive(false);
             driveThruPad.gameObject.SetActive(false);
-            planterPad.gameObject.SetActive(false);
             barista1Pad.gameObject.SetActive(false);
             seatingPad.gameObject.SetActive(false);
             barista2Pad.gameObject.SetActive(false);
-            menuBoardPad.gameObject.SetActive(false);
-            statuePad.gameObject.SetActive(false);
             cashierPad.gameObject.SetActive(false);
             var all = new System.Collections.Generic.List<UnlockPad>
             {
                 counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad, runner1Pad, runner2Pad,
-                expansionPad, driveThruPad, planterPad, menuBoardPad, statuePad, barista1Pad, barista2Pad,
+                expansionPad, driveThruPad, barista1Pad, barista2Pad,
                 seatingPad, cashierPad,
             };
             if (secondShopPad != null)
             {
+                var reveal = new GameObject("Level 2 Unlock").AddComponent<RevealWhenAllUnlocked>();
+                SetReferences(reveal, "required", all.ToArray());
+                SetReference(reveal, "target", secondShopPad);
                 secondShopPad.gameObject.SetActive(false);
                 all.Add(secondShopPad);
             }
