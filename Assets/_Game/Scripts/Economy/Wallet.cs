@@ -24,6 +24,13 @@ namespace BubbleTea.Economy
             MoneyChanged?.Invoke(money);
         }
 
+        /// <summary>Replaces the amount outright. Used when loading a saved game.</summary>
+        public void SetMoney(int amount)
+        {
+            money = Mathf.Max(0, amount);
+            MoneyChanged?.Invoke(money);
+        }
+
         /// <summary>Spends the amount if the player can afford it. Returns false (and spends nothing) otherwise.</summary>
         public bool TrySpend(int amount)
         {
