@@ -13,7 +13,7 @@ This is the plan for how the prototype's code fits together. It's written so a n
 
 | Module | Folder | Responsibility | Arrives in |
 |--------|--------|----------------|-----------|
-| Core | `Scripts/Core` | Event channels, object pool, small shared helpers | Step 2 |
+| Core | `Scripts/Core` | Shared helpers as they become needed (pooling lives inside each system for now) | Later |
 | Player | `Scripts/Player` | Joystick input, movement, the stack of items the player carries | Step 2 |
 | Economy | `Scripts/Economy` | Wallet (current money), cash piles, cash flying to the player | Step 2 |
 | UI | `Scripts/UI` | Money counter, joystick visuals, unlock pad labels | Steps 2-3 |
