@@ -31,6 +31,26 @@ namespace BubbleTea.Customers
         private int bonusPerVisit = 6;
 
         private Customer[] occupants;
+        private float cleanTimer;
+
+        /// <summary>Tables in the shop right now.</summary>
+        public static IReadOnlyList<SeatingTable> All => active;
+
+        /// <summary>Where the money from seated customers piles up.</summary>
+        public CashPile CashPile => cashPile;
+
+        /// <summary>Where someone stands to clean the table.</summary>
+        public Vector3 ZoneCenter => zone.Center(transform);
+
+        /// <summary>True if an empty seat has a cup left on it.</summary>
+        public bool NeedsCleaning
+        {
+            get
+            {
+                for (int i = 0; i < seats.Length; i++) if (IsMessy(i) && occupants[i] == null) return true;
+                return false;
+            }
+        }
 
         /// <summary>Messy seats in the whole shop.</summary>
         public static int MessCount
@@ -104,6 +124,14 @@ namespace BubbleTea.Customers
         }
 
         private bool IsMessy(int seat) => seat < messes.Length && messes[seat] != null && messes[seat].activeSelf;
+
+        /// <summary>Clears one empty seat's mess, at most a few times a second. Used by the cleaner.</summary>
+        public bool TryCleanOne()
+        {
+            if (Time.time < cleanTimer) return false;
+            cleanTimer = Time.time + 0.4f;
+            return Clean(null);
+        }
 
         // Anyone standing at the table clears one empty seat's mess at a time.
         private bool Clean(ItemCarrier carrier)

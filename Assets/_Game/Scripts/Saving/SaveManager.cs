@@ -43,6 +43,9 @@ namespace BubbleTea.Saving
         [SerializeField, Tooltip("The shop's star rating. Leave empty if the scene has none.")]
         private ShopRating rating;
 
+        [SerializeField, Tooltip("The floor money that stops after a set amount. Leave empty if the scene has none.")]
+        private CashPileRefiller floorCash;
+
         [SerializeField, Tooltip("Seconds between saves while money keeps changing.")]
         private float autosaveSeconds = 5f;
 
@@ -53,6 +56,9 @@ namespace BubbleTea.Saving
         private bool resetting;
         private bool dirty;
         private float timer;
+
+        /// <summary>Every unlock pad in the scene, including hidden ones.</summary>
+        public IReadOnlyList<UnlockPad> Pads => pads;
 
         /// <summary>Full path of this shop's save file on this device.</summary>
         public string SavePath => Path.Combine(Application.persistentDataPath, fileName);
@@ -139,6 +145,7 @@ namespace BubbleTea.Saving
                 earningsPerMinute = offlineEarnings != null ? offlineEarnings.RatePerMinute : 0f,
                 goalsDay = dailyGoals != null ? dailyGoals.Day : null,
                 ratingService = rating != null ? rating.Service : -1f,
+                floorCashGiven = floorCash != null ? floorCash.Given : 0,
             };
             if (dailyGoals != null) data.goals.AddRange(dailyGoals.Goals);
             foreach (UnlockPad pad in pads)
@@ -225,6 +232,7 @@ namespace BubbleTea.Saving
 
             if (dailyGoals != null) dailyGoals.Restore(data.goalsDay, data.goals);
             if (rating != null && data.ratingService >= 0f) rating.Restore(data.ratingService);
+            if (floorCash != null) floorCash.Restore(data.floorCashGiven);
 
             if (offlineEarnings != null && data.savedAtUnix > 0)
             {

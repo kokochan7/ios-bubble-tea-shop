@@ -27,7 +27,7 @@ Before you sell the game, check Meshy's license for your plan to make sure it al
 | DriveThru | drive-through pickup counter with a pink and white striped awning, mint cabinet, wood top |
 | UpgradeDesk | small lavender desk with a tablet on a stand and a little potted succulent |
 | Player | chibi barista girl with two hair buns, pink apron over a cream shirt, big head, standing with arms at her sides, facing forward |
-| Runner | chibi shop helper wearing a mint cap and mint apron, big head, standing with arms at sides, facing forward |
+| Barista | chibi shop helper wearing a mint cap and mint apron, big head, standing with arms at sides, facing forward |
 | Customer | chibi young customer with a bob haircut, yellow sweater and small backpack, big head, standing with arms at sides, facing forward |
 | Car | cute toy-like compact car, pastel mint with a pink stripe, rounded shapes |
 | Cup | bubble tea cup with milk tea, black tapioca pearls at the bottom, clear dome lid and a thick pink straw |

@@ -132,3 +132,12 @@ After the second playtest:
 - The cashier walks to a spot behind the counter (the right half, next to the cash pile) and faces the customers. The drop-off spot moved to the left half.
 - The decoration pads (Planter, Menu Board, Boba Statue) are gone for now; the Seating Area now appears after the Topping Bar.
 - The Matcha House (level 2) pad appears only once everything in the Boba Shop is built.
+
+After the third playtest:
+
+- **GM Tools** in the MENU (Editor and Development builds only): +$10,000, Build Everything, Instant Build and Max Upgrades.
+- Runners and baristas are now one role, the **Barista**: they keep the counter stocked, and when there's nothing to carry they stand at the busiest station and help it brew faster. Up to five can be hired ($300, $600, $900, $1300, $1800).
+- The cashier banks payments much faster.
+- The Seating Area has four tables, and **More Seating** ($1200, after Expand Shop) adds four more in the new area.
+- **Hire Cleaner** ($400, after the Seating Area): wipes the tables customers leave messy and banks the tips left on them.
+- There is one floor cash spot instead of three, and it stops refilling after handing out $500 (saved, so it doesn't start over).

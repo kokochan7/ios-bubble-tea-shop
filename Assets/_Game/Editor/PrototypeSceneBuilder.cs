@@ -32,11 +32,10 @@ namespace BubbleTea.EditorTools
         private const string PrefabFolder = "Assets/_Game/Prefabs";
         private const string MaterialFolder = "Assets/_Game/Materials";
 
+        // One spot of floor money to get the shop started.
         private static readonly Vector3[] CashPilePositions =
         {
             new(-4f, 0f, 3f),
-            new(4f, 0f, 3f),
-            new(0f, 0f, 7f),
         };
 
         // What differs between shops. Everything else (layout, pads, staff) is shared.
@@ -128,7 +127,7 @@ namespace BubbleTea.EditorTools
             SetReference(player.GetComponent<PlayerMovement>(), "cameraTransform", camera.transform);
 
             CashPile[] piles = CreateCashPiles(billPrefab, padMat);
-            CreateRefiller(piles);
+            CashPileRefiller floorCash = CreateRefiller(piles);
             ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab, plan.Number);
             UnlockPad[] pads = CreateUnlockPads(content, billPrefab, wallet, eastWall, expansionArea);
             if (content.TravelBack != null)
@@ -145,12 +144,12 @@ namespace BubbleTea.EditorTools
             OfflineEarnings offlineEarnings = CreateOfflineEarnings(wallet);
             DailyGoals dailyGoals = CreateDailyGoals(wallet, content.Menu, offlineEarnings);
             ShopRating rating = CreateShopRating(pads, content);
-            SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings, dailyGoals, rating);
+            SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings, dailyGoals, rating, floorCash);
             var saveFile = new SerializedObject(saveManager);
             saveFile.FindProperty("fileName").stringValue = plan.SaveFile;
             saveFile.ApplyModifiedPropertiesWithoutUndo();
             CreateFeedback();
-            CreateSettingsMenu(hud, saveManager);
+            CreateSettingsMenu(hud, saveManager, wallet, upgrades);
             CreateGoalsPanel(hud, dailyGoals);
             CreateRatingView(hud, rating);
             CreateWelcomeBackPopup(hud, offlineEarnings);
@@ -437,13 +436,19 @@ namespace BubbleTea.EditorTools
 
                 piles[i] = go.AddComponent<CashPile>();
                 SetReference(piles[i], "billPrefab", billPrefab);
+                // Starts empty: the refiller drops the first bills right away and counts them
+                // toward its $500 limit.
+                var pileSettings = new SerializedObject(piles[i]);
+                pileSettings.FindProperty("startingBills").intValue = 0;
+                pileSettings.ApplyModifiedPropertiesWithoutUndo();
             }
             return piles;
         }
 
-        private static void CreateRefiller(CashPile[] piles)
+        // Keeps the floor money topped up until it has handed out $500 in total.
+        private static CashPileRefiller CreateRefiller(CashPile[] piles)
         {
-            var go = new GameObject("CashPileRefiller (test helper)");
+            var go = new GameObject("FloorCash");
             var refiller = go.AddComponent<CashPileRefiller>();
 
             var serialized = new SerializedObject(refiller);
@@ -454,12 +459,14 @@ namespace BubbleTea.EditorTools
                 list.GetArrayElementAtIndex(i).objectReferenceValue = piles[i];
             }
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            return refiller;
         }
 
         // Pads in a chain: the counter reveals the tea brewer and the upgrade desk, then
         // tea brewer -> topping bar -> taro station -> fruit bar. The topping bar also
-        // reveals the first runner, who reveals the second. The fruit bar reveals Expand Shop,
-        // which opens the east wall and reveals the drive-through.
+        // reveals the first barista (each reveals the next) and the seating area, which reveals
+        // the cleaner. The fruit bar reveals Expand Shop, which opens the east wall and reveals
+        // the drive-through and more seating.
         private static UnlockPad[] CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet,
             GameObject eastWall, GameObject expansionArea)
         {
@@ -470,23 +477,31 @@ namespace BubbleTea.EditorTools
                 ? CreatePad(content.SecondShop, SecondShopPadPosition, billPrefab, wallet, padMat)
                 : null;
             UnlockPad driveThruPad = CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat);
+            UnlockPad moreSeatingPad = CreatePad(content.MoreSeating, new Vector3(19f, 0f, 5f), billPrefab, wallet, padMat);
             UnlockPad expansionPad = CreatePad(content.Expansion, new Vector3(12f, 0f, 10f), billPrefab, wallet, padMat,
-                driveThruPad);
+                driveThruPad, moreSeatingPad);
             SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
             SetObjectList(expansionPad, "hideWhenUnlocked", eastWall);
             UnlockPad fruitPad = CreatePad(content.FruitBar, new Vector3(10f, 0f, -5f), billPrefab, wallet, padMat,
                 expansionPad);
-            UnlockPad barista2Pad = CreatePad(content.Barista2, new Vector3(-6f, 0f, 9f), billPrefab, wallet, padMat);
-            UnlockPad barista1Pad = CreatePad(content.Barista1, new Vector3(-6f, 0f, 4f), billPrefab, wallet, padMat, barista2Pad);
-            UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(5f, 0f, -8f), billPrefab, wallet, padMat, fruitPad,
-                barista1Pad);
-            UnlockPad runner2Pad = CreatePad(content.Runner2, new Vector3(-10f, 0f, 5f), billPrefab, wallet, padMat);
-            UnlockPad runner1Pad = CreatePad(content.Runner1, new Vector3(-10f, 0f, 0f), billPrefab, wallet, padMat, runner2Pad);
+            UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(5f, 0f, -8f), billPrefab, wallet, padMat, fruitPad);
+
+            // Baristas along the west wall, each pad revealing the next.
+            Vector3[] baristaSpots = { new(-10f, 0f, 0f), new(-10f, 0f, 5f), new(-10f, 0f, 10f), new(-6f, 0f, 9f), new(-6f, 0f, 13f) };
+            var baristaPads = new UnlockPad[content.Baristas.Length];
+            for (int i = baristaPads.Length - 1; i >= 0; i--)
+            {
+                baristaPads[i] = i + 1 < baristaPads.Length
+                    ? CreatePad(content.Baristas[i], baristaSpots[i], billPrefab, wallet, padMat, baristaPads[i + 1])
+                    : CreatePad(content.Baristas[i], baristaSpots[i], billPrefab, wallet, padMat);
+            }
+
             // The decorations (Planter, Menu Board, Boba Statue) are left out for now; their
             // prefabs and data are still built, so they can come back as pads later.
-            UnlockPad seatingPad = CreatePad(content.Seating, new Vector3(6f, 0f, 6f), billPrefab, wallet, padMat);
+            UnlockPad cleanerPad = CreatePad(content.Cleaner, new Vector3(-2f, 0f, 9f), billPrefab, wallet, padMat);
+            UnlockPad seatingPad = CreatePad(content.Seating, new Vector3(6f, 0f, 6f), billPrefab, wallet, padMat, cleanerPad);
             UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat,
-                taroPad, runner1Pad, seatingPad);
+                taroPad, baristaPads[0], seatingPad);
             // The cashier stands beside the counter's cash pile (the counter's pad is at -5, -3).
             UnlockPad cashierPad = CreatePad(content.Cashier, new Vector3(-2f, 0f, -1.2f), billPrefab, wallet, padMat);
             UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad,
@@ -501,20 +516,19 @@ namespace BubbleTea.EditorTools
             upgradePad.gameObject.SetActive(false);
             taroPad.gameObject.SetActive(false);
             fruitPad.gameObject.SetActive(false);
-            runner1Pad.gameObject.SetActive(false);
-            runner2Pad.gameObject.SetActive(false);
             expansionPad.gameObject.SetActive(false);
             driveThruPad.gameObject.SetActive(false);
-            barista1Pad.gameObject.SetActive(false);
             seatingPad.gameObject.SetActive(false);
-            barista2Pad.gameObject.SetActive(false);
             cashierPad.gameObject.SetActive(false);
+            cleanerPad.gameObject.SetActive(false);
+            moreSeatingPad.gameObject.SetActive(false);
+            foreach (UnlockPad pad in baristaPads) pad.gameObject.SetActive(false);
             var all = new System.Collections.Generic.List<UnlockPad>
             {
-                counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad, runner1Pad, runner2Pad,
-                expansionPad, driveThruPad, barista1Pad, barista2Pad,
-                seatingPad, cashierPad,
+                counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad,
+                expansionPad, driveThruPad, seatingPad, cashierPad, cleanerPad, moreSeatingPad,
             };
+            all.AddRange(baristaPads);
             if (secondShopPad != null)
             {
                 var reveal = new GameObject("Level 2 Unlock").AddComponent<RevealWhenAllUnlocked>();
@@ -537,7 +551,7 @@ namespace BubbleTea.EditorTools
 
         // Loads progress on Play and keeps saving it. Delete it with Bubble Tea > Delete Save Data.
         private static SaveManager CreateSaveManager(Wallet wallet, UnlockPad[] pads, UpgradeManager upgrades,
-            OfflineEarnings offlineEarnings, DailyGoals dailyGoals, ShopRating rating)
+            OfflineEarnings offlineEarnings, DailyGoals dailyGoals, ShopRating rating, CashPileRefiller floorCash)
         {
             var go = new GameObject("SaveManager");
             var saveManager = go.AddComponent<SaveManager>();
@@ -546,6 +560,7 @@ namespace BubbleTea.EditorTools
             SetReference(saveManager, "offlineEarnings", offlineEarnings);
             SetReference(saveManager, "dailyGoals", dailyGoals);
             SetReference(saveManager, "rating", rating);
+            SetReference(saveManager, "floorCash", floorCash);
 
             var serialized = new SerializedObject(saveManager);
             SerializedProperty list = serialized.FindProperty("pads");
@@ -831,8 +846,9 @@ namespace BubbleTea.EditorTools
             go.AddComponent<SalePopups>();
         }
 
-        // A MENU button in the top-right corner that opens sound, vibration and reset options.
-        private static void CreateSettingsMenu(Transform hud, SaveManager saveManager)
+        // A MENU button in the top-right corner that opens sound, vibration and reset options,
+        // plus GM Tools for testing (Editor and Development builds only).
+        private static void CreateSettingsMenu(Transform hud, SaveManager saveManager, Wallet wallet, UpgradeManager upgrades)
         {
             Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -850,7 +866,7 @@ namespace BubbleTea.EditorTools
 
             RectTransform panel = CreateUiObject("Panel", root);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
-            panel.sizeDelta = new Vector2(800f, 760f);
+            panel.sizeDelta = new Vector2(800f, 910f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
             panelImage.type = Image.Type.Sliced;
@@ -868,8 +884,10 @@ namespace BubbleTea.EditorTools
             Button reset = CreateMenuButton("Reset", panel, "Reset Progress", rounded, font, new Color(0.85f, 0.35f, 0.35f),
                 out Text resetLabel);
             SetTopRow((RectTransform)reset.transform, 460f, 120f, 60f, 60f);
+            Button gmOpen = CreateMenuButton("GmTools", panel, "GM Tools", rounded, font, new Color(0.55f, 0.4f, 0.8f), out _);
+            SetTopRow((RectTransform)gmOpen.transform, 610f, 120f, 60f, 60f);
             Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
-            SetTopRow((RectTransform)close.transform, 610f, 110f, 200f, 200f);
+            SetTopRow((RectTransform)close.transform, 760f, 110f, 200f, 200f);
 
             SetReference(menu, "panel", panel.gameObject);
             SetReference(menu, "openButton", openButton);
@@ -881,6 +899,51 @@ namespace BubbleTea.EditorTools
             SetReference(menu, "resetButton", reset);
             SetReference(menu, "resetLabel", resetLabel);
             SetReference(menu, "saveManager", saveManager);
+
+            CreateGmPanel(root, gmOpen, rounded, font, wallet, saveManager, upgrades);
+        }
+
+        // The GM Tools panel: free money, build everything, instant building and maxed upgrades.
+        private static void CreateGmPanel(RectTransform root, Button openButton, Sprite rounded, Font font,
+            Wallet wallet, SaveManager saveManager, UpgradeManager upgrades)
+        {
+            var gm = root.gameObject.AddComponent<GmMenu>();
+
+            RectTransform panel = CreateUiObject("GmPanel", root);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = new Vector2(800f, 910f);
+            var panelImage = panel.gameObject.AddComponent<Image>();
+            panelImage.sprite = rounded;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.2f, 0.12f, 0.3f, 0.97f);
+
+            Text title = CreateHudText("Title", panel, font, 60, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 20f, 110f, 0f, 0f);
+            title.text = "GM TOOLS";
+
+            var green = new Color(0.35f, 0.78f, 0.38f);
+            Button money = CreateMenuButton("Money", panel, "+ $10,000", rounded, font, green, out _);
+            SetTopRow((RectTransform)money.transform, 160f, 120f, 60f, 60f);
+            Button buildAll = CreateMenuButton("BuildAll", panel, "Build Everything", rounded, font, green, out _);
+            SetTopRow((RectTransform)buildAll.transform, 310f, 120f, 60f, 60f);
+            Button instant = CreateMenuButton("Instant", panel, "Instant Build: OFF", rounded, font, green, out Text instantLabel);
+            SetTopRow((RectTransform)instant.transform, 460f, 120f, 60f, 60f);
+            Button maxUpgrades = CreateMenuButton("MaxUpgrades", panel, "Max Upgrades", rounded, font, green, out _);
+            SetTopRow((RectTransform)maxUpgrades.transform, 610f, 120f, 60f, 60f);
+            Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
+            SetTopRow((RectTransform)close.transform, 760f, 110f, 200f, 200f);
+
+            SetReference(gm, "openButton", openButton);
+            SetReference(gm, "panel", panel.gameObject);
+            SetReference(gm, "moneyButton", money);
+            SetReference(gm, "buildAllButton", buildAll);
+            SetReference(gm, "instantButton", instant);
+            SetReference(gm, "instantLabel", instantLabel);
+            SetReference(gm, "upgradesButton", maxUpgrades);
+            SetReference(gm, "closeButton", close);
+            SetReference(gm, "wallet", wallet);
+            SetReference(gm, "saveManager", saveManager);
+            SetReference(gm, "upgradeManager", upgrades);
         }
 
         private static Button CreateMenuButton(string name, Transform parent, string text, Sprite sprite, Font font, Color color,

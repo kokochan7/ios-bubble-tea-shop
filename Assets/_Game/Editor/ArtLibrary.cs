@@ -32,7 +32,7 @@ namespace BubbleTea.EditorTools
         {
             { "Player", new[] { "characterfemalea", "charactera", "characterfemale", "character" } },
             { "Customer", new[] { "charactermaleb", "characterb", "charactermale", "character" } },
-            { "Runner", new[] { "characterfemalec", "characterc", "characterd", "character" } },
+            { "Barista", new[] { "characterfemalec", "characterc", "characterd", "character" } },
             { "Car", new[] { "sedan", "hatchback", "taxi", "suv", "van", "car" } },
             { "Counter", new[] { "kitchencabinet", "counter", "cabinet" } },
             { "DriveThru", new[] { "kitchenbar", "bar", "kitchencabinetdrawer", "cabinet" } },
