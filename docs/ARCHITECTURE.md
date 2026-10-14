@@ -62,6 +62,10 @@ Upgrades never reach into other modules. `UpgradeManager` writes numbers into `C
 
 A `Runner` is just another `ItemCarrier`, so stations and the counter hand items to it through the same floor zones they use with the player. Two properties on `ItemCarrier` keep workers tidy: `GiveOnlyTo` (only drop items at this station or counter) and `TakeFilter` (only pick up this item). The counter tells workers what the line needs (`NextNeeded`) and keeps reservations so two runners don't fetch the same order. Runners are hired with ordinary unlock pads whose buildable prefab is the runner, so saving and loading them needed no new code.
 
+## Shop expansion (milestone 5)
+
+Unlock pads can show and hide scene objects when they're bought (`showWhenUnlocked`, `hideWhenUnlocked`), which is how Expand Shop opens the wall and reveals the new floor; because it happens in the same code path as loading, a saved expansion comes back open. Each `ServingCounter` has a `lane` name and a price multiplier, and each `CustomerSpawner` sends customers to the counter with its lane, so the drive-through is just a second counter prefab plus a car-shaped customer prefab.
+
 ## Conventions
 
 - Namespace: `BubbleTea.<Module>`, for example `BubbleTea.Economy`.

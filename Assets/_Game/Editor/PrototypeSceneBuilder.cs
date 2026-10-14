@@ -57,6 +57,8 @@ namespace BubbleTea.EditorTools
 
             CreateLight();
             CreateFloor(floorMat);
+            GameObject eastWall = CreateWalls();
+            GameObject expansionArea = CreateExpansionArea();
 
             GameObject player = CreatePlayer(playerMat, out Wallet wallet);
             Camera camera = CreateCamera(player.transform);
@@ -69,8 +71,11 @@ namespace BubbleTea.EditorTools
             CashPile[] piles = CreateCashPiles(billPrefab, padMat);
             CreateRefiller(piles);
             ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab);
-            UnlockPad[] pads = CreateUnlockPads(content, billPrefab, wallet);
-            CreateCustomerSpawner(content.CustomerPrefab);
+            UnlockPad[] pads = CreateUnlockPads(content, billPrefab, wallet, eastWall, expansionArea);
+            CreateCustomerSpawner("CustomerSpawner", "Main", content.CustomerPrefab,
+                new Vector3(-5f, 0f, -14f), new Vector3(-14f, 0f, -8f), secondsBetween: 3f, max: 4);
+            CreateCustomerSpawner("CarSpawner", "DriveThru", content.CarPrefab,
+                new Vector3(22f, 0f, -14f), new Vector3(30f, 0f, -1.5f), secondsBetween: 6f, max: 3);
             UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
             CreateUpgradePanel(hud, upgrades, content.Upgrades);
             CreateSaveManager(wallet, pads, upgrades);
@@ -101,6 +106,52 @@ namespace BubbleTea.EditorTools
             floor.name = "Floor";
             floor.transform.localScale = new Vector3(3f, 1f, 3f); // 30 x 30 meters
             floor.GetComponent<Renderer>().sharedMaterial = material;
+        }
+
+        // Low walls around the 30 x 30 m shop so nobody walks off the edge. Returns the east
+        // wall, which the Expand Shop pad removes.
+        private static GameObject CreateWalls()
+        {
+            Material wallMat = GetOrCreateMaterial("Wall", new Color(0.85f, 0.78f, 0.70f));
+            var root = new GameObject("Walls");
+            CreateWall(root.transform, "North", new Vector3(0f, 0.5f, 15.25f), new Vector3(30.5f, 1f, 0.5f), wallMat);
+            CreateWall(root.transform, "South", new Vector3(0f, 0.5f, -15.25f), new Vector3(30.5f, 1f, 0.5f), wallMat);
+            CreateWall(root.transform, "West", new Vector3(-15.25f, 0.5f, 0f), new Vector3(0.5f, 1f, 30.5f), wallMat);
+            return CreateWall(root.transform, "East (opens with Expand Shop)", new Vector3(15.25f, 0.5f, 0f),
+                new Vector3(0.5f, 1f, 30.5f), wallMat);
+        }
+
+        // The extra 16 x 30 m to the east, hidden until Expand Shop is bought.
+        private static GameObject CreateExpansionArea()
+        {
+            Material wallMat = GetOrCreateMaterial("Wall", new Color(0.85f, 0.78f, 0.70f));
+            Material expansionFloor = GetOrCreateMaterial("ExpansionFloor", new Color(0.86f, 0.90f, 0.82f));
+            var root = new GameObject("Expansion Area");
+
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            floor.name = "Floor";
+            floor.transform.SetParent(root.transform, false);
+            floor.transform.localPosition = new Vector3(23f, 0f, 0f);
+            floor.transform.localScale = new Vector3(1.6f, 1f, 3f); // 16 x 30 meters
+            floor.GetComponent<Renderer>().sharedMaterial = expansionFloor;
+
+            CreateWall(root.transform, "North", new Vector3(23f, 0.5f, 15.25f), new Vector3(16.5f, 1f, 0.5f), wallMat);
+            CreateWall(root.transform, "South", new Vector3(23f, 0.5f, -15.25f), new Vector3(16.5f, 1f, 0.5f), wallMat);
+            CreateWall(root.transform, "East", new Vector3(31.25f, 0.5f, 0f), new Vector3(0.5f, 1f, 30.5f), wallMat);
+
+            root.SetActive(false);
+            return root;
+        }
+
+        private static GameObject CreateWall(Transform parent, string name, Vector3 position, Vector3 size, Material material)
+        {
+            GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall.name = name;
+            wall.transform.SetParent(parent, false);
+            wall.transform.localPosition = position;
+            wall.transform.localScale = size;
+            wall.GetComponent<Renderer>().sharedMaterial = material;
+            return wall;
         }
 
         private static GameObject CreatePlayer(Material material, out Wallet wallet)
@@ -277,12 +328,20 @@ namespace BubbleTea.EditorTools
 
         // Pads in a chain: the counter reveals the tea brewer and the upgrade desk, then
         // tea brewer -> topping bar -> taro station -> fruit bar. The topping bar also
-        // reveals the first runner, who reveals the second.
-        private static UnlockPad[] CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet)
+        // reveals the first runner, who reveals the second. The fruit bar reveals Expand Shop,
+        // which opens the east wall and reveals the drive-through.
+        private static UnlockPad[] CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet,
+            GameObject eastWall, GameObject expansionArea)
         {
             Material padMat = GetOrCreateMaterial("UnlockPad", new Color(0.97f, 0.97f, 0.97f));
 
-            UnlockPad fruitPad = CreatePad(content.FruitBar, new Vector3(10f, 0f, -5f), billPrefab, wallet, padMat);
+            UnlockPad driveThruPad = CreatePad(content.DriveThru, new Vector3(22f, 0f, 0f), billPrefab, wallet, padMat);
+            UnlockPad expansionPad = CreatePad(content.Expansion, new Vector3(12f, 0f, 10f), billPrefab, wallet, padMat,
+                driveThruPad);
+            SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
+            SetObjectList(expansionPad, "hideWhenUnlocked", eastWall);
+            UnlockPad fruitPad = CreatePad(content.FruitBar, new Vector3(10f, 0f, -5f), billPrefab, wallet, padMat,
+                expansionPad);
             UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(5f, 0f, -8f), billPrefab, wallet, padMat, fruitPad);
             UnlockPad runner2Pad = CreatePad(content.Runner2, new Vector3(-10f, 0f, 5f), billPrefab, wallet, padMat);
             UnlockPad runner1Pad = CreatePad(content.Runner1, new Vector3(-10f, 0f, 0f), billPrefab, wallet, padMat, runner2Pad);
@@ -301,7 +360,22 @@ namespace BubbleTea.EditorTools
             fruitPad.gameObject.SetActive(false);
             runner1Pad.gameObject.SetActive(false);
             runner2Pad.gameObject.SetActive(false);
-            return new[] { counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad, runner1Pad, runner2Pad };
+            expansionPad.gameObject.SetActive(false);
+            driveThruPad.gameObject.SetActive(false);
+            return new[]
+            {
+                counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad, runner1Pad, runner2Pad,
+                expansionPad, driveThruPad,
+            };
+        }
+
+        private static void SetObjectList(Object component, string fieldName, params GameObject[] objects)
+        {
+            var serialized = new SerializedObject(component);
+            SerializedProperty list = serialized.FindProperty(fieldName);
+            list.arraySize = objects.Length;
+            for (int i = 0; i < objects.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = objects[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // Loads progress on Play and keeps saving it. Delete it with Bubble Tea > Delete Save Data.
@@ -428,17 +502,25 @@ namespace BubbleTea.EditorTools
             rect.offsetMax = Vector2.zero;
         }
 
-        // Customers walk in from the bottom-left, queue behind the counter, and leave to the left.
-        private static void CreateCustomerSpawner(Customer customerPrefab)
+        // Main customers walk in from the bottom-left, queue behind the counter, and leave to
+        // the left. Cars drive up from the bottom of the expansion and leave to the east.
+        private static void CreateCustomerSpawner(string name, string lane, Customer prefab, Vector3 position,
+            Vector3 exitPosition, float secondsBetween, int max)
         {
-            var exit = new GameObject("CustomerExit");
-            exit.transform.position = new Vector3(-14f, 0f, -8f);
+            var exit = new GameObject(name + " Exit");
+            exit.transform.position = exitPosition;
 
-            var go = new GameObject("CustomerSpawner");
-            go.transform.position = new Vector3(-5f, 0f, -14f);
+            var go = new GameObject(name);
+            go.transform.position = position;
             var spawner = go.AddComponent<CustomerSpawner>();
-            SetReference(spawner, "customerPrefab", customerPrefab);
+            SetReference(spawner, "customerPrefab", prefab);
             SetReference(spawner, "exitPoint", exit.transform);
+
+            var serialized = new SerializedObject(spawner);
+            serialized.FindProperty("lane").stringValue = lane;
+            serialized.FindProperty("secondsBetweenCustomers").floatValue = secondsBetween;
+            serialized.FindProperty("maxCustomers").intValue = max;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static UnlockPad CreatePad(BuildableDefinition definition, Vector3 position, CashBill billPrefab,

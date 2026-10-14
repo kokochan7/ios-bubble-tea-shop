@@ -31,6 +31,9 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition FruitBar;
             public BuildableDefinition Runner1;
             public BuildableDefinition Runner2;
+            public BuildableDefinition Expansion;
+            public BuildableDefinition DriveThru;
+            public Customer CarPrefab;
             public BuildableDefinition UpgradeDesk;
             public UpgradeDefinition[] Upgrades;
             public Customer CustomerPrefab;
@@ -63,8 +66,11 @@ namespace BubbleTea.EditorTools
             DrinkRecipe sellTaroBoba = GetOrCreateDrink("Taro Boba", taroBoba, 20);
             DrinkRecipe sellMangoTea = GetOrCreateDrink("Mango Fruit Tea", mangoTea, 14);
 
-            GameObject counter = BuildCounterPrefab(
-                new[] { sellMilkTea, sellBobaTea, sellTaroTea, sellTaroBoba, sellMangoTea }, billPrefab);
+            DrinkRecipe[] menu = { sellMilkTea, sellBobaTea, sellTaroTea, sellTaroBoba, sellMangoTea };
+            GameObject counter = BuildCounterPrefab("Counter", new Color(0.62f, 0.42f, 0.28f), menu, billPrefab,
+                "Main", priceMultiplier: 1f, queueSpacing: 1.1f);
+            GameObject driveThru = BuildCounterPrefab("DriveThru", new Color(0.35f, 0.55f, 0.75f), menu, billPrefab,
+                "DriveThru", priceMultiplier: 1.5f, queueSpacing: 3.2f);
             GameObject brewer = BuildStationPrefab("TeaBrewer", new Color(0.30f, 0.30f, 0.34f), new Vector3(1.4f, 1f, 1f),
                 new Color(0.55f, 0.32f, 0.16f), new[] { brew }, inputCapacity: 0);
             GameObject toppingBar = BuildStationPrefab("ToppingBar", new Color(0.95f, 0.78f, 0.55f), new Vector3(2f, 1f, 1f),
@@ -98,6 +104,10 @@ namespace BubbleTea.EditorTools
                 FruitBar = GetOrCreateBuildable("Fruit Bar", 400, fruitBar),
                 Runner1 = GetOrCreateBuildable("Hire Runner", 300, runner),
                 Runner2 = GetOrCreateBuildable("Hire Runner 2", 600, runner),
+                // The expansion builds nothing itself; its pad opens the wall and shows the new floor.
+                Expansion = GetOrCreateBuildable("Expand Shop", 1000, null),
+                DriveThru = GetOrCreateBuildable("Drive Thru", 600, driveThru),
+                CarPrefab = BuildCarPrefab(),
                 UpgradeDesk = GetOrCreateBuildable("Upgrades", 40, upgradeDesk),
                 Upgrades = upgrades,
                 CustomerPrefab = BuildCustomerPrefab(),
@@ -235,10 +245,12 @@ namespace BubbleTea.EditorTools
 
         // The counter: player drops drinks on the front, customers queue at the back,
         // and their money piles up beside it.
-        private static GameObject BuildCounterPrefab(DrinkRecipe[] menu, CashBill billPrefab)
+        // Used for both the main counter and the drive-through window.
+        private static GameObject BuildCounterPrefab(string name, Color color, DrinkRecipe[] menu, CashBill billPrefab,
+            string lane, float priceMultiplier, float queueSpacing)
         {
             var bodySize = new Vector3(2.2f, 1f, 1f);
-            GameObject root = BuildStationBody("Counter", new Color(0.62f, 0.42f, 0.28f), bodySize, null);
+            GameObject root = BuildStationBody(name, color, bodySize, null);
 
             var cashGo = new GameObject("CashPile");
             cashGo.transform.SetParent(root.transform, false);
@@ -264,9 +276,12 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("drinks.capacity").intValue = 6;
             serialized.FindProperty("cashPile").objectReferenceValue = cashPile;
             serialized.FindProperty("queueStart").objectReferenceValue = queueStart;
+            serialized.FindProperty("lane").stringValue = lane;
+            serialized.FindProperty("priceMultiplier").floatValue = priceMultiplier;
+            serialized.FindProperty("queueSpacing").floatValue = queueSpacing;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
-            return SavePrefab(root, $"{PrefabFolder}/Stations/Counter.prefab");
+            return SavePrefab(root, $"{PrefabFolder}/Stations/{name}.prefab");
         }
 
         // A purple desk. Standing in front of it opens the upgrade panel.
@@ -320,6 +335,29 @@ namespace BubbleTea.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return SavePrefab(root, $"{PrefabFolder}/Customer.prefab").GetComponent<Customer>();
+        }
+
+        // A drive-through customer: a boxy car that drives up, orders, and drives off.
+        private static Customer BuildCarPrefab()
+        {
+            var root = new GameObject("Car");
+            Material paint = GetOrCreateMaterial("Car", new Color(0.90f, 0.30f, 0.35f));
+            Material glass = GetOrCreateMaterial("CarWindow", new Color(0.55f, 0.75f, 0.90f));
+            AddPart(root.transform, PrimitiveType.Cube, "Body", new Vector3(0f, 0.5f, 0f), new Vector3(1.6f, 0.7f, 2.8f), paint);
+            AddPart(root.transform, PrimitiveType.Cube, "Cabin", new Vector3(0f, 1.05f, -0.2f), new Vector3(1.4f, 0.5f, 1.4f), glass);
+
+            Transform bubble = AddAnchor(root.transform, "OrderBubble", new Vector3(0f, 1.9f, 0f));
+            AddPart(bubble, PrimitiveType.Cylinder, "Disc", new Vector3(0f, -0.02f, 0f),
+                new Vector3(0.75f, 0.02f, 0.75f), GetOrCreateMaterial("OrderBubble", Color.white));
+
+            var customer = root.AddComponent<Customer>();
+            var serialized = new SerializedObject(customer);
+            serialized.FindProperty("speed").floatValue = 5f;
+            serialized.FindProperty("drinkHoldPosition").vector3Value = new Vector3(0.9f, 1f, 0.4f);
+            serialized.FindProperty("orderBubble").objectReferenceValue = bubble;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SavePrefab(root, $"{PrefabFolder}/Car.prefab").GetComponent<Customer>();
         }
 
         // ---------- Helpers ----------

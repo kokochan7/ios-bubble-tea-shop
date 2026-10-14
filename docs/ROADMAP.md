@@ -48,3 +48,10 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 - Runners carry one item at a time, never drop things at stations they just walk past, and don't double up on the same order. An item nobody needs gets thrown away after a few seconds.
 - Hired runners come back when you load your save, like stations do.
 - There's no separate cashier: customers already pay at the counter on their own, so the only manual job left is collecting the cash.
+
+## Milestone 5: Shop expansion
+
+- The shop now has low walls, so nobody can walk off the edge.
+- After the Fruit Bar, an **Expand Shop** pad ($1,000) appears by the east wall. Paying it removes the wall and reveals a new 16 x 30 m area.
+- In the new area, a **Drive Thru** pad ($600) builds a blue drive-through window. Cars line up, order like customers, and pay **1.5x** the menu price.
+- Each counter has a **lane** (Main, DriveThru) and its own customer spawner, so more counters can be added later without code. Runners serve whichever counter has someone waiting.
