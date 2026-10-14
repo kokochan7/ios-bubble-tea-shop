@@ -438,6 +438,8 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("lane").stringValue = lane;
             serialized.FindProperty("priceMultiplier").floatValue = priceMultiplier;
             serialized.FindProperty("queueSpacing").floatValue = queueSpacing;
+            // The drop-off spot is on the left half, so a cashier can stand behind the right half.
+            serialized.FindProperty("zone.offset").vector3Value = new Vector3(-0.5f, 0f, 1.4f);
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return SavePrefab(root, $"{PrefabFolder}/Stations/{name}.prefab");

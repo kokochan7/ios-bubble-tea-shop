@@ -109,6 +109,12 @@ namespace BubbleTea.Customers
         /// <summary>True if someone in line still needs this drink.</summary>
         public bool Needs(ItemDefinition drink) => IsStillWanted(drink);
 
+        /// <summary>How many of this drink are waiting on the counter.</summary>
+        public int Stored(ItemDefinition drink) => drinks.CountOf(item => item == drink);
+
+        /// <summary>The drinks this counter sells.</summary>
+        public IEnumerable<DrinkRecipe> Menu => menu ?? System.Array.Empty<DrinkRecipe>();
+
         /// <summary>True if this drink is on the menu and the counter has room to keep it for a later customer.</summary>
         public bool CanStore(ItemDefinition drink) => !drinks.IsFull && FindRecipe(drink) != null;
 
