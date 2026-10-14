@@ -57,7 +57,7 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 
 ## Try the prototype
 
-1. In Unity's menu bar, click **Bubble Tea > Build Prototype Scene**. It creates `Assets/_Game/Scenes/Prototype.unity` with everything wired up and opens it.
+1. In Unity's menu bar, click **Bubble Tea > Build Prototype Scene**. It creates `Assets/_Game/Scenes/Prototype.unity` with everything wired up and opens it. (**Bubble Tea > Build Main Menu Scene** builds the title screen the finished game opens on; press Play in it to start from the menu.)
 2. Press **Play**.
 3. Click and drag anywhere in the Game view to use the joystick (or use WASD / arrow keys). Walk up to the green cash spot and watch the bills fly to you while the counter at the top goes up.
 4. Stand on the white **Counter** pad. Your money drains into it, and when it's paid off the counter pops up and the next pad (Tea Brewer) appears. That one unlocks the Topping Bar.
@@ -65,8 +65,8 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 6. For a pricier drink, drop milk teas at the **Topping Bar** first. It turns them into boba milk tea, which sells for more.
 7. Each customer shows the drink they want on a bubble above their head and waits for exactly that one. The Topping Bar leads to the **Taro Station** and then the **Fruit Bar**, which add taro, taro boba and mango drinks to the orders.
 8. A **Hire Barista** pad ($200) is there from the start. A barista keeps the counter stocked and works the stations when there's nothing to carry, so you can focus on collecting cash. Up to five baristas can be hired, each pad appearing after the one before. Anything a barista holds that nobody needs goes in the **Trash** bin by the counter; stand next to it yourself to throw away what you carry, one item at a time. The Seating Area reveals a **Hire Cleaner** who wipes the tables and banks the tips customers leave there. The Tea Brewer reveals a **Hire Cashier** pad: the cashier stands by the counter and banks customers' payments for you.
-9. Drinks nobody in line wants are thrown out of the counter one by one, every 5 seconds. When the counter is full, a drink a customer is waiting for goes straight to them.
-10. Customers wait about 30 seconds. **Every customer who walks out costs a star** (you earn it back a little with each customer you serve). At 0 stars the shop closes and you start over.
+9. Drinks nobody in line wants are thrown out of the counter one by one, every 2 seconds. When the counter is full, a drink a customer is waiting for goes straight to them.
+10. Customers wait about 10 seconds. **Every customer who walks out costs a star** (each customer you serve wins back a tenth of one). At 0 stars the shop closes and you start over. The clock in the top left runs fast; breakfast, lunch and dinner rushes bring more customers. Tap a counter to change drink prices, but customers who find a price too high leave and cost a star.
 11. After the Fruit Bar, **Expand Shop** opens the east wall onto more kitchen and dining space, with a **Drive Thru** window in the far wall. Cars drive up the lane outside, stop at the window and pay 1.5x. Building it reveals **Hire Drive-Thru Cashier** ($400), who banks the drive-thru's payments for you.
 12. The **MENU** button (top right) turns sound, music and vibration on or off and can reset your progress. In the Editor and Development builds it also has **GM Tools**: +$10,000, Build Everything, Instant Build (pads build the moment you step on them) and Max Upgrades.
 13. Buying the Counter also reveals the purple **Upgrades** desk. Pay for it, then stand in front of it to buy faster walking, bigger carry stacks, faster brewing and higher drink prices.

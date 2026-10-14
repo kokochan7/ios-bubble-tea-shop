@@ -24,6 +24,9 @@ namespace BubbleTea.Saving
         /// <summary>PlayerPrefs key holding the scene of the shop the player was last in.</summary>
         public const string LastShopKey = "lastShop";
 
+        /// <summary>The first shop's scene, where a new game starts.</summary>
+        public const string FirstShopScene = "Prototype";
+
         [SerializeField, Tooltip("Save file name. Each shop has its own, so their progress stays apart.")]
         private string fileName = "save.json";
 
@@ -193,7 +196,9 @@ namespace BubbleTea.Saving
         {
             EraseSave();
             BubbleTea.Core.Stats.Clear();
-            SceneManager.LoadScene(0);
+            // Straight into the first shop (scene 0 is the main menu once that's built).
+            if (Application.CanStreamedLevelBeLoaded(FirstShopScene)) SceneManager.LoadScene(FirstShopScene);
+            else SceneManager.LoadScene(0);
         }
 
         /// <summary>

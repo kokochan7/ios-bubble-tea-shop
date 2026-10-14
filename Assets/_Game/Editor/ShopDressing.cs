@@ -30,44 +30,47 @@ namespace BubbleTea.EditorTools
 
         public static void Dress(Style style, Material floor, Material expansionFloor, Material wall, GameObject expansionArea)
         {
+            PrototypeSceneBuilder.ShopLayout layout = PrototypeSceneBuilder.Layout;
+            float w = layout.HalfWidth, d = layout.HalfDepth;
+
             // Textures are drawn in near-white, so each material's own color still tints them.
-            ApplyTexture(floor, TileTexture(), new Vector2(7.5f, 7.5f)); // 2 m tiles on the 30 m floor
-            ApplyTexture(expansionFloor, PlankTexture(), new Vector2(8f, 15f));
-            ApplyTexture(wall, StripeTexture(), new Vector2(15f, 1f));
+            ApplyTexture(floor, TileTexture(), new Vector2(w / 2f, d / 2f)); // 4 m pattern repeats
+            ApplyTexture(expansionFloor, PlankTexture(), new Vector2((layout.LaneOuterX - w) / 2f, d));
+            ApplyTexture(wall, StripeTexture(), new Vector2(w, 1f));
 
             var root = new GameObject("Dressing").transform;
-            CreateStreet(root, style);
-            CreateTrim(root, style, 30.5f, 0f, 15f, 3f);
-            CreateWindows(root, style, new[] { -11f, -5.5f, 5.5f, 11f }, 15f);
-            CreateSign(root, style);
-            CreateBunting(root, style, -14.5f, 14.5f, 15f);
-            CreateLamps(root, style, new[] { -8.25f, 8.25f }, 15f);
-            CreateRug(root, style, PrototypeSceneBuilder.SeatingPosition + new Vector3(0f, 0f, 1.4f), new Vector2(8.4f, 5.6f));
-            CreateFrontDoor(root, style);
-            CreateKitchenFloor(root, "KitchenFloor", -15f, 15f);
-            float counterX = PrototypeSceneBuilder.CounterPosition.x;
-            CreatePartition(root, -15f, counterX - 1.3f);
-            CreatePartition(root, counterX + 1.3f, StaffDoorFrom);
-            CreatePartition(root, StaffDoorTo, 15f);
-            CreateStaffDoor(root);
+            CreateStreet(root, style, layout);
+            CreateTrim(root, style, 2f * w + 0.5f, 0f, d, 3f);
+            CreateWindows(root, style, layout.Windows, d);
+            CreateSign(root, style, d);
+            CreateBunting(root, style, -w + 0.5f, w - 0.5f, d);
+            CreateLamps(root, style, layout.Lamps, d);
+            CreateRug(root, style, layout.Seating + new Vector3(0f, 0f, 1.4f), new Vector2(8.4f, 5.6f));
+            CreateFrontDoor(root, style, layout);
+            CreateKitchenFloor(root, "KitchenFloor", -w, w, layout);
+            float counterX = layout.Counter.x;
+            CreatePartition(root, -w, counterX - 1.3f, layout);
+            CreatePartition(root, counterX + 1.3f, layout.StaffDoorFrom, layout);
+            CreatePartition(root, layout.StaffDoorTo, w, layout);
+            CreateStaffDoor(root, layout);
 
             if (expansionArea != null)
             {
                 Transform expansion = new GameObject("Dressing").transform;
                 expansion.SetParent(expansionArea.transform, false);
-                float laneWall = PrototypeSceneBuilder.LaneWallX;
-                CreateTrim(expansion, style, laneWall - 15f + 0.5f, (15f + laneWall) / 2f, 15f, 3f);
-                CreateWindows(expansion, style, new[] { 18.5f }, 15f);
-                CreateLamps(expansion, style, new[] { 22.5f }, 15f);
-                CreateKitchenFloor(expansion, "KitchenFloorEast", 15f, laneWall);
-                CreatePartition(expansion, 15f, laneWall);
-                CreateDriveThruLane(expansion, style);
+                float laneWall = layout.LaneWallX;
+                CreateTrim(expansion, style, laneWall - w + 0.5f, (w + laneWall) / 2f, d, 3f);
+                CreateWindows(expansion, style, layout.ExpansionWindows, d);
+                CreateLamps(expansion, style, layout.ExpansionLamps, d);
+                CreateKitchenFloor(expansion, "KitchenFloorEast", w, laneWall, layout);
+                CreatePartition(expansion, w, laneWall, layout);
+                CreateDriveThruLane(expansion, style, layout);
             }
         }
 
         // ---------- Outside ----------
 
-        private static void CreateStreet(Transform root, Style style)
+        private static void CreateStreet(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
         {
             GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground";
@@ -78,17 +81,13 @@ namespace BubbleTea.EditorTools
             ground.GetComponent<Renderer>().sharedMaterial = Mat(style.Prefix + "Grass", style.Grass, 0.05f);
 
             // A sidewalk along the front of the shop.
-            Part(root, PrimitiveType.Cube, "Sidewalk", new Vector3(8f, -0.01f, -18f), new Vector3(70f, 0.02f, 5f),
+            float sidewalk = layout.SidewalkZ;
+            Part(root, PrimitiveType.Cube, "Sidewalk", new Vector3(8f, -0.01f, sidewalk), new Vector3(70f, 0.02f, 5f),
                 Mat("Sidewalk", new Color(0.86f, 0.85f, 0.83f), 0.1f));
-            Part(root, PrimitiveType.Cube, "Road", new Vector3(8f, -0.012f, -24f), new Vector3(70f, 0.02f, 7f),
+            Part(root, PrimitiveType.Cube, "Road", new Vector3(8f, -0.012f, sidewalk - 6f), new Vector3(70f, 0.02f, 7f),
                 Mat("Road", new Color(0.36f, 0.36f, 0.40f), 0.15f));
 
-            Vector3[] trees =
-            {
-                new(-19f, 0f, -17f), new(-19f, 0f, -6f), new(-19f, 0f, 5f), new(-19f, 0f, 14f),
-                new(-12f, 0f, 19f), new(-2f, 0f, 19.5f), new(9f, 0f, 19f), new(19f, 0f, 19.5f), new(28f, 0f, 19f),
-                new(35f, 0f, 12f), new(35f, 0f, 1f), new(35f, 0f, -10f), new(4f, 0f, -18.5f), new(16f, 0f, -18.5f),
-            };
+            Vector3[] trees = layout.Trees;
             Material trunk = Mat("TreeTrunk", new Color(0.55f, 0.38f, 0.26f), 0.1f);
             Material leaves = Mat(style.Prefix + "TreeLeaves", Color.Lerp(style.Grass, new Color(0.2f, 0.55f, 0.3f), 0.6f), 0.1f);
             for (int i = 0; i < trees.Length; i++)
@@ -149,11 +148,11 @@ namespace BubbleTea.EditorTools
         }
 
         // The shop's name on a board above the back wall, facing the camera.
-        private static void CreateSign(Transform root, Style style)
+        private static void CreateSign(Transform root, Style style, float wallZ)
         {
             Transform sign = new GameObject("Shop Sign").transform;
             sign.SetParent(root, false);
-            sign.localPosition = new Vector3(0f, 2.15f, 14.9f);
+            sign.localPosition = new Vector3(0f, 2.15f, wallZ - 0.1f);
             Part(sign, PrimitiveType.Cube, "Board", Vector3.zero, new Vector3(6.4f, 1.3f, 0.12f), Mat(style.Prefix + "Accent", style.Accent, 0.4f));
             Part(sign, PrimitiveType.Cube, "Border", new Vector3(0f, 0f, 0.02f), new Vector3(6.7f, 1.6f, 0.08f),
                 Mat("TrimCream", new Color(1f, 0.96f, 0.90f), 0.3f));
@@ -216,16 +215,12 @@ namespace BubbleTea.EditorTools
 
         // ---------- Floor plan ----------
 
-        // The gap in the glass wall where the player walks between the kitchen and the dining room.
-        private const float StaffDoorFrom = 2f;
-        private const float StaffDoorTo = 4.5f;
-
         // Waist-high glass between the dining room and the kitchen, on a wooden base. Solid, so the
         // player goes round through the staff door.
-        private static void CreatePartition(Transform root, float fromX, float toX)
+        private static void CreatePartition(Transform root, float fromX, float toX, PrototypeSceneBuilder.ShopLayout layout)
         {
             if (toX - fromX < 0.2f) return;
-            float z = PrototypeSceneBuilder.PartitionZ;
+            float z = layout.PartitionZ;
             float center = (fromX + toX) / 2f, length = toX - fromX;
             var wall = new GameObject("Glass Wall").transform;
             wall.SetParent(root, false);
@@ -243,11 +238,12 @@ namespace BubbleTea.EditorTools
             }
         }
 
-        // Posts and a sign over the gap in the glass wall.
-        private static void CreateStaffDoor(Transform root)
+        // Posts and a sign over the gap in the glass wall where the player walks between the
+        // kitchen and the dining room.
+        private static void CreateStaffDoor(Transform root, PrototypeSceneBuilder.ShopLayout layout)
         {
             Material wood = Mat("TrimWood", new Color(0.62f, 0.43f, 0.30f), 0.3f);
-            float z = PrototypeSceneBuilder.PartitionZ;
+            float z = layout.PartitionZ, StaffDoorFrom = layout.StaffDoorFrom, StaffDoorTo = layout.StaffDoorTo;
             Part(root, PrimitiveType.Cube, "Staff Door Header", new Vector3((StaffDoorFrom + StaffDoorTo) / 2f, 2.1f, z),
                 new Vector3(StaffDoorTo - StaffDoorFrom + 0.2f, 0.12f, 0.14f), wood);
             Part(root, PrimitiveType.Cube, "Staff Door Post", new Vector3(StaffDoorFrom, 1.05f, z), new Vector3(0.12f, 2.1f, 0.14f), wood);
@@ -256,9 +252,10 @@ namespace BubbleTea.EditorTools
         }
 
         // Gray kitchen tiles behind the counter, so the two rooms read as different spaces.
-        private static void CreateKitchenFloor(Transform root, string materialName, float fromX, float toX)
+        private static void CreateKitchenFloor(Transform root, string materialName, float fromX, float toX,
+            PrototypeSceneBuilder.ShopLayout layout)
         {
-            float z0 = PrototypeSceneBuilder.PartitionZ, z1 = 15f;
+            float z0 = layout.PartitionZ, z1 = layout.HalfDepth;
             Material kitchen = Mat(materialName, new Color(0.84f, 0.86f, 0.88f), 0.35f);
             ApplyTexture(kitchen, TileTexture(), new Vector2((toX - fromX) / 2f, (z1 - z0) / 2f)); // 1 m tiles
             Part(root, PrimitiveType.Cube, "Kitchen Floor", new Vector3((fromX + toX) / 2f, 0.003f, (z0 + z1) / 2f),
@@ -266,38 +263,41 @@ namespace BubbleTea.EditorTools
         }
 
         // The front doorway: posts, a header with an awning outside, and a mat.
-        private static void CreateFrontDoor(Transform root, Style style)
+        private static void CreateFrontDoor(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
         {
-            const float from = -5.5f, to = 6.5f, z = -15.25f;
+            float from = layout.DoorFrom, to = layout.DoorTo, z = -layout.HalfDepth - 0.25f;
             Material wood = Mat("TrimWood", new Color(0.62f, 0.43f, 0.30f), 0.3f);
             Part(root, PrimitiveType.Cube, "Door Post", new Vector3(from, 1.1f, z), new Vector3(0.3f, 2.2f, 0.6f), wood);
             Part(root, PrimitiveType.Cube, "Door Post", new Vector3(to, 1.1f, z), new Vector3(0.3f, 2.2f, 0.6f), wood);
             GameObject awning = Part(root, PrimitiveType.Cube, "Awning", new Vector3((from + to) / 2f, 2.3f, z - 0.6f),
                 new Vector3(to - from + 0.6f, 0.08f, 1.4f), Mat(style.Prefix + "Accent", style.Accent, 0.4f));
             awning.transform.localRotation = Quaternion.Euler(-15f, 0f, 0f);
-            Part(root, PrimitiveType.Cube, "Door Mat", new Vector3((from + to) / 2f, 0.005f, -14.3f),
+            Part(root, PrimitiveType.Cube, "Door Mat", new Vector3((from + to) / 2f, 0.005f, z + 0.95f),
                 new Vector3(4f, 0.01f, 1.2f), Mat("DoorMat", new Color(0.55f, 0.42f, 0.34f), 0.05f));
         }
 
         // The car lane outside the east wall: asphalt, edge lines, arrows, an awning over the
         // window, a menu board and a DRIVE THRU sign at the entrance.
-        private static void CreateDriveThruLane(Transform root, Style style)
+        private static void CreateDriveThruLane(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
         {
-            float laneX = PrototypeSceneBuilder.LaneX, wallX = PrototypeSceneBuilder.LaneWallX;
-            float windowZ = PrototypeSceneBuilder.DriveThruPosition.z;
+            float laneX = layout.LaneX, wallX = layout.LaneWallX, outerX = layout.LaneOuterX, d = layout.HalfDepth;
+            float windowZ = layout.DriveThru.z;
+            // From the road out front to past the back wall.
+            float laneFrom = layout.SidewalkZ - 3f, laneTo = d + 9f;
+            float laneZ = (laneFrom + laneTo) / 2f, laneLength = laneTo - laneFrom;
             Material asphalt = Mat("Road", new Color(0.36f, 0.36f, 0.40f), 0.15f);
             Material line = Mat("LaneLine", new Color(1f, 0.85f, 0.35f), 0.2f);
             Material white = Mat("RoadPaint", new Color(0.97f, 0.97f, 0.97f), 0.2f);
 
-            float width = 31.5f - wallX;
-            Part(root, PrimitiveType.Cube, "Lane", new Vector3(wallX + width / 2f, 0.004f, 1.5f), new Vector3(width, 0.008f, 45f), asphalt);
-            Part(root, PrimitiveType.Cube, "Lane Edge", new Vector3(wallX + 0.6f, 0.01f, 1.5f), new Vector3(0.12f, 0.01f, 45f), line);
-            Part(root, PrimitiveType.Cube, "Lane Edge", new Vector3(31f, 0.01f, 1.5f), new Vector3(0.12f, 0.01f, 45f), line);
-            Part(root, PrimitiveType.Cube, "Curb", new Vector3(31.6f, 0.08f, 1.5f), new Vector3(0.3f, 0.16f, 45f),
+            float width = outerX - wallX;
+            Part(root, PrimitiveType.Cube, "Lane", new Vector3(wallX + width / 2f, 0.004f, laneZ), new Vector3(width, 0.008f, laneLength), asphalt);
+            Part(root, PrimitiveType.Cube, "Lane Edge", new Vector3(wallX + 0.6f, 0.01f, laneZ), new Vector3(0.12f, 0.01f, laneLength), line);
+            Part(root, PrimitiveType.Cube, "Lane Edge", new Vector3(outerX - 0.5f, 0.01f, laneZ), new Vector3(0.12f, 0.01f, laneLength), line);
+            Part(root, PrimitiveType.Cube, "Curb", new Vector3(outerX + 0.1f, 0.08f, laneZ), new Vector3(0.3f, 0.16f, laneLength),
                 Mat("Sidewalk", new Color(0.86f, 0.85f, 0.83f), 0.1f));
             Part(root, PrimitiveType.Cube, "Stop Line", new Vector3(laneX, 0.01f, windowZ + 1.6f), new Vector3(3.6f, 0.01f, 0.25f), white);
 
-            foreach (float z in new[] { -11f, 13f })
+            foreach (float z in new[] { -d + 4f, d - 2f })
             {
                 Part(root, PrimitiveType.Cube, "Arrow", new Vector3(laneX, 0.01f, z), new Vector3(0.3f, 0.01f, 1.8f), white);
                 GameObject left = Part(root, PrimitiveType.Cube, "Arrow Head", new Vector3(laneX - 0.3f, 0.01f, z + 0.7f),
@@ -316,8 +316,8 @@ namespace BubbleTea.EditorTools
             Part(root, PrimitiveType.Cube, "Window Frame", new Vector3(wallX + 0.55f, 2.3f, windowZ), new Vector3(0.12f, 0.12f, 2.6f), frame);
 
             Material pole = Mat("SignPole", new Color(0.4f, 0.4f, 0.45f), 0.5f);
-            Sign(root, "DRIVE THRU", new Vector3(31.2f, 0f, -14f), Mat(style.Prefix + "Accent", style.Accent, 0.4f), pole, 2.8f);
-            Sign(root, "MENU", new Vector3(31.2f, 0f, windowZ - 6f), Mat("Chalkboard", new Color(0.24f, 0.29f, 0.27f), 0.2f), pole, 2.2f);
+            Sign(root, "DRIVE THRU", new Vector3(outerX - 0.3f, 0f, -d + 1f), Mat(style.Prefix + "Accent", style.Accent, 0.4f), pole, 2.8f);
+            Sign(root, "MENU", new Vector3(outerX - 0.3f, 0f, windowZ - 6f), Mat("Chalkboard", new Color(0.24f, 0.29f, 0.27f), 0.2f), pole, 2.2f);
         }
 
         // A board on a pole facing the street, with white text.

@@ -29,14 +29,9 @@ namespace BubbleTea.EditorTools
     {
         private const string ScenePath = "Assets/_Game/Scenes/Prototype.unity";
         private const string Shop2ScenePath = "Assets/_Game/Scenes/Shop2.unity";
+        private const string MenuScenePath = "Assets/_Game/Scenes/MainMenu.unity";
         private const string PrefabFolder = "Assets/_Game/Prefabs";
         private const string MaterialFolder = "Assets/_Game/Materials";
-
-        // One spot of floor money to get the shop started.
-        private static readonly Vector3[] CashPilePositions =
-        {
-            new(8f, 0f, 3f),
-        };
 
         // What differs between shops. Everything else (layout, pads, staff) is shared.
         private sealed class ShopPlan
@@ -52,7 +47,120 @@ namespace BubbleTea.EditorTools
             public Color ExpansionFloorColor;
             public ShopDressing.Style Look;
             public MusicMaker.Track Music;
+            public ShopLayout Layout;
         }
+
+        /// <summary>
+        /// Where everything stands in a shop. The main room runs from -HalfWidth to +HalfWidth
+        /// (west to east) and -HalfDepth to +HalfDepth (front door to back wall); Expand Shop adds
+        /// the space from the east wall to the lane wall, with the drive-thru lane outside it.
+        /// The first shop is small and each later shop is bigger.
+        /// </summary>
+        internal sealed class ShopLayout
+        {
+            public float HalfWidth, HalfDepth;
+            public float DoorFrom, DoorTo;              // the front doorway in the south wall
+            public float StaffDoorFrom, StaffDoorTo;    // the gap in the glass wall beside the counter
+            public float LaneWallX;                     // the east end of the expansion
+            public Vector3 Counter, Seating, DriveThru, TrashCan, FloorCash, PlayerStart;
+            public Vector3 TeaBrewer, ToppingBar, TaroStation, FruitBar, UpgradeDesk, Cashier;
+            public Vector3 Expansion, MoreSeating, Cleaner, DriveThruCashier, SecondShopPad, TravelBack;
+            public Vector3[] Baristas;
+            public float[] Windows, Lamps, ExpansionWindows, ExpansionLamps; // x positions on the back wall
+            public Vector3[] Trees;
+
+            public float PartitionZ => Counter.z;        // glass wall between the dining room and the kitchen
+            public float LaneX => LaneWallX + 2.5f;      // middle of the drive-thru lane
+            public float LaneOuterX => LaneWallX + 6f;   // far edge of the lane
+            public float SidewalkZ => -HalfDepth - 3f;
+
+            // Plants (or whatever the Art Set lists as decorations) in the corners of the shop.
+            public Vector3[] DecorationSpots => new Vector3[]
+            {
+                new(-HalfWidth + 1f, 0f, HalfDepth - 1f), new(HalfWidth - 1f, 0f, HalfDepth - 1f),
+                new(-HalfWidth + 1f, 0f, -HalfDepth + 1f), new(HalfWidth - 0.8f, 0f, -HalfDepth + 0.8f),
+                new(-HalfWidth + 1f, 0f, -2f), new(HalfWidth - 1f, 0f, -2f),
+            };
+        }
+
+        // Boba Shop: a small corner café, 22 x 20 meters.
+        private static readonly ShopLayout Small = new()
+        {
+            HalfWidth = 11f, HalfDepth = 10f,
+            DoorFrom = -5f, DoorTo = 3f,
+            StaffDoorFrom = 3f, StaffDoorTo = 5.5f,
+            LaneWallX = 18f,
+            Counter = new(-2f, 0f, 0f),
+            Seating = new(5.5f, 0f, -6.8f),
+            DriveThru = new(17f, 0f, 4f),
+            TrashCan = new(-9.5f, 0f, 1f),
+            FloorCash = new(7.5f, 0f, 2.2f),
+            PlayerStart = new(5f, 1f, 2.2f),
+            TeaBrewer = new(-8.5f, 0f, 5.5f),
+            ToppingBar = new(-4.5f, 0f, 5.5f),
+            TaroStation = new(-0.5f, 0f, 5.5f),
+            FruitBar = new(3.5f, 0f, 5.5f),
+            UpgradeDesk = new(9f, 0f, 4.5f),
+            Cashier = new(1f, 0f, 1.8f),
+            Expansion = new(7f, 0f, 8.6f),
+            MoreSeating = new(14.5f, 0f, -6f),
+            Cleaner = new(-8f, 0f, -7f),
+            DriveThruCashier = new(14f, 0f, 6.5f),
+            SecondShopPad = new(16.6f, 0f, 8.2f),
+            TravelBack = new(8f, 0f, -8f),
+            Baristas = new Vector3[] { new(-8f, 0f, 8.6f), new(-5f, 0f, 8.6f), new(-2f, 0f, 8.6f), new(1f, 0f, 8.6f), new(4f, 0f, 8.6f) },
+            Windows = new[] { -7.5f, 7.5f },
+            Lamps = new[] { -5f, 5f },
+            ExpansionWindows = new[] { 13.5f },
+            ExpansionLamps = new[] { 16.5f },
+            Trees = new Vector3[]
+            {
+                new(-15f, 0f, -12f), new(-15f, 0f, -3f), new(-15f, 0f, 6f), new(-15f, 0f, 13f),
+                new(-8f, 0f, 14f), new(0f, 0f, 14.5f), new(8f, 0f, 14f), new(15f, 0f, 14.5f), new(21f, 0f, 14f),
+                new(27f, 0f, 9f), new(27f, 0f, 0f), new(27f, 0f, -9f), new(4f, 0f, -13.5f), new(12f, 0f, -13.5f),
+            },
+        };
+
+        // Matcha House and later shops: the full 30 x 30 meter café.
+        private static readonly ShopLayout Large = new()
+        {
+            HalfWidth = 15f, HalfDepth = 15f,
+            DoorFrom = -5.5f, DoorTo = 6.5f,
+            StaffDoorFrom = 2f, StaffDoorTo = 4.5f,
+            LaneWallX = 25.5f,
+            Counter = new(-3f, 0f, 1f),
+            Seating = new(7f, 0f, -7f),
+            DriveThru = new(24.5f, 0f, 5f),
+            TrashCan = new(-8f, 0f, 2.2f),
+            FloorCash = new(8f, 0f, 3f),
+            PlayerStart = new(5f, 1f, 3f),
+            TeaBrewer = new(-9f, 0f, 7f),
+            ToppingBar = new(-4f, 0f, 7f),
+            TaroStation = new(1f, 0f, 7f),
+            FruitBar = new(6f, 0f, 7f),
+            UpgradeDesk = new(12.5f, 0f, 9f),
+            Cashier = new(0f, 0f, 2.8f),
+            Expansion = new(8f, 0f, 11.5f),
+            MoreSeating = new(20f, 0f, -8f),
+            Cleaner = new(-10f, 0f, -11f),
+            DriveThruCashier = new(21.5f, 0f, 7.5f),
+            SecondShopPad = new(18f, 0f, 11.5f),
+            TravelBack = new(12f, 0f, -12f),
+            Baristas = new Vector3[] { new(-12f, 0f, 12f), new(-8f, 0f, 12f), new(-4f, 0f, 12f), new(0f, 0f, 12f), new(4f, 0f, 12f) },
+            Windows = new[] { -11f, -5.5f, 5.5f, 11f },
+            Lamps = new[] { -8.25f, 8.25f },
+            ExpansionWindows = new[] { 18.5f },
+            ExpansionLamps = new[] { 22.5f },
+            Trees = new Vector3[]
+            {
+                new(-19f, 0f, -17f), new(-19f, 0f, -6f), new(-19f, 0f, 5f), new(-19f, 0f, 14f),
+                new(-12f, 0f, 19f), new(-2f, 0f, 19.5f), new(9f, 0f, 19f), new(19f, 0f, 19.5f), new(28f, 0f, 19f),
+                new(35f, 0f, 12f), new(35f, 0f, 1f), new(35f, 0f, -10f), new(4f, 0f, -18.5f), new(16f, 0f, -18.5f),
+            },
+        };
+
+        /// <summary>The layout of the shop being built (read by <see cref="ShopDressing"/>).</summary>
+        internal static ShopLayout Layout { get; private set; } = Large;
 
         private static readonly ShopPlan FirstShop = new()
         {
@@ -74,6 +182,7 @@ namespace BubbleTea.EditorTools
                 Grass = new Color(0.62f, 0.80f, 0.52f),
             },
             Music = MusicMaker.Track.BobaShop,
+            Layout = Small,
         };
 
         private static readonly ShopPlan SecondShop = new()
@@ -96,21 +205,8 @@ namespace BubbleTea.EditorTools
                 Grass = new Color(0.70f, 0.82f, 0.56f),
             },
             Music = MusicMaker.Track.MatchaHouse,
+            Layout = Large,
         };
-
-        // Where the bus stop stands: in the expansion for shop 1 (revealed after the
-        // drive-through), and near the front door from the start in the second shop.
-        private static readonly Vector3 SecondShopPadPosition = new(18f, 0f, 11.5f);
-        private static readonly Vector3 TravelBackPosition = new(12f, 0f, -12f);
-        private static readonly Vector3 TrashCanPosition = new(-8f, 0f, 2.2f);
-
-        // The floor plan (see CreateUnlockPads). The counter's customer side faces the front door.
-        internal static readonly Vector3 CounterPosition = new(-3f, 0f, 1f);
-        internal static readonly Vector3 SeatingPosition = new(7f, 0f, -7f);
-        internal static readonly Vector3 DriveThruPosition = new(24.5f, 0f, 5f);
-        internal const float PartitionZ = 1f;     // glass wall between the dining room and the kitchen
-        internal const float LaneWallX = 25.5f;   // wall between the expansion and the drive-thru lane
-        internal const float LaneX = 28f;         // middle of the drive-thru lane
 
         [MenuItem("Bubble Tea/Build Prototype Scene")]
         public static void Build() => BuildShop(FirstShop);
@@ -118,6 +214,157 @@ namespace BubbleTea.EditorTools
         /// <summary>Builds the Matcha House, the second shop that the first one unlocks.</summary>
         [MenuItem("Bubble Tea/Build Second Shop Scene")]
         public static void BuildSecondShop() => BuildShop(SecondShop);
+
+        /// <summary>Builds the title screen the game opens on: Play and Settings.</summary>
+        [MenuItem("Bubble Tea/Build Main Menu Scene")]
+        public static void BuildMainMenu()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var cameraGo = new GameObject("Main Camera");
+            cameraGo.tag = "MainCamera";
+            var camera = cameraGo.AddComponent<Camera>();
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(0.99f, 0.86f, 0.88f);
+            cameraGo.AddComponent<AudioListener>();
+            CreateMusic(MusicMaker.Track.BobaShop);
+            CreateEventSystem();
+
+            var canvasGo = new GameObject("Menu", typeof(RectTransform));
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1080f, 1920f);
+            scaler.matchWidthOrHeight = 0.5f;
+            canvasGo.AddComponent<GraphicRaycaster>();
+            Transform root = canvasGo.transform;
+
+            Sprite circle = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            // A soft pink background with tapioca pearls scattered around it.
+            RectTransform background = CreateUiObject("Background", root);
+            Stretch(background);
+            background.gameObject.AddComponent<Image>().color = new Color(0.99f, 0.86f, 0.88f);
+            var pearl = new Color(0.36f, 0.22f, 0.16f, 0.18f);
+            Vector2[] pearls =
+            {
+                new(0.08f, 0.92f), new(0.9f, 0.86f), new(0.15f, 0.62f), new(0.88f, 0.55f), new(0.06f, 0.3f),
+                new(0.93f, 0.22f), new(0.25f, 0.08f), new(0.72f, 0.06f), new(0.5f, 0.97f), new(0.8f, 0.38f),
+            };
+            for (int i = 0; i < pearls.Length; i++)
+            {
+                RectTransform dot = CreateUiObject("Pearl", background);
+                dot.anchorMin = dot.anchorMax = pearls[i];
+                float size = 70f + 50f * Mathf.Repeat(i * 0.618f, 1f);
+                dot.sizeDelta = new Vector2(size, size);
+                var dotImage = dot.gameObject.AddComponent<Image>();
+                dotImage.sprite = circle;
+                dotImage.color = pearl;
+                dotImage.raycastTarget = false;
+            }
+
+            // The title.
+            Text title = CreateHudText("Title", root, font, 130, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 220f, 300f, 40f, 40f);
+            title.horizontalOverflow = HorizontalWrapMode.Wrap;
+            title.text = "BUBBLE TEA\nSHOP";
+            title.color = new Color(0.91f, 0.42f, 0.53f);
+            var outline = title.gameObject.AddComponent<Outline>();
+            outline.effectColor = Color.white;
+            outline.effectDistance = new Vector2(5f, -5f);
+            title.gameObject.AddComponent<Shadow>().effectDistance = new Vector2(0f, -12f);
+
+            // A big cup of milk tea, drawn from rounded shapes, bobbing in the middle.
+            RectTransform cup = CreateUiObject("Cup", root);
+            cup.anchorMin = cup.anchorMax = new Vector2(0.5f, 0.5f);
+            cup.anchoredPosition = new Vector2(0f, 60f);
+            cup.sizeDelta = new Vector2(360f, 480f);
+            RectTransform straw = MenuShape("Straw", cup, rounded, new Color(0.95f, 0.45f, 0.55f), new Vector2(46f, 380f), new Vector2(60f, 250f));
+            straw.localRotation = Quaternion.Euler(0f, 0f, -12f);
+            MenuShape("Body", cup, rounded, new Color(0.87f, 0.72f, 0.56f), new Vector2(340f, 440f), new Vector2(0f, -20f));
+            MenuShape("Shine", cup, rounded, new Color(1f, 1f, 1f, 0.35f), new Vector2(40f, 300f), new Vector2(-115f, 10f));
+            for (int i = 0; i < 9; i++)
+            {
+                float x = -110f + (i % 5) * 55f + (i >= 5 ? 27f : 0f);
+                float y = i >= 5 ? -150f : -195f;
+                MenuShape("Pearl", cup, circle, new Color(0.27f, 0.16f, 0.12f), new Vector2(56f, 56f), new Vector2(x, y));
+            }
+            MenuShape("Lid", cup, rounded, new Color(1f, 0.97f, 0.93f), new Vector2(390f, 60f), new Vector2(0f, 210f));
+
+            // Play and Settings.
+            Button play = CreateMenuButton("Play", root, "PLAY", rounded, font, new Color(0.35f, 0.78f, 0.38f), out Text playLabel);
+            var playRect = (RectTransform)play.transform;
+            playRect.anchorMin = playRect.anchorMax = new Vector2(0.5f, 0f);
+            playRect.anchoredPosition = new Vector2(0f, 520f);
+            playRect.sizeDelta = new Vector2(620f, 180f);
+            playLabel.fontSize = 80;
+            Button settingsButton = CreateMenuButton("SettingsButton", root, "SETTINGS", rounded, font,
+                new Color(0.55f, 0.45f, 0.8f), out _);
+            var settingsRect = (RectTransform)settingsButton.transform;
+            settingsRect.anchorMin = settingsRect.anchorMax = new Vector2(0.5f, 0f);
+            settingsRect.anchoredPosition = new Vector2(0f, 300f);
+            settingsRect.sizeDelta = new Vector2(620f, 150f);
+
+            var menu = canvasGo.AddComponent<MainMenu>();
+            SetReference(menu, "playButton", play);
+            SetReference(menu, "playLabel", playLabel);
+            SetReference(menu, "bobbing", cup);
+
+            // The settings panel: sound, music and vibration (reset and GM tools stay in the shop).
+            RectTransform settingsRoot = CreateUiObject("Settings", root);
+            Stretch(settingsRoot);
+            var settings = settingsRoot.gameObject.AddComponent<SettingsMenu>();
+            RectTransform panel = CreateUiObject("Panel", settingsRoot);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = new Vector2(800f, 760f);
+            var panelImage = panel.gameObject.AddComponent<Image>();
+            panelImage.sprite = rounded;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.95f);
+            Text settingsTitle = CreateHudText("Title", panel, font, 60, TextAnchor.MiddleCenter);
+            SetTopRow(settingsTitle.rectTransform, 20f, 110f, 0f, 0f);
+            settingsTitle.text = "SETTINGS";
+            var green = new Color(0.35f, 0.78f, 0.38f);
+            Button sound = CreateMenuButton("Sound", panel, "Sound: ON", rounded, font, green, out Text soundLabel);
+            SetTopRow((RectTransform)sound.transform, 160f, 120f, 60f, 60f);
+            Button music = CreateMenuButton("Music", panel, "Music: ON", rounded, font, green, out Text musicLabel);
+            SetTopRow((RectTransform)music.transform, 310f, 120f, 60f, 60f);
+            Button vibration = CreateMenuButton("Vibration", panel, "Vibration: ON", rounded, font, green, out Text vibrationLabel);
+            SetTopRow((RectTransform)vibration.transform, 460f, 120f, 60f, 60f);
+            Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
+            SetTopRow((RectTransform)close.transform, 610f, 110f, 200f, 200f);
+            SetReference(settings, "panel", panel.gameObject);
+            SetReference(settings, "openButton", settingsButton);
+            SetReference(settings, "closeButton", close);
+            SetReference(settings, "soundButton", sound);
+            SetReference(settings, "soundLabel", soundLabel);
+            SetReference(settings, "musicButton", music);
+            SetReference(settings, "musicLabel", musicLabel);
+            SetReference(settings, "vibrationButton", vibration);
+            SetReference(settings, "vibrationLabel", vibrationLabel);
+
+            EditorSceneManager.SaveScene(scene, MenuScenePath);
+            AddSceneToBuild(MenuScenePath, 0);
+            Debug.Log($"Bubble Tea: main menu built at {MenuScenePath}. It's first in the build, so the game opens on it.");
+        }
+
+        // A rounded shape (or circle) on the main menu's cup.
+        private static RectTransform MenuShape(string name, Transform parent, Sprite sprite, Color color, Vector2 size, Vector2 position)
+        {
+            RectTransform rect = CreateUiObject(name, parent);
+            rect.sizeDelta = size;
+            rect.anchoredPosition = position;
+            var image = rect.gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.color = color;
+            image.raycastTarget = false;
+            return rect;
+        }
 
         private static void BuildShop(ShopPlan plan)
         {
@@ -131,6 +378,7 @@ namespace BubbleTea.EditorTools
                 return;
             }
 
+            Layout = plan.Layout;
             Material floorMat = GetOrCreateMaterial(plan.FloorMaterial, plan.FloorColor);
             Material playerMat = GetOrCreateMaterial("Player", new Color(0.36f, 0.62f, 0.95f));
             Material cashMat = GetOrCreateMaterial("Cash", new Color(0.35f, 0.78f, 0.38f));
@@ -166,14 +414,17 @@ namespace BubbleTea.EditorTools
             if (content.TravelBack != null)
             {
                 var stop = (GameObject)PrefabUtility.InstantiatePrefab(content.TravelBack);
-                stop.transform.position = TravelBackPosition;
+                stop.transform.position = Layout.TravelBack;
             }
             // Customers come in off the sidewalk through the front door and leave the same way.
+            float street = Layout.SidewalkZ;
             CreateCustomerSpawner("CustomerSpawner", "Main", content.CustomerPrefab,
-                new Vector3(CounterPosition.x, 0f, -18f), new Vector3(1f, 0f, -18f), secondsBetween: 3f, max: 4);
+                new Vector3(Layout.Counter.x, 0f, street), new Vector3((Layout.DoorFrom + Layout.DoorTo) / 2f, 0f, street),
+                secondsBetween: 3f, max: 4);
             // Cars turn in from the road, drive up the lane past the window and out the far end.
             CreateCustomerSpawner("CarSpawner", "DriveThru", content.CarPrefab,
-                new Vector3(LaneX, 0f, -22f), new Vector3(LaneX, 0f, 24f), secondsBetween: 6f, max: 3);
+                new Vector3(Layout.LaneX, 0f, street - 4f), new Vector3(Layout.LaneX, 0f, Layout.HalfDepth + 9f),
+                secondsBetween: 6f, max: 3);
             UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
             CreateUpgradePanel(hud, upgrades, content.Upgrades);
             OfflineEarnings offlineEarnings = CreateOfflineEarnings(wallet);
@@ -193,7 +444,10 @@ namespace BubbleTea.EditorTools
             CreateGameOverPopup(hud, rating, saveManager);
 
             EditorSceneManager.SaveScene(scene, plan.ScenePath);
-            AddSceneToBuild(plan.ScenePath, first: plan.Number == 1);
+            // The first shop goes first in the build, right after the main menu if there is one.
+            EditorBuildSettingsScene[] inBuild = EditorBuildSettings.scenes;
+            bool menuFirst = inBuild.Length > 0 && inBuild[0].path == MenuScenePath;
+            AddSceneToBuild(plan.ScenePath, plan.Number == 1 ? (menuFirst ? 1 : 0) : -1);
             Selection.activeGameObject = player;
 
             Debug.Log($"Bubble Tea: shop {plan.Number} built at {plan.ScenePath}. Press Play to try it.");
@@ -226,61 +480,61 @@ namespace BubbleTea.EditorTools
         {
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
             floor.name = "Floor";
-            floor.transform.localScale = new Vector3(3f, 1f, 3f); // 30 x 30 meters
+            floor.transform.localScale = new Vector3(Layout.HalfWidth / 5f, 1f, Layout.HalfDepth / 5f); // a plane is 10 x 10 meters
             floor.GetComponent<Renderer>().sharedMaterial = material;
         }
 
-        // Low walls around the 30 x 30 m shop so nobody walks off the edge. Returns the east
-        // wall, which the Expand Shop pad removes.
+        // Low walls around the shop so nobody walks off the edge. Returns the east wall,
+        // which the Expand Shop pad removes.
         private static GameObject CreateWalls(Material wallMat)
         {
             var root = new GameObject("Walls");
+            float w = Layout.HalfWidth, d = Layout.HalfDepth, from = Layout.DoorFrom, to = Layout.DoorTo;
             // The back wall is tall (windows, sign); the others stay low so they never hide the shop.
             // The front (south) wall has a wide doorway; an invisible bar across it keeps the
             // player inside (customers don't use physics, so they walk through it).
-            CreateWall(root.transform, "North", new Vector3(0f, 1.5f, 15.25f), new Vector3(30.5f, 3f, 0.5f), wallMat);
-            CreateWall(root.transform, "South (west of door)", new Vector3(-10.375f, 0.5f, -15.25f), new Vector3(9.75f, 1f, 0.5f), wallMat);
-            CreateWall(root.transform, "South (east of door)", new Vector3(10.875f, 0.5f, -15.25f), new Vector3(8.75f, 1f, 0.5f), wallMat);
-            CreateBlocker(root.transform, "Door (keeps the player in)", new Vector3(0.5f, 1f, -15.25f), new Vector3(12f, 2f, 0.5f));
-            CreateWall(root.transform, "West", new Vector3(-15.25f, 0.5f, 0f), new Vector3(0.5f, 1f, 30.5f), wallMat);
-            return CreateWall(root.transform, "East (opens with Expand Shop)", new Vector3(15.25f, 0.5f, 0f),
-                new Vector3(0.5f, 1f, 30.5f), wallMat);
+            CreateWall(root.transform, "North", new Vector3(0f, 1.5f, d + 0.25f), new Vector3(2f * w + 0.5f, 3f, 0.5f), wallMat);
+            CreateWall(root.transform, "South (west of door)", new Vector3((-w - 0.25f + from) / 2f, 0.5f, -d - 0.25f),
+                new Vector3(from + w + 0.25f, 1f, 0.5f), wallMat);
+            CreateWall(root.transform, "South (east of door)", new Vector3((w + 0.25f + to) / 2f, 0.5f, -d - 0.25f),
+                new Vector3(w + 0.25f - to, 1f, 0.5f), wallMat);
+            CreateBlocker(root.transform, "Door (keeps the player in)", new Vector3((from + to) / 2f, 1f, -d - 0.25f),
+                new Vector3(to - from, 2f, 0.5f));
+            CreateWall(root.transform, "West", new Vector3(-w - 0.25f, 0.5f, 0f), new Vector3(0.5f, 1f, 2f * d + 0.5f), wallMat);
+            return CreateWall(root.transform, "East (opens with Expand Shop)", new Vector3(w + 0.25f, 0.5f, 0f),
+                new Vector3(0.5f, 1f, 2f * d + 0.5f), wallMat);
         }
 
-        // The extra 16 x 30 m to the east, hidden until Expand Shop is bought.
+        // The extra space to the east, hidden until Expand Shop is bought.
         private static GameObject CreateExpansionArea(Material wallMat, Material expansionFloor)
         {
             var root = new GameObject("Expansion Area");
+            float w = Layout.HalfWidth, d = Layout.HalfDepth, laneWall = Layout.LaneWallX;
 
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
             floor.name = "Floor";
             floor.transform.SetParent(root.transform, false);
-            floor.transform.localPosition = new Vector3(23f, 0f, 0f);
-            floor.transform.localScale = new Vector3(1.6f, 1f, 3f); // 16 x 30 meters
+            floor.transform.localPosition = new Vector3((w + Layout.LaneOuterX) / 2f, 0f, 0f);
+            floor.transform.localScale = new Vector3((Layout.LaneOuterX - w) / 10f, 1f, d / 5f);
             floor.GetComponent<Renderer>().sharedMaterial = expansionFloor;
 
             // The building ends at the lane wall; the lane outside runs the full length, open at both ends.
-            float buildingLength = LaneWallX - 15f;
-            CreateWall(root.transform, "North", new Vector3(15f + buildingLength / 2f, 1.5f, 15.25f), new Vector3(buildingLength, 3f, 0.5f), wallMat);
-            CreateWall(root.transform, "South", new Vector3(15f + buildingLength / 2f, 0.5f, -15.25f), new Vector3(buildingLength, 1f, 0.5f), wallMat);
+            float buildingLength = laneWall - w;
+            CreateWall(root.transform, "North", new Vector3(w + buildingLength / 2f, 1.5f, d + 0.25f), new Vector3(buildingLength, 3f, 0.5f), wallMat);
+            CreateWall(root.transform, "South", new Vector3(w + buildingLength / 2f, 0.5f, -d - 0.25f), new Vector3(buildingLength, 1f, 0.5f), wallMat);
             // The lane wall, with a gap for the drive-thru window.
-            float windowFrom = DriveThruPosition.z - 1.2f, windowTo = DriveThruPosition.z + 1.2f;
-            CreateWall(root.transform, "Lane Wall (south)", new Vector3(LaneWallX + 0.25f, 1.2f, (-15.5f + windowFrom) / 2f),
-                new Vector3(0.5f, 2.4f, windowFrom + 15.5f), wallMat);
-            CreateWall(root.transform, "Lane Wall (north)", new Vector3(LaneWallX + 0.25f, 1.2f, (windowTo + 15.5f) / 2f),
-                new Vector3(0.5f, 2.4f, 15.5f - windowTo), wallMat);
-            CreateBlocker(root.transform, "Window (keeps the player in)", new Vector3(LaneWallX + 0.25f, 1f, DriveThruPosition.z),
+            float windowZ = Layout.DriveThru.z;
+            float windowFrom = windowZ - 1.2f, windowTo = windowZ + 1.2f, end = d + 0.5f;
+            CreateWall(root.transform, "Lane Wall (south)", new Vector3(laneWall + 0.25f, 1.2f, (-end + windowFrom) / 2f),
+                new Vector3(0.5f, 2.4f, windowFrom + end), wallMat);
+            CreateWall(root.transform, "Lane Wall (north)", new Vector3(laneWall + 0.25f, 1.2f, (windowTo + end) / 2f),
+                new Vector3(0.5f, 2.4f, end - windowTo), wallMat);
+            CreateBlocker(root.transform, "Window (keeps the player in)", new Vector3(laneWall + 0.25f, 1f, windowZ),
                 new Vector3(0.5f, 2f, 2.4f));
 
             root.SetActive(false);
             return root;
         }
-
-        // Plants (or whatever the Art Set lists as decorations) in the corners of the shop.
-        private static readonly Vector3[] DecorationSpots =
-        {
-            new(-14f, 0f, 14f), new(14f, 0f, 14f), new(-14f, 0f, -14f), new(14.2f, 0f, -14.2f), new(-14f, 0f, -2f), new(14f, 0f, -2f),
-        };
 
         private static void CreateDecorations()
         {
@@ -288,13 +542,14 @@ namespace BubbleTea.EditorTools
             if (art.Decorations.Count == 0) return;
 
             var root = new GameObject("Decorations").transform;
-            for (int i = 0; i < DecorationSpots.Length; i++)
+            Vector3[] spots = Layout.DecorationSpots;
+            for (int i = 0; i < spots.Length; i++)
             {
                 GameObject model = art.Decorations[i % art.Decorations.Count];
                 if (model == null) continue;
                 var spot = new GameObject(model.name).transform;
                 spot.SetParent(root, false);
-                spot.localPosition = DecorationSpots[i];
+                spot.localPosition = spots[i];
                 AttachLoose(model, spot, 1.2f);
             }
         }
@@ -345,7 +600,7 @@ namespace BubbleTea.EditorTools
         {
             GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             player.name = "Player";
-            player.transform.position = new Vector3(5f, 1f, 3f);
+            player.transform.position = Layout.PlayerStart;
             player.GetComponent<Renderer>().sharedMaterial = material;
 
             // The CharacterController brings its own collider.
@@ -494,11 +749,12 @@ namespace BubbleTea.EditorTools
 
         private static CashPile[] CreateCashPiles(CashBill billPrefab, Material padMaterial)
         {
-            var piles = new CashPile[CashPilePositions.Length];
+            Vector3[] spots = { Layout.FloorCash };
+            var piles = new CashPile[spots.Length];
             for (int i = 0; i < piles.Length; i++)
             {
                 var go = new GameObject($"CashPile {i + 1}");
-                go.transform.position = CashPilePositions[i];
+                go.transform.position = spots[i];
 
                 // A flat tile under the pile so you can see where cash lands.
                 GameObject spot = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -557,28 +813,28 @@ namespace BubbleTea.EditorTools
 
             // Shop 1 only: once everything else in the shop is built, a pad opens level 2 (see below).
             UnlockPad secondShopPad = content.SecondShop != null
-                ? CreatePad(content.SecondShop, SecondShopPadPosition, billPrefab, wallet, padMat)
+                ? CreatePad(content.SecondShop, Layout.SecondShopPad, billPrefab, wallet, padMat)
                 : null;
             // The drive-thru cashier's pad sits beside the drive-thru's cash pile, like the main one.
-            UnlockPad driveThruCashierPad = CreatePad(content.DriveThruCashier, new Vector3(21.5f, 0f, 7.5f), billPrefab, wallet, padMat);
+            UnlockPad driveThruCashierPad = CreatePad(content.DriveThruCashier, Layout.DriveThruCashier, billPrefab, wallet, padMat);
             // The drive-thru window sits in the lane wall, its customer side facing the cars outside.
-            UnlockPad driveThruPad = CreatePad(content.DriveThru, DriveThruPosition, billPrefab, wallet, padMat,
+            UnlockPad driveThruPad = CreatePad(content.DriveThru, Layout.DriveThru, billPrefab, wallet, padMat,
                 driveThruCashierPad);
             Turn(driveThruPad, -90f);
-            UnlockPad moreSeatingPad = CreatePad(content.MoreSeating, new Vector3(20f, 0f, -8f), billPrefab, wallet, padMat);
-            UnlockPad expansionPad = CreatePad(content.Expansion, new Vector3(8f, 0f, 11.5f), billPrefab, wallet, padMat,
+            UnlockPad moreSeatingPad = CreatePad(content.MoreSeating, Layout.MoreSeating, billPrefab, wallet, padMat);
+            UnlockPad expansionPad = CreatePad(content.Expansion, Layout.Expansion, billPrefab, wallet, padMat,
                 driveThruPad, moreSeatingPad);
             SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
             SetObjectList(expansionPad, "hideWhenUnlocked", eastWall);
             // The bars stand in a row behind the counter, turned so you serve them from the counter side.
-            UnlockPad fruitPad = CreatePad(content.FruitBar, new Vector3(6f, 0f, 7f), billPrefab, wallet, padMat,
+            UnlockPad fruitPad = CreatePad(content.FruitBar, Layout.FruitBar, billPrefab, wallet, padMat,
                 expansionPad);
             Turn(fruitPad, 180f);
-            UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(1f, 0f, 7f), billPrefab, wallet, padMat, fruitPad);
+            UnlockPad taroPad = CreatePad(content.TaroStation, Layout.TaroStation, billPrefab, wallet, padMat, fruitPad);
             Turn(taroPad, 180f);
 
             // Baristas along the back wall of the kitchen, each pad revealing the next.
-            Vector3[] baristaSpots = { new(-12f, 0f, 12f), new(-8f, 0f, 12f), new(-4f, 0f, 12f), new(0f, 0f, 12f), new(4f, 0f, 12f) };
+            Vector3[] baristaSpots = Layout.Baristas;
             var baristaPads = new UnlockPad[content.Baristas.Length];
             for (int i = baristaPads.Length - 1; i >= 0; i--)
             {
@@ -590,18 +846,18 @@ namespace BubbleTea.EditorTools
             // The decorations (Planter, Menu Board, Boba Statue) are left out for now; their
             // prefabs and data are still built, so they can come back as pads later.
             // Dining room: café tables beside the line, the cleaner's pad by the west wall.
-            UnlockPad cleanerPad = CreatePad(content.Cleaner, new Vector3(-10f, 0f, -11f), billPrefab, wallet, padMat);
-            UnlockPad seatingPad = CreatePad(content.Seating, SeatingPosition, billPrefab, wallet, padMat, cleanerPad);
-            UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(-4f, 0f, 7f), billPrefab, wallet, padMat,
+            UnlockPad cleanerPad = CreatePad(content.Cleaner, Layout.Cleaner, billPrefab, wallet, padMat);
+            UnlockPad seatingPad = CreatePad(content.Seating, Layout.Seating, billPrefab, wallet, padMat, cleanerPad);
+            UnlockPad toppingPad = CreatePad(content.ToppingBar, Layout.ToppingBar, billPrefab, wallet, padMat,
                 taroPad, seatingPad);
             Turn(toppingPad, 180f);
             // The cashier stands behind the counter beside its cash pile.
-            UnlockPad cashierPad = CreatePad(content.Cashier, CounterPosition + new Vector3(3f, 0f, 1.8f), billPrefab, wallet, padMat);
-            UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(-9f, 0f, 7f), billPrefab, wallet, padMat, toppingPad,
+            UnlockPad cashierPad = CreatePad(content.Cashier, Layout.Cashier, billPrefab, wallet, padMat);
+            UnlockPad brewerPad = CreatePad(content.TeaBrewer, Layout.TeaBrewer, billPrefab, wallet, padMat, toppingPad,
                 cashierPad);
             Turn(brewerPad, 180f);
-            UnlockPad upgradePad = CreatePad(content.UpgradeDesk, new Vector3(12.5f, 0f, 9f), billPrefab, wallet, padMat);
-            UnlockPad counterPad = CreatePad(content.Counter, CounterPosition, billPrefab, wallet, padMat,
+            UnlockPad upgradePad = CreatePad(content.UpgradeDesk, Layout.UpgradeDesk, billPrefab, wallet, padMat);
+            UnlockPad counterPad = CreatePad(content.Counter, Layout.Counter, billPrefab, wallet, padMat,
                 brewerPad, upgradePad);
 
             // Only the first pad is visible at the start.
@@ -1102,7 +1358,7 @@ namespace BubbleTea.EditorTools
         private static void CreateTrashCan(Material spotMaterial)
         {
             var go = new GameObject("TrashCan");
-            go.transform.position = TrashCanPosition;
+            go.transform.position = Layout.TrashCan;
 
             GameObject bin = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             bin.name = "Bin";
@@ -1177,7 +1433,7 @@ namespace BubbleTea.EditorTools
 
             RectTransform panel = CreateUiObject("Panel", root);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
-            panel.sizeDelta = new Vector2(800f, 1060f);
+            panel.sizeDelta = new Vector2(800f, 1210f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
             panelImage.type = Image.Type.Sliced;
@@ -1194,13 +1450,15 @@ namespace BubbleTea.EditorTools
             SetTopRow((RectTransform)music.transform, 310f, 120f, 60f, 60f);
             Button vibration = CreateMenuButton("Vibration", panel, "Vibration: ON", rounded, font, green, out Text vibrationLabel);
             SetTopRow((RectTransform)vibration.transform, 460f, 120f, 60f, 60f);
+            Button mainMenu = CreateMenuButton("MainMenu", panel, "Main Menu", rounded, font, new Color(0.91f, 0.51f, 0.60f), out _);
+            SetTopRow((RectTransform)mainMenu.transform, 610f, 120f, 60f, 60f);
             Button reset = CreateMenuButton("Reset", panel, "Reset Progress", rounded, font, new Color(0.85f, 0.35f, 0.35f),
                 out Text resetLabel);
-            SetTopRow((RectTransform)reset.transform, 610f, 120f, 60f, 60f);
+            SetTopRow((RectTransform)reset.transform, 760f, 120f, 60f, 60f);
             Button gmOpen = CreateMenuButton("GmTools", panel, "GM Tools", rounded, font, new Color(0.55f, 0.4f, 0.8f), out _);
-            SetTopRow((RectTransform)gmOpen.transform, 760f, 120f, 60f, 60f);
+            SetTopRow((RectTransform)gmOpen.transform, 910f, 120f, 60f, 60f);
             Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
-            SetTopRow((RectTransform)close.transform, 910f, 110f, 200f, 200f);
+            SetTopRow((RectTransform)close.transform, 1060f, 110f, 200f, 200f);
 
             SetReference(menu, "panel", panel.gameObject);
             SetReference(menu, "openButton", openButton);
@@ -1213,6 +1471,7 @@ namespace BubbleTea.EditorTools
             SetReference(menu, "vibrationLabel", vibrationLabel);
             SetReference(menu, "resetButton", reset);
             SetReference(menu, "resetLabel", resetLabel);
+            SetReference(menu, "mainMenuButton", mainMenu);
             SetReference(menu, "saveManager", saveManager);
 
             CreateGmPanel(root, gmOpen, rounded, font, wallet, saveManager, upgrades);
@@ -1523,11 +1782,12 @@ namespace BubbleTea.EditorTools
         }
 
         // The first shop must be scene 0 (the game starts there); other shops go after it.
-        private static void AddSceneToBuild(string path, bool first)
+        // Puts a scene in the build at this index (-1 = at the end).
+        private static void AddSceneToBuild(string path, int index)
         {
             var scenes = new System.Collections.Generic.List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             scenes.RemoveAll(s => s.path == path);
-            if (first) scenes.Insert(0, new EditorBuildSettingsScene(path, true));
+            if (index >= 0) scenes.Insert(Mathf.Min(index, scenes.Count), new EditorBuildSettingsScene(path, true));
             else scenes.Add(new EditorBuildSettingsScene(path, true));
             EditorBuildSettings.scenes = scenes.ToArray();
         }

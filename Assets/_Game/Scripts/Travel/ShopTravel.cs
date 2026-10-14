@@ -98,19 +98,6 @@ namespace BubbleTea.Travel
             fillRing.gameObject.SetActive(size > 0f);
         }
 
-        // On a phone, open the shop the player was in last time. (Skipped in the Editor so
-        // pressing Play always starts the scene you have open.)
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void ResumeLastShop()
-        {
-            if (Application.isEditor) return;
-            string last = PlayerPrefs.GetString(SaveManager.LastShopKey, "");
-            if (string.IsNullOrEmpty(last) || last == SceneManager.GetActiveScene().name) return;
-            if (!Application.CanStreamedLevelBeLoaded(last)) return;
-            Stats.Clear();
-            SceneManager.LoadScene(last);
-        }
-
         private void OnDrawGizmos()
         {
             Gizmos.color = new Color(0.4f, 0.8f, 0.5f);

@@ -7,7 +7,8 @@ namespace BubbleTea.UI
 {
     /// <summary>
     /// The settings panel opened by the button in the corner: sound, music and vibration on/off,
-    /// and a reset button that asks for a second tap before wiping your progress.
+    /// a button back to the main menu, and a reset button that asks for a second tap before
+    /// wiping your progress. The main menu uses it too, without the shop-only buttons.
     /// </summary>
     public class SettingsMenu : MonoBehaviour
     {
@@ -40,7 +41,10 @@ namespace BubbleTea.UI
 
         [SerializeField] private Text resetLabel;
 
-        [SerializeField, Tooltip("The save manager, used by the reset button.")]
+        [SerializeField, Tooltip("Saves and goes back to the main menu (hidden if the menu scene isn't built).")]
+        private Button mainMenuButton;
+
+        [SerializeField, Tooltip("The save manager, used by the reset and main menu buttons.")]
         private SaveManager saveManager;
 
         private bool confirmingReset;
@@ -53,6 +57,17 @@ namespace BubbleTea.UI
             if (musicButton != null) musicButton.onClick.AddListener(() => GameSettings.MusicOn = !GameSettings.MusicOn);
             if (vibrationButton != null) vibrationButton.onClick.AddListener(() => GameSettings.VibrationOn = !GameSettings.VibrationOn);
             if (resetButton != null) resetButton.onClick.AddListener(OnResetPressed);
+            if (mainMenuButton != null)
+            {
+                mainMenuButton.onClick.AddListener(GoToMainMenu);
+                mainMenuButton.gameObject.SetActive(MainMenu.InBuild);
+            }
+        }
+
+        private void GoToMainMenu()
+        {
+            if (saveManager != null) saveManager.Save();
+            MainMenu.Open();
         }
 
         private void OnEnable()
