@@ -30,6 +30,12 @@ namespace BubbleTea.Building
         [SerializeField, Tooltip("Pads that appear once this one is unlocked.")]
         private UnlockPad[] unlocksNext;
 
+        [SerializeField, Tooltip("Scene objects that appear once this pad is unlocked, like a new floor area.")]
+        private GameObject[] showWhenUnlocked;
+
+        [SerializeField, Tooltip("Scene objects that disappear once this pad is unlocked, like the wall in the way.")]
+        private GameObject[] hideWhenUnlocked;
+
         [SerializeField, Tooltip("Half the pad's width in meters. The player counts as 'on' the pad inside this square.")]
         private float halfSize = 1.2f;
 
@@ -147,6 +153,21 @@ namespace BubbleTea.Building
                 GameObject station = Instantiate(definition.Prefab, transform.position, transform.rotation);
                 station.name = definition.DisplayName;
                 if (animate) station.AddComponent<PopIn>();
+            }
+
+            if (showWhenUnlocked != null)
+            {
+                foreach (GameObject shown in showWhenUnlocked)
+                {
+                    if (shown != null) shown.SetActive(true);
+                }
+            }
+            if (hideWhenUnlocked != null)
+            {
+                foreach (GameObject hidden in hideWhenUnlocked)
+                {
+                    if (hidden != null) hidden.SetActive(false);
+                }
             }
 
             // Skip pads that are already unlocked, so loading a save can't bring them back.

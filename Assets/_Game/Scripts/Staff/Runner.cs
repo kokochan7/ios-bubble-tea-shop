@@ -63,17 +63,24 @@ namespace BubbleTea.Staff
             if (timer < secondsBetweenPlans) return;
             timer = 0f;
 
-            ServingCounter counter = ServingCounter.All.Count > 0 ? ServingCounter.All[0] : null;
-
             if (carrier.Stack.Count > 0)
             {
-                PlanForHeldItem(counter);
+                PlanForHeldItem();
                 return;
             }
             holdingUselessTimer = 0f;
 
-            ItemDefinition needed = counter != null ? counter.NextNeeded() : null;
-            if (needed == null) return;
+            // Serve whichever counter has a customer waiting on a drink (main shop first).
+            ServingCounter counter = null;
+            ItemDefinition needed = null;
+            foreach (ServingCounter candidate in ServingCounter.All)
+            {
+                needed = candidate.NextNeeded();
+                if (needed == null) continue;
+                counter = candidate;
+                break;
+            }
+            if (counter == null) return;
 
             // Is the drink ready somewhere? Fetch it for the counter.
             Station ready = Station.FindReady(needed);
@@ -97,13 +104,14 @@ namespace BubbleTea.Staff
         }
 
         // Already holding something (a job was cut short): find somewhere it's useful.
-        private void PlanForHeldItem(ServingCounter counter)
+        private void PlanForHeldItem()
         {
             ItemDefinition held = null;
             carrier.Stack.Contains(i => { held = i; return true; });
 
-            if (counter != null && counter.Needs(held))
+            foreach (ServingCounter counter in ServingCounter.All)
             {
+                if (!counter.Needs(held)) continue;
                 counter.Reserve(held);
                 StartDeliver(held, null, counter);
                 return;

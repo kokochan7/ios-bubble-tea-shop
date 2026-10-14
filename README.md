@@ -65,7 +65,8 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 6. For a pricier drink, drop milk teas at the **Topping Bar** first. It turns them into boba milk tea, which sells for more.
 7. Each customer shows the drink they want on a bubble above their head and waits for exactly that one. The Topping Bar leads to the **Taro Station** and then the **Fruit Bar**, which add taro, taro boba and mango drinks to the orders.
 8. The Topping Bar also reveals a **Hire Runner** pad. A runner keeps the counter stocked for you, so you can focus on collecting cash. A second runner pad appears after the first.
-9. Buying the Counter also reveals the purple **Upgrades** desk. Pay for it, then stand in front of it to buy faster walking, bigger carry stacks, faster brewing and higher drink prices.
+9. After the Fruit Bar, **Expand Shop** opens the east wall onto a new area with a **Drive Thru** window. Cars queue there and pay 1.5x.
+10. Buying the Counter also reveals the purple **Upgrades** desk. Pay for it, then stand in front of it to buy faster walking, bigger carry stacks, faster brewing and higher drink prices.
 
 Your progress (money and unlocked stations) is saved as you play, so pressing Play again carries on where you stopped. To start over, stop Play and click **Bubble Tea > Delete Save Data**. If you rebuild the scene, delete the save too so the two match.
 

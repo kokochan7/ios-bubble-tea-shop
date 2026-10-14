@@ -18,6 +18,12 @@ namespace BubbleTea.Customers
         private static readonly List<ServingCounter> active = new();
         public static IReadOnlyList<ServingCounter> All => active;
 
+        [SerializeField, Tooltip("Which customer line this counter serves. A spawner with the same lane sends customers here.")]
+        private string lane = "Main";
+
+        [SerializeField, Min(0.1f), Tooltip("Multiplies what customers pay here (a drive-through might pay 1.5x).")]
+        private float priceMultiplier = 1f;
+
         [SerializeField, Tooltip("Drinks this counter sells, with their prices.")]
         private DrinkRecipe[] menu;
 
@@ -39,6 +45,18 @@ namespace BubbleTea.Customers
         private readonly List<Customer> queue = new();
         private readonly List<DrinkRecipe> orderChoices = new();
         private readonly Dictionary<ItemDefinition, int> reserved = new();
+
+        public string Lane => lane;
+
+        /// <summary>The counter serving <paramref name="laneName"/>, or null if it isn't built yet.</summary>
+        public static ServingCounter FindLane(string laneName)
+        {
+            foreach (ServingCounter counter in active)
+            {
+                if (counter.lane == laneName) return counter;
+            }
+            return null;
+        }
 
         private void OnEnable() => active.Add(this);
         private void OnDisable() => active.Remove(this);
@@ -133,7 +151,7 @@ namespace BubbleTea.Customers
         {
             drink = null;
             if (order == null || !drinks.TryTake(item => item == order.Drink, out drink)) return false;
-            if (cashPile != null) cashPile.AddValue(Mathf.RoundToInt(order.Price * Stats.Get(StatId.DrinkPrice, 1f)));
+            if (cashPile != null) cashPile.AddValue(Mathf.RoundToInt(order.Price * priceMultiplier * Stats.Get(StatId.DrinkPrice, 1f)));
             return true;
         }
 
