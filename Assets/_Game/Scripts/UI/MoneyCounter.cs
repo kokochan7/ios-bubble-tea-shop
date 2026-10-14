@@ -23,6 +23,9 @@ namespace BubbleTea.UI
         private float bounceSettleSpeed = 10f;
 
         private float bounce;
+        private Vector3 baseScale = Vector3.one;
+
+        private void Awake() => baseScale = transform.localScale; // the HUD may draw it smaller
 
         private void OnEnable()
         {
@@ -40,7 +43,7 @@ namespace BubbleTea.UI
         private void Update()
         {
             bounce = Mathf.MoveTowards(bounce, 0f, bounceSettleSpeed * Time.deltaTime);
-            transform.localScale = Vector3.one * (1f + bounce * bounceAmount);
+            transform.localScale = baseScale * (1f + bounce * bounceAmount);
         }
 
         private void Show(int amount)

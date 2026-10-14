@@ -21,6 +21,9 @@ namespace BubbleTea.Cooking
         [SerializeField, Tooltip("Whether the Carry More upgrade adds room. On for the player, off for staff.")]
         private bool usesCarryUpgrade = true;
 
+        [SerializeField, Tooltip("Optional tray shown under the items while carrying something.")]
+        private GameObject tray;
+
         public ItemStack Stack => stack;
 
         /// <summary>
@@ -46,6 +49,11 @@ namespace BubbleTea.Cooking
         {
             active.Remove(this);
             Stats.Changed -= OnStatChanged;
+        }
+
+        private void LateUpdate()
+        {
+            if (tray != null && tray.activeSelf != stack.Count > 0) tray.SetActive(stack.Count > 0);
         }
 
         private void OnStatChanged(StatId stat)

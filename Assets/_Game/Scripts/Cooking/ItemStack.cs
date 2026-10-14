@@ -5,8 +5,9 @@ using UnityEngine;
 namespace BubbleTea.Cooking
 {
     /// <summary>
-    /// A vertical pile of items at an anchor point. Used for the player's hands, station
-    /// inputs and outputs, and the serving counter.
+    /// Items laid out at an anchor point: side by side in a grid of columns and rows, and
+    /// only piled upward once every spot is taken. Used for trays, station inputs and
+    /// outputs, and the serving counter.
     /// </summary>
     [Serializable]
     public class ItemStack
@@ -17,8 +18,20 @@ namespace BubbleTea.Cooking
         [SerializeField, Min(0), Tooltip("Most items this stack holds.")]
         private int capacity = 4;
 
-        [SerializeField, Tooltip("Height of each item in the pile.")]
+        [SerializeField, Tooltip("Height of each item in the pile (at normal size).")]
         private float itemHeight = 0.32f;
+
+        [SerializeField, Min(1), Tooltip("Items side by side across (x).")]
+        private int columns = 1;
+
+        [SerializeField, Min(1), Tooltip("Rows of items, front to back (z).")]
+        private int rows = 1;
+
+        [SerializeField, Tooltip("Gap between item centers across (x) and front to back (y).")]
+        private Vector2 spacing = new(0.3f, 0.3f);
+
+        [SerializeField, Min(0.1f), Tooltip("Size of the items here (1 = normal).")]
+        private float itemScale = 1f;
 
         private List<CarriedItem> items;
         private List<CarriedItem> Items => items ??= new List<CarriedItem>();
@@ -34,7 +47,7 @@ namespace BubbleTea.Cooking
         {
             if (item == null || IsFull) return false;
             Items.Add(item);
-            item.MoveTo(anchor, SlotPosition(Items.Count - 1));
+            item.MoveTo(anchor, SlotPosition(Items.Count - 1), itemScale);
             return true;
         }
 
@@ -46,7 +59,7 @@ namespace BubbleTea.Cooking
                 if (Items[i] == null || !match(Items[i].Definition)) continue;
                 item = Items[i];
                 Items.RemoveAt(i);
-                for (int j = i; j < Items.Count; j++) Items[j].MoveTo(anchor, SlotPosition(j));
+                for (int j = i; j < Items.Count; j++) Items[j].MoveTo(anchor, SlotPosition(j), itemScale);
                 return true;
             }
             item = null;
@@ -61,7 +74,7 @@ namespace BubbleTea.Cooking
                 if (Items[i] == null || !match(Items[i].Definition)) continue;
                 item = Items[i];
                 Items.RemoveAt(i);
-                for (int j = i; j < Items.Count; j++) Items[j].MoveTo(anchor, SlotPosition(j));
+                for (int j = i; j < Items.Count; j++) Items[j].MoveTo(anchor, SlotPosition(j), itemScale);
                 return true;
             }
             item = null;
@@ -89,6 +102,19 @@ namespace BubbleTea.Cooking
             return false;
         }
 
-        private Vector3 SlotPosition(int index) => new(0f, index * itemHeight, 0f);
+        // Fills the front row left to right, then the rows behind it, then starts a layer on top.
+        private Vector3 SlotPosition(int index)
+        {
+            int across = Mathf.Max(1, columns);
+            int deep = Mathf.Max(1, rows);
+            int perLayer = across * deep;
+            int layer = index / perLayer;
+            int slot = index % perLayer;
+            int column = slot % across;
+            int row = slot / across;
+            float x = (column - (across - 1) * 0.5f) * spacing.x;
+            float z = ((deep - 1) * 0.5f - row) * spacing.y;
+            return new Vector3(x, layer * itemHeight * itemScale, z);
+        }
     }
 }

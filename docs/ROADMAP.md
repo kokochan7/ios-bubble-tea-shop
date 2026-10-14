@@ -196,3 +196,13 @@ Cozy art pass (in the style of Capybarista):
 - Counters and stations are honey-wood cabinets with carved door panels, a lighter worktop and a band in each station's color. Café tables are round and wooden, with bentwood chairs.
 - Dark plank floors (honey oak in the Matcha House), wood-board walls with thick dark caps, warm cream kitchen tiles, wooden shelves of mugs and jars on the back wall, wood window frames, a cobblestone sidewalk and deeper green grass.
 - Warm golden lighting plus a cozy color grade: soft glow, gentle contrast, warmer colors and a light vignette (`Editor/CozyLook.cs`, saved as `Assets/_Game/Settings/CozyLook.asset`).
+
+Taiwanese tea house pass and playtest fixes:
+
+- Red and gold theme: red paper lanterns along the back wall and by the front door, a red sign with gold lettering, a noren curtain over the door, lattice windows, potted bamboo, and shelves of red tea tins and celadon cups (`Editor/ShopDressing.cs`).
+- Staff (baristas, cashiers, cleaners) wear a uniform: red shirt, cream apron with a gold badge and a red cap. The player wears the red shirt too.
+- Drinks stand side by side on the bars and counter (`ItemStack` columns and rows) at 1.5x size; baristas and the player carry them on a red tray.
+- Bars hold 3 finished drinks to start; the new **Bigger Bars** upgrade adds 1 per level (`StatId.StationCapacity`).
+- The topping bar pad appears after hiring the first barista. Customers wait 30 seconds.
+- Money: bigger bills ($5 at the counter, $10 on the floor), a quieter tick at most about 8 times a second, and a cash register "ka-ching" on every sale.
+- Smaller HUD in the top corners: clock, money and stars on the left; MENU and GOALS on the right.

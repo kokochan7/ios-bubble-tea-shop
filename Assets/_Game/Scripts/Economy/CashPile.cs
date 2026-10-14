@@ -34,6 +34,7 @@ namespace BubbleTea.Economy
         private Vector3 spacing = new(0.48f, 0.06f, 0.28f);
 
         private readonly List<CashBill> stacked = new();
+        private readonly List<int> values = new(); // what each stacked bill pays (the last one of a payment may be less)
         private readonly Stack<CashBill> spare = new();
         private int created;
 
@@ -51,21 +52,39 @@ namespace BubbleTea.Economy
         /// <summary>Adds up to <paramref name="amount"/> bills on top of the pile.</summary>
         public void AddBills(int amount)
         {
-            for (int i = 0; i < amount && stacked.Count < maxBills; i++)
+            for (int i = 0; i < amount; i++)
             {
-                CashBill bill = GetFreeBill();
-                if (bill == null) return;
-                bill.PlaceIn(transform, SlotPosition(stacked.Count));
-                bill.gameObject.SetActive(true);
-                stacked.Add(bill);
+                if (!AddBill(valuePerBill)) return;
             }
         }
 
-        /// <summary>Adds enough bills to be worth at least <paramref name="amount"/>.</summary>
+        /// <summary>Adds bills worth exactly <paramref name="amount"/> (the last bill holds the change).</summary>
         public void AddValue(int amount)
         {
-            if (amount <= 0) return;
-            AddBills(Mathf.CeilToInt((float)amount / Mathf.Max(valuePerBill, 1)));
+            int perBill = Mathf.Max(valuePerBill, 1);
+            while (amount > 0)
+            {
+                int value = Mathf.Min(perBill, amount);
+                if (!AddBill(value))
+                {
+                    // Pile full: the rest goes on the top bill so no money is lost.
+                    if (values.Count > 0) values[values.Count - 1] += amount;
+                    return;
+                }
+                amount -= value;
+            }
+        }
+
+        private bool AddBill(int value)
+        {
+            if (stacked.Count >= maxBills) return false;
+            CashBill bill = GetFreeBill();
+            if (bill == null) return false;
+            bill.PlaceIn(transform, SlotPosition(stacked.Count));
+            bill.gameObject.SetActive(true);
+            stacked.Add(bill);
+            values.Add(value);
+            return true;
         }
 
         /// <summary>
@@ -77,10 +96,12 @@ namespace BubbleTea.Economy
             if (stacked.Count == 0) return false;
 
             CashBill bill = stacked[stacked.Count - 1];
+            int value = values[values.Count - 1];
             stacked.RemoveAt(stacked.Count - 1);
+            values.RemoveAt(values.Count - 1);
             bill.FlyTo(flyTarget, landed =>
             {
-                if (wallet != null) wallet.Add(valuePerBill);
+                if (wallet != null) wallet.Add(value);
                 GameEvents.RaiseCashCollected(flyTarget != null ? flyTarget.position : transform.position);
                 landed.gameObject.SetActive(false);
                 landed.transform.SetParent(transform, false);

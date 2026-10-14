@@ -20,7 +20,7 @@ namespace BubbleTea.Feedback
         [SerializeField, Tooltip("Played when a station appears. Leave empty for a generated chime.")]
         private AudioClip unlockClip;
 
-        [SerializeField, Tooltip("Played when a customer buys a drink. Leave empty for a generated ding.")]
+        [SerializeField, Tooltip("Played when a customer buys a drink. Leave empty for a generated cash register.")]
         private AudioClip saleClip;
 
         [SerializeField, Tooltip("Played when a customer tips. Leave empty for a generated sparkle.")]
@@ -52,7 +52,7 @@ namespace BubbleTea.Feedback
             if (cashClip == null) cashClip = Tone("Cash", new[] { 1320f }, 0.05f);
             if (payClip == null) payClip = Tone("Pay", new[] { 660f }, 0.04f);
             if (unlockClip == null) unlockClip = Tone("Unlock", new[] { 523f, 659f, 784f, 1047f }, 0.09f);
-            if (saleClip == null) saleClip = Tone("Sale", new[] { 988f, 1319f }, 0.08f);
+            if (saleClip == null) saleClip = Register();
             if (tipClip == null) tipClip = Tone("Tip", new[] { 1568f, 2093f, 2637f }, 0.05f);
             if (upsetClip == null) upsetClip = Tone("Upset", new[] { 392f, 311f }, 0.14f);
             if (upgradeClip == null) upgradeClip = Tone("Upgrade", new[] { 659f, 988f }, 0.1f);
@@ -84,11 +84,14 @@ namespace BubbleTea.Feedback
             GameEvents.TableCleaned -= OnCleaned;
         }
 
+        // A soft tick, at most about 8 a second, so grabbing a big pile isn't a drum roll.
         private void OnCash(Vector3 _)
         {
-            cashStreak = Time.time - lastCashTime < streakResetSeconds ? cashStreak + 1 : 0;
+            float since = Time.time - lastCashTime;
+            if (since < 0.12f) return;
+            cashStreak = since < streakResetSeconds ? cashStreak + 1 : 0;
             lastCashTime = Time.time;
-            Play(cashClip, 1f + Mathf.Min(cashStreak, 24) * 0.03f, 0.6f);
+            Play(cashClip, 1f + Mathf.Min(cashStreak, 12) * 0.03f, 0.22f);
         }
 
         // Pads pay 20 times a second; a tick every other payment is plenty.
@@ -100,7 +103,8 @@ namespace BubbleTea.Feedback
         }
 
         private void OnUnlock(Vector3 _) => Play(unlockClip, 1f, 1f);
-        private void OnSale(Vector3 _, int amount) => Play(saleClip, 1f, 0.8f);
+        // A cash register "ka-ching" when a customer pays.
+        private void OnSale(Vector3 _, int amount) => Play(saleClip, 1f, 0.7f);
         private void OnUpgrade() => Play(upgradeClip, 1f, 1f);
         private void OnBonus() => Play(unlockClip, 1f, 1f);
         private void OnTip(Vector3 _, int amount) => Play(tipClip, 1f, 0.7f);
@@ -112,6 +116,43 @@ namespace BubbleTea.Feedback
             if (clip == null || !GameSettings.SoundOn) return;
             source.pitch = pitch;
             source.PlayOneShot(clip, volume * loudness);
+        }
+
+        // A cash register: a short drawer clunk, then two bright bell strikes that ring out.
+        private static AudioClip Register()
+        {
+            const int sampleRate = 44100;
+            int length = Mathf.CeilToInt(0.55f * sampleRate);
+            var samples = new float[length];
+            var random = new System.Random(7);
+            for (int i = 0; i < length; i++)
+            {
+                float t = (float)i / sampleRate;
+                float value = 0f;
+                // Drawer clunk: a burst of low noise in the first 60 ms.
+                if (t < 0.06f)
+                {
+                    float clunk = 1f - t / 0.06f;
+                    value += ((float)random.NextDouble() * 2f - 1f) * clunk * clunk * 0.35f
+                             + Mathf.Sin(2f * Mathf.PI * 140f * t) * clunk * 0.3f;
+                }
+                // Two bell strikes ("ka" then "ching"), with inharmonic overtones like a real bell.
+                value += Bell(t - 0.05f, 2093f, 0.12f) * 0.5f;
+                value += Bell(t - 0.13f, 2637f, 0.4f);
+                samples[i] = Mathf.Clamp(value * 0.5f, -1f, 1f);
+            }
+            AudioClip clip = AudioClip.Create("Register", length, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        private static float Bell(float t, float pitch, float decay)
+        {
+            if (t < 0f) return 0f;
+            float envelope = Mathf.Exp(-t / decay);
+            return (Mathf.Sin(2f * Mathf.PI * pitch * t)
+                    + 0.5f * Mathf.Sin(2f * Mathf.PI * pitch * 2.76f * t)
+                    + 0.25f * Mathf.Sin(2f * Mathf.PI * pitch * 5.4f * t)) * envelope * 0.4f;
         }
 
         // Builds a little clip: each note in turn, as a sine wave that fades out quickly.

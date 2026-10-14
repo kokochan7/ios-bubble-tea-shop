@@ -14,9 +14,9 @@ namespace BubbleTea.Building
         [SerializeField, Tooltip("Meters above the object's position.")]
         private float height = 2f;
 
-        private Transform tag;
+        private Transform label;
 
-        /// <summary>Puts a name tag on an object, just above its top.</summary>
+        /// <summary>Puts a name label on an object, just above its top.</summary>
         public static NameTag Add(GameObject target, string text)
         {
             if (target == null || string.IsNullOrEmpty(text)) return null;
@@ -46,12 +46,12 @@ namespace BubbleTea.Building
 
         private void Start()
         {
-            tag = new GameObject("Name Tag").transform;
-            tag.SetParent(transform, false);
+            label = new GameObject("Name Tag").transform;
+            label.SetParent(transform, false);
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             // A dark copy just behind the white text, so it reads on any floor.
-            MakeText(tag, font, new Color(0.25f, 0.17f, 0.13f, 0.85f), new Vector3(0.025f, -0.025f, 0.01f));
-            MakeText(tag, font, Color.white, Vector3.zero);
+            MakeText(label, font, new Color(0.25f, 0.17f, 0.13f, 0.85f), new Vector3(0.025f, -0.025f, 0.01f));
+            MakeText(label, font, Color.white, Vector3.zero);
         }
 
         private void MakeText(Transform parent, Font font, Color color, Vector3 offset)
@@ -73,12 +73,12 @@ namespace BubbleTea.Building
 
         private void LateUpdate()
         {
-            if (tag == null) return;
+            if (label == null) return;
             // World position and size stay fixed while the object turns, grows in or walks around.
-            tag.position = transform.position + Vector3.up * height;
+            label.position = transform.position + Vector3.up * height;
             Vector3 parentScale = transform.lossyScale;
-            tag.localScale = new Vector3(SafeInverse(parentScale.x), SafeInverse(parentScale.y), SafeInverse(parentScale.z));
-            if (Camera.main != null) tag.rotation = Camera.main.transform.rotation;
+            label.localScale = new Vector3(SafeInverse(parentScale.x), SafeInverse(parentScale.y), SafeInverse(parentScale.z));
+            if (Camera.main != null) label.rotation = Camera.main.transform.rotation;
         }
 
         private static float SafeInverse(float value) => Mathf.Abs(value) > 0.001f ? 1f / value : 1f;

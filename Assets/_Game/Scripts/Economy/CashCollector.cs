@@ -15,7 +15,7 @@ namespace BubbleTea.Economy
         private float pickupRadius = 1.8f;
 
         [SerializeField, Tooltip("Delay between bills, in seconds. Smaller is faster.")]
-        private float secondsPerBill = 0.04f;
+        private float secondsPerBill = 0.08f;
 
         private float cooldown;
 

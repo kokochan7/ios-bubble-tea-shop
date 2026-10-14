@@ -177,8 +177,8 @@ namespace BubbleTea.EditorTools
             {
                 ShopName = "Boba Shop",
                 Prefix = "Shop1",
-                Accent = new Color(0.91f, 0.51f, 0.60f),
-                Accent2 = new Color(0.66f, 0.88f, 0.80f),
+                Accent = new Color(0.78f, 0.24f, 0.20f),  // Taiwanese tea house red
+                Accent2 = new Color(0.95f, 0.75f, 0.32f), // and gold
                 Grass = new Color(0.36f, 0.55f, 0.28f),
             },
             Music = MusicMaker.Track.BobaShop,
@@ -645,14 +645,17 @@ namespace BubbleTea.EditorTools
             var collector = player.AddComponent<CashCollector>();
             SetReference(collector, "wallet", wallet);
 
-            // Items the player carries pile up in front of them.
+            // Items the player carries ride on a tray in front of them.
             var hands = new GameObject("HandStack").transform;
             hands.SetParent(player.transform, false);
-            hands.localPosition = new Vector3(0f, 0.1f, 0.7f);
+            hands.localPosition = new Vector3(0f, 0.1f, 0.75f);
             var carrier = player.AddComponent<ItemCarrier>();
             var serializedCarrier = new SerializedObject(carrier);
             serializedCarrier.FindProperty("stack.anchor").objectReferenceValue = hands;
             serializedCarrier.FindProperty("stack.capacity").intValue = 1; // +1 per Carry More level, like baristas
+            // Drinks ride side by side on a tray instead of piling up.
+            SetStackGrid(serializedCarrier, "stack", 3, 2, 0.27f, 1.1f);
+            serializedCarrier.FindProperty("tray").objectReferenceValue = AddTray(hands);
             serializedCarrier.ApplyModifiedPropertiesWithoutUndo();
             return player;
         }
@@ -722,11 +725,14 @@ namespace BubbleTea.EditorTools
             safeArea.gameObject.AddComponent<BubbleTea.UI.SafeArea>();
             hud = safeArea;
 
+            // The top bar is kept small and in the corners so it doesn't hide the shop: clock,
+            // money and stars down the top-left, MENU and GOALS down the top-right.
             RectTransform panel = CreateUiObject("MoneyCounter", safeArea);
-            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 1f);
-            panel.pivot = new Vector2(0.5f, 1f);
-            panel.anchoredPosition = new Vector2(0f, -110f);
-            panel.sizeDelta = new Vector2(380f, 120f);
+            panel.anchorMin = panel.anchorMax = new Vector2(0f, 1f);
+            panel.pivot = new Vector2(0f, 1f);
+            panel.anchoredPosition = new Vector2(HudMargin, -HudMargin - 120f * HudScale - 10f);
+            panel.sizeDelta = new Vector2(330f, 120f);
+            panel.localScale = Vector3.one * HudScale;
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
             panelImage.type = Image.Type.Sliced;
@@ -782,6 +788,7 @@ namespace BubbleTea.EditorTools
                 // toward its $500 limit.
                 var pileSettings = new SerializedObject(piles[i]);
                 pileSettings.FindProperty("startingBills").intValue = 0;
+                pileSettings.FindProperty("valuePerBill").intValue = 10; // bigger bills, fewer ticks
                 pileSettings.ApplyModifiedPropertiesWithoutUndo();
             }
             return piles;
@@ -800,6 +807,7 @@ namespace BubbleTea.EditorTools
             {
                 list.GetArrayElementAtIndex(i).objectReferenceValue = piles[i];
             }
+            serialized.FindProperty("billsPerRefill").intValue = 3;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return refiller;
         }
@@ -844,16 +852,6 @@ namespace BubbleTea.EditorTools
             UnlockPad taroPad = CreatePad(content.TaroStation, Layout.TaroStation, billPrefab, wallet, padMat, fruitPad);
             Turn(taroPad, 180f);
 
-            // Baristas along the back wall of the kitchen, each pad revealing the next.
-            Vector3[] baristaSpots = Layout.Baristas;
-            var baristaPads = new UnlockPad[content.Baristas.Length];
-            for (int i = baristaPads.Length - 1; i >= 0; i--)
-            {
-                baristaPads[i] = i + 1 < baristaPads.Length
-                    ? CreatePad(content.Baristas[i], baristaSpots[i], billPrefab, wallet, padMat, baristaPads[i + 1])
-                    : CreatePad(content.Baristas[i], baristaSpots[i], billPrefab, wallet, padMat);
-            }
-
             // The decorations (Planter, Menu Board, Boba Statue) are left out for now; their
             // prefabs and data are still built, so they can come back as pads later.
             // Dining room: café tables beside the line, the cleaner's pad right beside them.
@@ -864,8 +862,19 @@ namespace BubbleTea.EditorTools
             UnlockPad toppingPad = CreatePad(content.ToppingBar, Layout.ToppingBar, billPrefab, wallet, padMat,
                 taroPad, seatingPad, cashierPad);
             Turn(toppingPad, 180f);
+            // Baristas along the back wall of the kitchen, each pad revealing the next. Hiring
+            // the first one also brings out the topping bar.
+            Vector3[] baristaSpots = Layout.Baristas;
+            var baristaPads = new UnlockPad[content.Baristas.Length];
+            for (int i = baristaPads.Length - 1; i >= 0; i--)
+            {
+                var reveals = new System.Collections.Generic.List<UnlockPad>();
+                if (i + 1 < baristaPads.Length) reveals.Add(baristaPads[i + 1]);
+                if (i == 0) reveals.Add(toppingPad);
+                baristaPads[i] = CreatePad(content.Baristas[i], baristaSpots[i], billPrefab, wallet, padMat, reveals.ToArray());
+            }
             UnlockPad upgradePad = CreatePad(content.UpgradeDesk, Layout.UpgradeDesk, billPrefab, wallet, padMat);
-            UnlockPad brewerPad = CreatePad(content.TeaBrewer, Layout.TeaBrewer, billPrefab, wallet, padMat, toppingPad,
+            UnlockPad brewerPad = CreatePad(content.TeaBrewer, Layout.TeaBrewer, billPrefab, wallet, padMat,
                 baristaPads[0], upgradePad);
             Turn(brewerPad, 180f);
             UnlockPad counterPad = CreatePad(content.Counter, Layout.Counter, billPrefab, wallet, padMat, brewerPad);
@@ -957,8 +966,9 @@ namespace BubbleTea.EditorTools
             var openRect = (RectTransform)openButton.transform;
             openRect.anchorMin = openRect.anchorMax = new Vector2(1f, 1f);
             openRect.pivot = new Vector2(1f, 1f);
-            openRect.anchoredPosition = new Vector2(-40f, -235f);
+            openRect.anchoredPosition = new Vector2(-HudMargin, -HudMargin - 110f * HudScale - 10f);
             openRect.sizeDelta = new Vector2(200f, 110f);
+            openRect.localScale = Vector3.one * HudScale;
 
             // A red "!" in the button's corner when a reward is waiting.
             RectTransform badge = CreateUiObject("Badge", openRect);
@@ -1074,10 +1084,11 @@ namespace BubbleTea.EditorTools
             const float starSize = 62f;
 
             RectTransform root = CreateUiObject("Rating", hud);
-            root.anchorMin = root.anchorMax = new Vector2(0.5f, 1f);
-            root.pivot = new Vector2(0.5f, 1f);
-            root.anchoredPosition = new Vector2(0f, -240f);
+            root.anchorMin = root.anchorMax = new Vector2(0f, 1f);
+            root.pivot = new Vector2(0f, 1f);
+            root.anchoredPosition = new Vector2(HudMargin, -HudMargin - 240f * HudScale - 20f);
             root.sizeDelta = new Vector2(5 * starSize + 130f, starSize + 10f);
+            root.localScale = Vector3.one * HudScale;
             var hitArea = root.gameObject.AddComponent<Image>();
             hitArea.color = new Color(0f, 0f, 0f, 0.25f);
             var help = root.gameObject.AddComponent<Button>();
@@ -1111,9 +1122,10 @@ namespace BubbleTea.EditorTools
             value.rectTransform.sizeDelta = new Vector2(110f, starSize);
 
             Text hint = CreateHudText("Hint", root, font, 34, TextAnchor.MiddleCenter);
-            hint.rectTransform.anchorMin = hint.rectTransform.anchorMax = new Vector2(0.5f, 0f);
-            hint.rectTransform.pivot = new Vector2(0.5f, 1f);
+            hint.rectTransform.anchorMin = hint.rectTransform.anchorMax = new Vector2(0f, 0f);
+            hint.rectTransform.pivot = new Vector2(0f, 1f);
             hint.rectTransform.anchoredPosition = new Vector2(0f, -10f);
+            hint.alignment = TextAnchor.UpperLeft;
             hint.rectTransform.sizeDelta = new Vector2(900f, 100f);
             hint.horizontalOverflow = HorizontalWrapMode.Wrap;
             hint.text = "Every customer who walks out costs a star.\nAt 0 stars your shop closes and you start over!";
@@ -1198,6 +1210,10 @@ namespace BubbleTea.EditorTools
         }
 
         // The shop clock (rush hours) and its display in the top-left corner.
+        // Size and edge gap of the top-corner HUD widgets (clock, money, stars, MENU, GOALS).
+        private const float HudScale = 0.62f;
+        private const float HudMargin = 16f;
+
         private static void CreateClock(Transform hud)
         {
             var clock = new GameObject("GameClock").AddComponent<GameClock>();
@@ -1207,8 +1223,9 @@ namespace BubbleTea.EditorTools
             RectTransform root = CreateUiObject("Clock", hud);
             root.anchorMin = root.anchorMax = new Vector2(0f, 1f);
             root.pivot = new Vector2(0f, 1f);
-            root.anchoredPosition = new Vector2(40f, -110f);
+            root.anchoredPosition = new Vector2(HudMargin, -HudMargin);
             root.sizeDelta = new Vector2(250f, 120f);
+            root.localScale = Vector3.one * HudScale;
             var back = root.gameObject.AddComponent<Image>();
             back.sprite = rounded;
             back.type = Image.Type.Sliced;
@@ -1222,9 +1239,11 @@ namespace BubbleTea.EditorTools
             day.color = new Color(0.8f, 0.8f, 0.88f);
 
             Text period = CreateHudText("Period", root, font, 36, TextAnchor.UpperLeft);
-            period.rectTransform.anchorMin = period.rectTransform.anchorMax = new Vector2(0f, 0f);
-            period.rectTransform.pivot = new Vector2(0f, 1f);
-            period.rectTransform.anchoredPosition = new Vector2(4f, -8f);
+            // Beside the clock (the money sits right under it).
+            period.rectTransform.anchorMin = period.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+            period.rectTransform.pivot = new Vector2(0f, 0.5f);
+            period.rectTransform.anchoredPosition = new Vector2(14f, 0f);
+            period.alignment = TextAnchor.MiddleLeft;
             period.rectTransform.sizeDelta = new Vector2(420f, 50f);
             period.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.7f);
 
@@ -1438,8 +1457,9 @@ namespace BubbleTea.EditorTools
             var openRect = (RectTransform)openButton.transform;
             openRect.anchorMin = openRect.anchorMax = new Vector2(1f, 1f);
             openRect.pivot = new Vector2(1f, 1f);
-            openRect.anchoredPosition = new Vector2(-40f, -110f);
+            openRect.anchoredPosition = new Vector2(-HudMargin, -HudMargin);
             openRect.sizeDelta = new Vector2(200f, 110f);
+            openRect.localScale = Vector3.one * HudScale;
 
             RectTransform panel = CreateUiObject("Panel", root);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
@@ -1776,6 +1796,44 @@ namespace BubbleTea.EditorTools
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(bill, $"{PrefabFolder}/CashBill.prefab");
             Object.DestroyImmediate(bill);
             return prefab.GetComponent<CashBill>();
+        }
+
+        // Lays a stack out side by side (columns across, rows front to back) at the given item size.
+        internal static void SetStackGrid(SerializedObject serialized, string stack, int columns, int rows,
+            float spacing, float itemScale)
+        {
+            serialized.FindProperty(stack + ".columns").intValue = columns;
+            serialized.FindProperty(stack + ".rows").intValue = rows;
+            serialized.FindProperty(stack + ".spacing").vector2Value = new Vector2(spacing, spacing);
+            serialized.FindProperty(stack + ".itemScale").floatValue = itemScale;
+        }
+
+        // A red lacquered serving tray under a carrier's hands. The ItemCarrier shows it only
+        // while something is being carried. Drinks sit in a 3 x 2 grid on top.
+        internal static GameObject AddTray(Transform hands)
+        {
+            var tray = new GameObject("Tray");
+            tray.transform.SetParent(hands, false);
+            Material lacquer = GetOrCreateMaterial("TrayLacquer", new Color(0.72f, 0.16f, 0.14f));
+            Material gold = GetOrCreateMaterial("TrayGold", new Color(0.93f, 0.72f, 0.30f));
+            TrayPart(tray.transform, new Vector3(0f, -0.02f, 0f), new Vector3(0.9f, 0.035f, 0.64f), lacquer);
+            TrayPart(tray.transform, new Vector3(0f, 0.01f, 0.31f), new Vector3(0.9f, 0.05f, 0.03f), gold);
+            TrayPart(tray.transform, new Vector3(0f, 0.01f, -0.31f), new Vector3(0.9f, 0.05f, 0.03f), gold);
+            TrayPart(tray.transform, new Vector3(0.44f, 0.01f, 0f), new Vector3(0.03f, 0.05f, 0.64f), gold);
+            TrayPart(tray.transform, new Vector3(-0.44f, 0.01f, 0f), new Vector3(0.03f, 0.05f, 0.64f), gold);
+            tray.SetActive(false);
+            return tray;
+        }
+
+        private static void TrayPart(Transform parent, Vector3 position, Vector3 size, Material material)
+        {
+            GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.DestroyImmediate(part.GetComponent<Collider>());
+            part.name = "TrayPart";
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = position;
+            part.transform.localScale = size;
+            part.GetComponent<Renderer>().sharedMaterial = material;
         }
 
         internal static Material GetOrCreateMaterial(string name, Color color)

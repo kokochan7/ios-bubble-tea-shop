@@ -116,6 +116,8 @@ namespace BubbleTea.EditorTools
                     new[] { 1f, 1.25f, 1.5f, 1.75f, 2f }, Scaled(60, 140, 280, 550)),
                 GetOrCreateUpgrade("Drink Price", StatId.DrinkPrice,
                     new[] { 1f, 1.2f, 1.4f, 1.6f, 1.8f }, Scaled(80, 180, 360, 700)),
+                GetOrCreateUpgrade("Bigger Bars", StatId.StationCapacity,
+                    new[] { 0f, 1f, 2f, 3f, 4f }, Scaled(70, 150, 300, 600)), // +1 finished drink per bar (see Station)
             };
             GameObject upgradeDesk = BuildUpgradeDeskPrefab();
             GameObject barista = BuildBaristaPrefab();
@@ -401,16 +403,21 @@ namespace BubbleTea.EditorTools
             stepList.arraySize = steps.Length;
             for (int i = 0; i < steps.Length; i++) stepList.GetArrayElementAtIndex(i).objectReferenceValue = steps[i];
 
+            // Finished drinks stand side by side along the front of the bar (the machines are at
+            // the back), big enough to read at a glance. 3 to start; Bigger Bars adds one per level.
             float edgeX = bodySize.x * 0.5f - 0.3f;
+            float outputX = inputCapacity > 0 ? bodySize.x * 0.5f - 0.62f : 0f;
             serialized.FindProperty("output.anchor").objectReferenceValue =
-                AddAnchor(root.transform, "OutputStack", new Vector3(edgeX, bodySize.y, 0.2f));
-            serialized.FindProperty("output.capacity").intValue = 4;
+                AddAnchor(root.transform, "OutputStack", new Vector3(outputX, bodySize.y, 0.18f));
+            serialized.FindProperty("output.capacity").intValue = 3;
+            SetStackGrid(serialized, "output", 4, 2, 0.3f, 1.5f);
 
             serialized.FindProperty("input.capacity").intValue = inputCapacity;
             if (inputCapacity > 0)
             {
                 serialized.FindProperty("input.anchor").objectReferenceValue =
-                    AddAnchor(root.transform, "InputStack", new Vector3(-edgeX, bodySize.y, 0.2f));
+                    AddAnchor(root.transform, "InputStack", new Vector3(-edgeX + 0.05f, bodySize.y, 0.18f));
+                SetStackGrid(serialized, "input", 2, 2, 0.3f, 1.5f);
             }
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
@@ -432,7 +439,7 @@ namespace BubbleTea.EditorTools
             var cashPile = cashGo.AddComponent<CashPile>();
             var serializedPile = new SerializedObject(cashPile);
             serializedPile.FindProperty("billPrefab").objectReferenceValue = billPrefab;
-            serializedPile.FindProperty("valuePerBill").intValue = 1;
+            serializedPile.FindProperty("valuePerBill").intValue = 5;
             serializedPile.FindProperty("startingBills").intValue = 0;
             serializedPile.FindProperty("maxBills").intValue = 90;
             serializedPile.ApplyModifiedPropertiesWithoutUndo();
@@ -446,8 +453,9 @@ namespace BubbleTea.EditorTools
             menuList.arraySize = menu.Length;
             for (int i = 0; i < menu.Length; i++) menuList.GetArrayElementAtIndex(i).objectReferenceValue = menu[i];
             serialized.FindProperty("drinks.anchor").objectReferenceValue =
-                AddAnchor(root.transform, "DrinkStack", new Vector3(-0.6f, bodySize.y, 0f));
+                AddAnchor(root.transform, "DrinkStack", new Vector3(-0.48f, bodySize.y, 0f));
             serialized.FindProperty("drinks.capacity").intValue = 8;
+            SetStackGrid(serialized, "drinks", 4, 2, 0.3f, 1.5f); // side by side, as big as the order bubbles
             serialized.FindProperty("cashPile").objectReferenceValue = cashPile;
             serialized.FindProperty("queueStart").objectReferenceValue = queueStart;
             serialized.FindProperty("lane").stringValue = lane;
@@ -542,7 +550,7 @@ namespace BubbleTea.EditorTools
             var cashPile = cashGo.AddComponent<CashPile>();
             var serializedPile = new SerializedObject(cashPile);
             serializedPile.FindProperty("billPrefab").objectReferenceValue = billPrefab;
-            serializedPile.FindProperty("valuePerBill").intValue = 1;
+            serializedPile.FindProperty("valuePerBill").intValue = 2;
             serializedPile.FindProperty("startingBills").intValue = 0;
             serializedPile.FindProperty("maxBills").intValue = 40;
             serializedPile.ApplyModifiedPropertiesWithoutUndo();
@@ -620,11 +628,14 @@ namespace BubbleTea.EditorTools
                 new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
             AddCharacterArt("Barista", root, body);
 
-            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.55f));
+            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.62f));
             var carrier = root.AddComponent<ItemCarrier>();
             var serialized = new SerializedObject(carrier);
             serialized.FindProperty("stack.anchor").objectReferenceValue = hands;
             serialized.FindProperty("stack.capacity").intValue = 1;
+            // Drinks ride side by side on a tray.
+            SetStackGrid(serialized, "stack", 3, 2, 0.27f, 1.1f);
+            serialized.FindProperty("tray").objectReferenceValue = AddTray(hands);
             serialized.FindProperty("usesCarryUpgrade").boolValue = true; // Carry More lets baristas carry more too
             serialized.ApplyModifiedPropertiesWithoutUndo();
 

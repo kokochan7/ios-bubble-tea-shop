@@ -38,8 +38,27 @@ namespace BubbleTea.Cooking
         /// <summary>0 to 1 progress on the current item (for a future progress bar).</summary>
         public float Progress => current != null ? Mathf.Clamp01(workTimer / current.Seconds) : 0f;
 
-        private void OnEnable() => active.Add(this);
-        private void OnDisable() => active.Remove(this);
+        private void OnEnable()
+        {
+            active.Add(this);
+            Stats.Changed += OnStatChanged;
+            ApplyCapacityBonus();
+        }
+
+        private void OnDisable()
+        {
+            active.Remove(this);
+            Stats.Changed -= OnStatChanged;
+        }
+
+        private void OnStatChanged(StatId stat)
+        {
+            if (stat == StatId.StationCapacity) ApplyCapacityBonus();
+        }
+
+        // The Bigger Bars upgrade adds room for one more finished drink per level.
+        private void ApplyCapacityBonus() =>
+            output.ExtraCapacity = Mathf.RoundToInt(Stats.Get(StatId.StationCapacity, 0f));
 
         public static IReadOnlyList<Station> All => active;
 

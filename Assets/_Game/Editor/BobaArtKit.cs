@@ -26,6 +26,9 @@ namespace BubbleTea.EditorTools
             public static readonly Color Cream = Hex("FFF3E3");
             public static readonly Color Blush = Hex("F6B8C4");
             public static readonly Color DeepPink = Hex("E9839A");
+            // Taiwanese tea house accents: lacquer red, lantern gold and jade.
+            public static readonly Color TeaRed = Hex("C8433A");
+            public static readonly Color Jade = Hex("4E9C7E");
             public static readonly Color Mint = Hex("A9E2CC");
             public static readonly Color DeepMint = Hex("6CC4A6");
             public static readonly Color Lavender = Hex("C7B3E8");
@@ -95,12 +98,12 @@ namespace BubbleTea.EditorTools
                 { "FruitBar", Save("FruitBar", BuildFruitBar()) },
                 { "UpgradeDesk", Save("UpgradeDesk", BuildUpgradeDesk()) },
                 { "Cup", Save("BobaCup", BuildCup()) },
-                { "Player", Save("Barista", BuildCharacter(Palette.Blush, Palette.Cream, CharacterStyle.Buns)) },
+                { "Player", Save("Barista", BuildCharacter(Palette.TeaRed, Palette.Cream, CharacterStyle.Buns)) },
                 // Customers and staff get a random look (man or woman, colors) when they appear.
                 { "Customer", Save("Customer", BuildCharacter(Palette.Butter, null, CharacterStyle.Bob, randomLook: true)) },
-                { "Barista", Save("BaristaHelper", BuildCharacter(Palette.Lavender, Palette.Cream, CharacterStyle.Headband, randomLook: true)) },
-                { "Cashier", Save("Cashier", BuildCharacter(Palette.Butter, Palette.Cream, CharacterStyle.Buns, randomLook: true)) },
-                { "Cleaner", Save("Cleaner", BuildCharacter(Palette.Mint, Palette.Cream, CharacterStyle.Cap, randomLook: true)) },
+                { "Barista", Save("BaristaHelper", BuildCharacter(Palette.TeaRed, Palette.Cream, CharacterStyle.Uniform, randomLook: true)) },
+                { "Cashier", Save("Cashier", BuildCharacter(Palette.TeaRed, Palette.Cream, CharacterStyle.Uniform, randomLook: true)) },
+                { "Cleaner", Save("Cleaner", BuildCharacter(Palette.TeaRed, Palette.Cream, CharacterStyle.Uniform, randomLook: true)) },
                 { "Car", Save("Car", BuildCar()) },
             };
             GameObject plant = Save("Plant", BuildPlant());
@@ -349,7 +352,9 @@ namespace BubbleTea.EditorTools
 
         // ---------- Characters ----------
 
-        private enum CharacterStyle { Buns, Cap, Bob, Headband }
+        // Uniform: the shop's staff uniform (red shirt, cream apron and a red cap), with a random
+        // face and hair underneath.
+        private enum CharacterStyle { Buns, Cap, Bob, Headband, Uniform }
 
         // A chibi character about 1.6 m tall, facing +Z, with an optional apron. With randomLook,
         // it has both long (woman) and short (man) hair and a CharacterLook that picks one, plus
@@ -365,6 +370,8 @@ namespace BubbleTea.EditorTools
             {
                 Box(root, "Apron", new Vector3(0f, 0.45f, 0.21f), new Vector3(0.34f, 0.44f, 0.03f), apron.Value);
                 Box(root, "Pocket", new Vector3(0f, 0.36f, 0.23f), new Vector3(0.18f, 0.1f, 0.01f), Color.Lerp(apron.Value, shirt, 0.5f));
+                // The shop's logo: a little gold boba cup badge on the chest.
+                Sphere(root, "Badge", new Vector3(0f, 0.58f, 0.235f), new Vector3(0.09f, 0.09f, 0.02f), Palette.Gold);
             }
             Transform armL = Capsule(root, "ArmL", new Vector3(-0.29f, 0.55f, 0.02f), new Vector3(0.14f, 0.2f, 0.14f), shirt);
             armL.localRotation = Quaternion.Euler(0f, 0f, -14f);
@@ -414,7 +421,7 @@ namespace BubbleTea.EditorTools
             var female = new GameObject("Female").transform;
             female.SetParent(root, false);
             Sphere(female, "LongHair", new Vector3(0f, 1.0f, -0.12f), new Vector3(0.7f, 0.66f, 0.52f), Palette.Hair);
-            if (style != CharacterStyle.Cap) Sphere(female, "Bow", new Vector3(0.24f, 1.42f, 0.05f), new Vector3(0.16f, 0.1f, 0.06f), Palette.DeepPink);
+            if (style != CharacterStyle.Cap && style != CharacterStyle.Uniform) Sphere(female, "Bow", new Vector3(0.24f, 1.42f, 0.05f), new Vector3(0.16f, 0.1f, 0.06f), Palette.DeepPink);
 
             var male = new GameObject("Male").transform;
             male.SetParent(root, false);
@@ -430,13 +437,20 @@ namespace BubbleTea.EditorTools
                     Box(root, "BagStrap", new Vector3(0f, 0.6f, 0f), new Vector3(0.06f, 0.5f, 0.47f), Palette.DarkWood);
                     Box(root, "Bag", new Vector3(0f, 0.55f, -0.27f), new Vector3(0.3f, 0.32f, 0.14f), Palette.Peach);
                     break;
+                case CharacterStyle.Uniform:
+                    Sphere(root, "Cap", new Vector3(0f, 1.32f, -0.02f), new Vector3(0.64f, 0.42f, 0.64f), Palette.TeaRed);
+                    Sphere(root, "CapBand", new Vector3(0f, 1.27f, -0.02f), new Vector3(0.66f, 0.08f, 0.66f), Palette.Gold);
+                    Box(root, "Visor", new Vector3(0f, 1.36f, 0.3f), new Vector3(0.4f, 0.03f, 0.22f), Palette.TeaRed);
+                    break;
             }
 
             var look = root.gameObject.AddComponent<BubbleTea.Feedback.CharacterLook>();
             var serialized = new SerializedObject(look);
             serialized.FindProperty("female").objectReferenceValue = female.gameObject;
             serialized.FindProperty("male").objectReferenceValue = male.gameObject;
-            SetRenderers(serialized, "shirt", root, "Body", "ArmL", "ArmR");
+            // Staff keep their uniform color; only customers get a random shirt.
+            if (style == CharacterStyle.Uniform) SetRenderers(serialized, "shirt", root);
+            else SetRenderers(serialized, "shirt", root, "Body", "ArmL", "ArmR");
             SetRenderers(serialized, "hair", root, "Hair", "Female/LongHair", "Male/Fringe");
             SetRenderers(serialized, "skin", root, "Head", "HandL", "HandR");
             serialized.ApplyModifiedPropertiesWithoutUndo();

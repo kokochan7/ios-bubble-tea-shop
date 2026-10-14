@@ -6,9 +6,10 @@ using UnityEngine.Rendering;
 namespace BubbleTea.EditorTools
 {
     /// <summary>
-    /// The look of a shop beyond its gameplay pieces: tiled floors (gray tiles in the kitchen),
-    /// striped wallpaper, wood planks in the expansion, glass walls between the dining room and
-    /// the kitchen, trim along the walls, windows, a shop sign, bunting, wall lamps,
+    /// The look of a shop beyond its gameplay pieces, styled like a Taiwanese tea house: wood
+    /// floors and paneling, glass walls between the dining room and the kitchen, trim along the
+    /// walls, lattice windows, a red and gold shop sign, red paper lanterns, bamboo plants, a
+    /// noren curtain over the front door, shelves of tea tins and celadon cups, wall lamps,
     /// swing doors on the staff entrance, the front door, the drive-thru lane, and a street with trees outside. Everything is
     /// built from primitives and textures drawn in code, so nothing needs downloading.
     /// Called by <see cref="PrototypeSceneBuilder"/> each time a shop scene is built.
@@ -23,7 +24,7 @@ namespace BubbleTea.EditorTools
         {
             public string ShopName;
             public Color Accent;      // sign, bunting, rug
-            public Color Accent2;     // second bunting color
+            public Color Accent2;     // second accent color
             public Color Grass;
             public string Prefix;     // material name prefix, so shops don't share colors
         }
@@ -47,9 +48,12 @@ namespace BubbleTea.EditorTools
             CreateShelves(root, layout.Lamps, d);
             CreateWindows(root, style, layout.Windows, d);
             CreateSign(root, style, d);
-            CreateBunting(root, style, -w + 0.5f, w - 0.5f, d);
+            CreateLanterns(root, -w + 0.5f, w - 0.5f, d, layout.Lamps);
             CreateLamps(root, style, layout.Lamps, d);
             CreateFrontDoor(root, style, layout);
+            CreateBamboo(root, new Vector3(-w + 0.7f, 0f, -d + 0.7f));
+            CreateBamboo(root, new Vector3(layout.DoorFrom - 1f, 0f, -d + 0.7f));
+            CreateBamboo(root, new Vector3(layout.DoorTo + 1f, 0f, -d + 0.7f));
             CreateKitchenFloor(root, "KitchenFloor", -w, w, layout);
             float counterX = layout.Counter.x;
             CreatePartition(root, -w, counterX - 1.3f, layout);
@@ -141,9 +145,9 @@ namespace BubbleTea.EditorTools
             Material board = Mat("ShelfWood", new Color(0.62f, 0.40f, 0.27f), 0.3f);
             Material[] mugs =
             {
-                Mat("MugTeal", new Color(0.45f, 0.78f, 0.80f), 0.6f),
+                Mat("MugTeal", new Color(0.62f, 0.80f, 0.70f), 0.7f),  // celadon tea cups
                 Mat("MugCream", new Color(0.98f, 0.94f, 0.86f), 0.6f),
-                Mat("JarGlass", new Color(0.85f, 0.93f, 0.95f), 0.9f),
+                Mat("JarGlass", new Color(0.76f, 0.20f, 0.17f), 0.5f), // red tea tins
             };
             foreach (float x in xs)
             {
@@ -155,9 +159,14 @@ namespace BubbleTea.EditorTools
                     {
                         Material mug = mugs[(i + row) % mugs.Length];
                         bool jar = mug == mugs[2];
-                        Part(root, PrimitiveType.Cylinder, jar ? "Jar" : "Mug",
-                            new Vector3(x - 0.45f + i * 0.3f, y + (jar ? 0.13f : 0.09f), wallZ - 0.16f),
+                        Vector3 spot = new(x - 0.45f + i * 0.3f, y + (jar ? 0.13f : 0.09f), wallZ - 0.16f);
+                        Part(root, PrimitiveType.Cylinder, jar ? "Tea Tin" : "Cup", spot,
                             jar ? new Vector3(0.14f, 0.1f, 0.14f) : new Vector3(0.13f, 0.065f, 0.13f), mug);
+                        if (jar)
+                        {
+                            Part(root, PrimitiveType.Cylinder, "Tin Lid", spot + new Vector3(0f, 0.105f, 0f),
+                                new Vector3(0.15f, 0.012f, 0.15f), Mat("LanternGold", new Color(0.95f, 0.75f, 0.32f), 0.7f));
+                        }
                     }
                 }
                 // Brackets under the bottom shelf.
@@ -187,6 +196,18 @@ namespace BubbleTea.EditorTools
                 Part(window, PrimitiveType.Cube, "Left", new Vector3(-width / 2f, 0f, -0.03f), new Vector3(0.1f, height, 0.08f), frame);
                 Part(window, PrimitiveType.Cube, "Right", new Vector3(width / 2f, 0f, -0.03f), new Vector3(0.1f, height, 0.08f), frame);
                 Part(window, PrimitiveType.Cube, "Middle", new Vector3(0f, 0f, -0.03f), new Vector3(0.06f, height, 0.06f), frame);
+                // A Chinese-style lattice of thin wooden bars over the glass.
+                for (int i = 1; i < 4; i++)
+                {
+                    float y = -height / 2f + i * height / 4f;
+                    Part(window, PrimitiveType.Cube, "Lattice", new Vector3(0f, y, -0.02f), new Vector3(width, 0.025f, 0.025f), frame);
+                }
+                for (int i = 1; i < 8; i++)
+                {
+                    if (i == 4) continue; // the middle bar is already there
+                    float x2 = -width / 2f + i * width / 8f;
+                    Part(window, PrimitiveType.Cube, "Lattice", new Vector3(x2, 0f, -0.02f), new Vector3(0.025f, height, 0.025f), frame);
+                }
                 Part(window, PrimitiveType.Cube, "Sill", new Vector3(0f, -height / 2f - 0.08f, -0.12f), new Vector3(width + 0.3f, 0.07f, 0.25f), sill);
 
                 // Little potted plants on the sill.
@@ -209,7 +230,7 @@ namespace BubbleTea.EditorTools
             sign.localPosition = new Vector3(0f, 2.15f, wallZ - 0.1f);
             Part(sign, PrimitiveType.Cube, "Board", Vector3.zero, new Vector3(6.4f, 1.3f, 0.12f), Mat(style.Prefix + "Accent", style.Accent, 0.4f));
             Part(sign, PrimitiveType.Cube, "Border", new Vector3(0f, 0f, 0.02f), new Vector3(6.7f, 1.6f, 0.08f),
-                Mat("TrimCream", new Color(1f, 0.96f, 0.90f), 0.3f));
+                Mat("LanternGold", new Color(0.95f, 0.75f, 0.32f), 0.7f));
 
             var label = new GameObject("Name").AddComponent<TextMesh>();
             label.transform.SetParent(sign, false);
@@ -223,31 +244,72 @@ namespace BubbleTea.EditorTools
             label.characterSize = 0.07f;
             label.anchor = TextAnchor.MiddleCenter;
             label.alignment = TextAlignment.Center;
-            label.color = Color.white;
+            label.color = new Color(1f, 0.90f, 0.62f); // gold lettering
         }
 
-        // A string of little diamond flags along the top of the back wall.
-        private static void CreateBunting(Transform root, Style style, float fromX, float toX, float wallZ)
+        // A string of red paper lanterns along the top of the back wall (the sign stays clear).
+        private static void CreateLanterns(Transform root, float fromX, float toX, float wallZ, float[] lampXs)
         {
-            Transform bunting = new GameObject("Bunting").transform;
-            bunting.SetParent(root, false);
-            Material cord = Mat("Cord", new Color(0.95f, 0.93f, 0.88f), 0.2f);
-            Material[] flags =
+            Transform lanterns = new GameObject("Lanterns").transform;
+            lanterns.SetParent(root, false);
+            Material cord = Mat("Cord", new Color(0.30f, 0.20f, 0.16f), 0.2f);
+            const float y = 2.9f;
+            float z = wallZ - 0.35f;
+            Part(lanterns, PrimitiveType.Cube, "Cord", new Vector3((fromX + toX) / 2f, y, wallZ - 0.12f),
+                new Vector3(toX - fromX, 0.03f, 0.03f), cord);
+            for (float x = fromX + 1f; x < toX - 0.5f; x += 2.2f)
             {
-                Mat(style.Prefix + "Accent", style.Accent, 0.4f),
-                Mat(style.Prefix + "Accent2", style.Accent2, 0.4f),
-                Mat("FlagCream", new Color(1f, 0.95f, 0.80f), 0.4f),
-            };
-            const float y = 2.85f;
-            float z = wallZ - 0.12f;
-            Part(bunting, PrimitiveType.Cube, "Cord", new Vector3((fromX + toX) / 2f, y, z), new Vector3(toX - fromX, 0.03f, 0.03f), cord);
-            int index = 0;
-            for (float x = fromX + 0.5f; x < toX; x += 0.9f, index++)
+                if (Mathf.Abs(x) < 3.8f) continue; // leave the sign clear
+                bool nearLamp = false;
+                foreach (float lampX in lampXs) nearLamp |= Mathf.Abs(lampX - x) < 0.7f;
+                if (nearLamp) continue;
+                Part(lanterns, PrimitiveType.Cube, "Hook", new Vector3(x, y, wallZ - 0.23f), new Vector3(0.03f, 0.03f, 0.25f), cord);
+                Lantern(lanterns, new Vector3(x, y - 0.45f, z), 1f);
+            }
+        }
+
+        // One red paper lantern with gold caps and a tassel, hanging with its top at position + 0.3 m.
+        private static void Lantern(Transform parent, Vector3 position, float size)
+        {
+            Material red = Mat("LanternRed", new Color(0.86f, 0.18f, 0.14f), 0.4f, new Color(0.9f, 0.22f, 0.10f) * 0.6f);
+            Material gold = Mat("LanternGold", new Color(0.95f, 0.75f, 0.32f), 0.7f);
+            Material cord = Mat("Cord", new Color(0.30f, 0.20f, 0.16f), 0.2f);
+            Transform lantern = new GameObject("Lantern").transform;
+            lantern.SetParent(parent, false);
+            lantern.localPosition = position;
+            lantern.localScale = Vector3.one * size;
+            Part(lantern, PrimitiveType.Cylinder, "String", new Vector3(0f, 0.38f, 0f), new Vector3(0.02f, 0.1f, 0.02f), cord);
+            Part(lantern, PrimitiveType.Sphere, "Paper", Vector3.zero, new Vector3(0.46f, 0.5f, 0.46f), red);
+            Part(lantern, PrimitiveType.Cylinder, "TopCap", new Vector3(0f, 0.25f, 0f), new Vector3(0.24f, 0.03f, 0.24f), gold);
+            Part(lantern, PrimitiveType.Cylinder, "BottomCap", new Vector3(0f, -0.25f, 0f), new Vector3(0.24f, 0.03f, 0.24f), gold);
+            Part(lantern, PrimitiveType.Cylinder, "Tassel", new Vector3(0f, -0.38f, 0f), new Vector3(0.05f, 0.1f, 0.05f), red);
+        }
+
+        // A glazed pot of bamboo: a cluster of green stalks with joints and leafy tops.
+        private static void CreateBamboo(Transform root, Vector3 position)
+        {
+            Material pot = Mat("BambooPot", new Color(0.20f, 0.28f, 0.36f), 0.7f); // blue glaze
+            Material stalk = Mat("Bamboo", new Color(0.48f, 0.68f, 0.30f), 0.3f);
+            Material joint = Mat("BambooJoint", new Color(0.38f, 0.55f, 0.24f), 0.3f);
+            Material leaf = Mat("BambooLeaf", new Color(0.36f, 0.62f, 0.32f), 0.2f);
+            Transform plant = new GameObject("Bamboo").transform;
+            plant.SetParent(root, false);
+            plant.localPosition = position;
+            Part(plant, PrimitiveType.Cylinder, "Pot", new Vector3(0f, 0.22f, 0f), new Vector3(0.6f, 0.22f, 0.6f), pot);
+            Part(plant, PrimitiveType.Cylinder, "Rim", new Vector3(0f, 0.45f, 0f), new Vector3(0.66f, 0.03f, 0.66f), pot);
+            Vector2[] spots = { new(0f, 0f), new(0.14f, 0.08f), new(-0.12f, 0.1f), new(0.06f, -0.14f), new(-0.1f, -0.08f) };
+            for (int i = 0; i < spots.Length; i++)
             {
-                if (Mathf.Abs(x) < 3.6f) continue; // leave the sign clear
-                GameObject flag = Part(bunting, PrimitiveType.Cube, "Flag", new Vector3(x, y - 0.18f, z), new Vector3(0.3f, 0.3f, 0.02f),
-                    flags[index % flags.Length]);
-                flag.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                float height = 1.5f + (i * 0.37f % 0.7f);
+                Vector3 bottom = new(spots[i].x, 0.45f, spots[i].y);
+                Part(plant, PrimitiveType.Cylinder, "Stalk", bottom + Vector3.up * (height / 2f), new Vector3(0.06f, height / 2f, 0.06f), stalk);
+                for (float y = 0.4f; y < height; y += 0.4f)
+                {
+                    Part(plant, PrimitiveType.Cylinder, "Joint", bottom + Vector3.up * y, new Vector3(0.075f, 0.012f, 0.075f), joint);
+                }
+                GameObject leaves = Part(plant, PrimitiveType.Sphere, "Leaves", bottom + Vector3.up * (height - 0.05f),
+                    new Vector3(0.45f, 0.14f, 0.22f), leaf);
+                leaves.transform.localRotation = Quaternion.Euler(0f, i * 67f, 15f);
             }
         }
 
@@ -357,6 +419,24 @@ namespace BubbleTea.EditorTools
             GameObject awning = Part(root, PrimitiveType.Cube, "Awning", new Vector3((from + to) / 2f, 2.3f, z - 0.6f),
                 new Vector3(to - from + 0.6f, 0.08f, 1.4f), Mat(style.Prefix + "Accent", style.Accent, 0.4f));
             awning.transform.localRotation = Quaternion.Euler(-15f, 0f, 0f);
+
+            // A noren: split fabric panels hanging over the doorway, and a lantern by each post.
+            Material rod = Mat("WindowFrameWood", new Color(0.42f, 0.27f, 0.21f), 0.35f);
+            Material[] cloth =
+            {
+                Mat("NorenIndigo", new Color(0.20f, 0.26f, 0.45f), 0.1f),
+                Mat(style.Prefix + "Accent", style.Accent, 0.4f),
+            };
+            Part(root, PrimitiveType.Cube, "Noren Rod", new Vector3((from + to) / 2f, 2.42f, z), new Vector3(to - from, 0.05f, 0.05f), rod);
+            int panels = Mathf.Max(3, Mathf.RoundToInt((to - from) / 1.1f));
+            float panelWidth = (to - from) / panels;
+            for (int i = 0; i < panels; i++)
+            {
+                float x = from + (i + 0.5f) * panelWidth;
+                Part(root, PrimitiveType.Cube, "Noren", new Vector3(x, 2.17f, z), new Vector3(panelWidth - 0.06f, 0.48f, 0.02f), cloth[i % 2]);
+            }
+            Lantern(root, new Vector3(from, 1.85f, z - 0.45f), 0.9f);
+            Lantern(root, new Vector3(to, 1.85f, z - 0.45f), 0.9f);
             Part(root, PrimitiveType.Cube, "Door Mat", new Vector3((from + to) / 2f, 0.005f, z + 0.95f),
                 new Vector3(4f, 0.01f, 1.2f), Mat("DoorMat", new Color(0.55f, 0.42f, 0.34f), 0.05f));
         }

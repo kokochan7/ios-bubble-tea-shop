@@ -23,5 +23,8 @@ namespace BubbleTea.Core
 
         /// <summary>Extra customers allowed in line at once (0 = none). Set by the shop rating.</summary>
         ExtraCustomers,
+
+        /// <summary>Extra finished drinks each station can hold (0 = none).</summary>
+        StationCapacity,
     }
 }
