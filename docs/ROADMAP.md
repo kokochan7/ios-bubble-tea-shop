@@ -40,3 +40,11 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 - Customers only order drinks your shop can make, so new drinks show up in orders as you unlock their stations.
 - New drinks: **Taro Milk Tea** ($12), **Taro Boba** ($20, taro tea through the Topping Bar) and **Mango Fruit Tea** ($14).
 - New stations on the pad chain after the Topping Bar: **Taro Station** ($250), then **Fruit Bar** ($400).
+
+## Milestone 4: Staff
+
+- Buying the Topping Bar reveals a **Hire Runner** pad ($300) on the left, and that one reveals **Hire Runner 2** ($600).
+- A runner (green) keeps the counter stocked: they fetch the drink the line needs from the station where it's ready. If it isn't ready anywhere, they carry the ingredient to the station that makes it, like plain milk tea to the Topping Bar for a boba order.
+- Runners carry one item at a time, never drop things at stations they just walk past, and don't double up on the same order. An item nobody needs gets thrown away after a few seconds.
+- Hired runners come back when you load your save, like stations do.
+- There's no separate cashier: customers already pay at the counter on their own, so the only manual job left is collecting the cash.

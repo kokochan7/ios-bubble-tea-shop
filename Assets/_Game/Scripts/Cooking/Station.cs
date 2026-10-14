@@ -36,6 +36,38 @@ namespace BubbleTea.Cooking
         private void OnEnable() => active.Add(this);
         private void OnDisable() => active.Remove(this);
 
+        public static IReadOnlyList<Station> All => active;
+
+        /// <summary>Where a worker stands to drop off and pick up.</summary>
+        public Vector3 ZoneCenter => zone.Center(transform);
+
+        /// <summary>True if a finished <paramref name="item"/> is waiting to be picked up here.</summary>
+        public bool HasReady(ItemDefinition item) => item != null && output.Contains(i => i == item);
+
+        /// <summary>True if this station uses <paramref name="item"/> and has room for it.</summary>
+        public bool Accepts(ItemDefinition item) => !input.IsFull && IsInput(item);
+
+        /// <summary>The input this station turns into <paramref name="product"/>, or null if it can't.</summary>
+        public ItemDefinition InputFor(ItemDefinition product)
+        {
+            if (steps == null || product == null) return null;
+            foreach (RecipeStep step in steps)
+            {
+                if (step != null && step.Input != null && step.Output == product) return step.Input;
+            }
+            return null;
+        }
+
+        /// <summary>A station with a finished <paramref name="item"/> ready, or null.</summary>
+        public static Station FindReady(ItemDefinition item)
+        {
+            foreach (Station station in active)
+            {
+                if (station.HasReady(item)) return station;
+            }
+            return null;
+        }
+
         /// <summary>True if any station in the shop produces <paramref name="item"/>.</summary>
         public static bool AnyCanMake(ItemDefinition item)
         {
@@ -99,12 +131,12 @@ namespace BubbleTea.Cooking
         // Drop off anything this station uses first; otherwise pick up a finished item.
         private bool Handoff(ItemCarrier carrier)
         {
-            if (!input.IsFull && carrier.Stack.TryTake(IsInput, out CarriedItem dropped))
+            if (!input.IsFull && carrier.WillGiveTo(this) && carrier.Stack.TryTake(IsInput, out CarriedItem dropped))
             {
                 input.Push(dropped);
                 return true;
             }
-            if (!carrier.Stack.IsFull && output.TryTake(_ => true, out CarriedItem finished))
+            if (!carrier.Stack.IsFull && output.TryTake(carrier.WillTake, out CarriedItem finished))
             {
                 carrier.Stack.Push(finished);
                 return true;

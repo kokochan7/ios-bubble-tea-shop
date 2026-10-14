@@ -21,6 +21,7 @@ This is the plan for how the prototype's code fits together. It's written so a n
 | Cooking | `Scripts/Cooking` | Items, recipe steps, drinks, item stacks (including the one the player carries), stations | Step 4 |
 | Customers | `Scripts/Customers` | Spawning, queueing at the counter, buying drinks, dropping cash | Step 4 |
 | Upgrades | `Scripts/Upgrades` | Upgrade levels, buying them, and the zone at the upgrade desk | Milestone 2 |
+| Staff | `Scripts/Staff` | Hired helpers that move items between stations and the counter | Milestone 4 |
 | Saving | `Scripts/Saving` | Writing progress to a JSON file and putting it back on start | Milestone 1 |
 
 Dependencies only point one way: Player, Economy, Building, Cooking and Customers may use Core, Upgrades uses Economy (to pay), UI and Saving may read from any of them, but Core never depends on gameplay code.
@@ -56,6 +57,10 @@ Because stations only care about "do my inputs match a step I know", new drinks 
 ## Upgrades (milestone 2)
 
 Upgrades never reach into other modules. `UpgradeManager` writes numbers into `Core/Stats` (walking speed multiplier, extra carry slots, brew speed multiplier, price multiplier), and the code that cares reads them: `PlayerMovement`, `ItemCarrier`, `Station` and `ServingCounter`. A new kind of upgrade means a new `StatId` plus one line where it's used; a new level or price is just an edit to the asset.
+
+## Staff (milestone 4)
+
+A `Runner` is just another `ItemCarrier`, so stations and the counter hand items to it through the same floor zones they use with the player. Two properties on `ItemCarrier` keep workers tidy: `GiveOnlyTo` (only drop items at this station or counter) and `TakeFilter` (only pick up this item). The counter tells workers what the line needs (`NextNeeded`) and keeps reservations so two runners don't fetch the same order. Runners are hired with ordinary unlock pads whose buildable prefab is the runner, so saving and loading them needed no new code.
 
 ## Conventions
 

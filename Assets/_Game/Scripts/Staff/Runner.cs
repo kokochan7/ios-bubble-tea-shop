@@ -1,0 +1,230 @@
+using BubbleTea.Cooking;
+using BubbleTea.Customers;
+using UnityEngine;
+
+namespace BubbleTea.Staff
+{
+    /// <summary>
+    /// A hired helper who keeps the counter stocked. Each time they're free they pick one job:
+    /// <list type="bullet">
+    /// <item>bring a drink someone in line is waiting for from the station where it's ready, or</item>
+    /// <item>if it isn't ready anywhere, carry the ingredient it needs to the station that makes it
+    /// (for example plain milk tea to the topping bar, to become boba).</item>
+    /// </list>
+    /// They swap items through the same floor zones the player uses.
+    /// </summary>
+    [RequireComponent(typeof(ItemCarrier))]
+    public class Runner : MonoBehaviour
+    {
+        [SerializeField, Tooltip("Walking speed in meters per second.")]
+        private float speed = 3.5f;
+
+        [SerializeField, Tooltip("Seconds between looking for a new job while idle.")]
+        private float secondsBetweenPlans = 0.5f;
+
+        [SerializeField, Tooltip("Seconds to wait at a zone for the hand-off before giving up on the job.")]
+        private float giveUpSeconds = 4f;
+
+        [SerializeField, Tooltip("Seconds to hold an item nobody needs before throwing it away.")]
+        private float discardSeconds = 8f;
+
+        private enum Job { None, Fetch, Deliver }
+
+        private ItemCarrier carrier;
+        private Job job;
+        private ItemDefinition item;
+        private Station pickupFrom;
+        private Station deliverToStation;
+        private ServingCounter deliverToCounter;
+        private float timer;
+        private float holdingUselessTimer;
+
+        private void Awake()
+        {
+            carrier = GetComponent<ItemCarrier>();
+            TakeNothing();
+        }
+
+        private void Update()
+        {
+            switch (job)
+            {
+                case Job.None: Plan(); break;
+                case Job.Fetch: Fetch(); break;
+                case Job.Deliver: Deliver(); break;
+            }
+        }
+
+        // ---------- Choosing a job ----------
+
+        private void Plan()
+        {
+            timer += Time.deltaTime;
+            if (timer < secondsBetweenPlans) return;
+            timer = 0f;
+
+            ServingCounter counter = ServingCounter.All.Count > 0 ? ServingCounter.All[0] : null;
+
+            if (carrier.Stack.Count > 0)
+            {
+                PlanForHeldItem(counter);
+                return;
+            }
+            holdingUselessTimer = 0f;
+
+            ItemDefinition needed = counter != null ? counter.NextNeeded() : null;
+            if (needed == null) return;
+
+            // Is the drink ready somewhere? Fetch it for the counter.
+            Station ready = Station.FindReady(needed);
+            if (ready != null)
+            {
+                counter.Reserve(needed);
+                StartFetch(needed, ready, null, counter);
+                return;
+            }
+
+            // Otherwise feed a station that turns an ingredient into it.
+            foreach (Station maker in Station.All)
+            {
+                ItemDefinition ingredient = maker.InputFor(needed);
+                if (ingredient == null || !maker.Accepts(ingredient)) continue;
+                Station source = Station.FindReady(ingredient);
+                if (source == null || source == maker) continue;
+                StartFetch(ingredient, source, maker, null);
+                return;
+            }
+        }
+
+        // Already holding something (a job was cut short): find somewhere it's useful.
+        private void PlanForHeldItem(ServingCounter counter)
+        {
+            ItemDefinition held = null;
+            carrier.Stack.Contains(i => { held = i; return true; });
+
+            if (counter != null && counter.Needs(held))
+            {
+                counter.Reserve(held);
+                StartDeliver(held, null, counter);
+                return;
+            }
+            foreach (Station station in Station.All)
+            {
+                if (!station.Accepts(held)) continue;
+                StartDeliver(held, station, null);
+                return;
+            }
+
+            holdingUselessTimer += secondsBetweenPlans;
+            if (holdingUselessTimer < discardSeconds) return;
+            holdingUselessTimer = 0f;
+            if (carrier.Stack.TryTake(_ => true, out CarriedItem junk)) Destroy(junk.gameObject);
+        }
+
+        // ---------- Doing the job ----------
+
+        private void StartFetch(ItemDefinition what, Station from, Station toStation, ServingCounter toCounter)
+        {
+            item = what;
+            pickupFrom = from;
+            deliverToStation = toStation;
+            deliverToCounter = toCounter;
+            carrier.TakeFilter = i => i == item && carrier.Stack.Count == 0;
+            timer = 0f;
+            job = Job.Fetch;
+        }
+
+        private void Fetch()
+        {
+            if (pickupFrom == null)
+            {
+                Cancel();
+                return;
+            }
+
+            if (carrier.Stack.Contains(i => i == item))
+            {
+                TakeNothing();
+                StartDeliver(item, deliverToStation, deliverToCounter);
+                return;
+            }
+
+            if (!WalkTo(pickupFrom.ZoneCenter)) return;
+            timer += Time.deltaTime;
+            if (timer >= giveUpSeconds) Cancel();
+        }
+
+        private void StartDeliver(ItemDefinition what, Station toStation, ServingCounter toCounter)
+        {
+            item = what;
+            deliverToStation = toStation;
+            deliverToCounter = toCounter;
+            carrier.GiveOnlyTo = toStation != null ? toStation : toCounter;
+            timer = 0f;
+            job = Job.Deliver;
+        }
+
+        private void Deliver()
+        {
+            Component target = deliverToStation != null ? deliverToStation : deliverToCounter;
+            if (target == null || !carrier.Stack.Contains(i => i == item))
+            {
+                // Handed over (or the destination is gone).
+                Finish();
+                return;
+            }
+
+            Vector3 spot = deliverToStation != null ? deliverToStation.ZoneCenter : deliverToCounter.ZoneCenter;
+            if (!WalkTo(spot)) return;
+            timer += Time.deltaTime;
+            if (timer >= giveUpSeconds) Finish();
+        }
+
+        private void Cancel()
+        {
+            if (deliverToCounter != null) deliverToCounter.Release(item);
+            Clear();
+        }
+
+        private void Finish()
+        {
+            if (deliverToCounter != null) deliverToCounter.Release(item);
+            Clear();
+        }
+
+        private void Clear()
+        {
+            TakeNothing();
+            item = null;
+            pickupFrom = null;
+            deliverToStation = null;
+            deliverToCounter = null;
+            timer = 0f;
+            job = Job.None;
+        }
+
+        // Between jobs the runner keeps what it holds and picks nothing up.
+        private void TakeNothing()
+        {
+            carrier.TakeFilter = _ => false;
+            carrier.GiveOnlyTo = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (deliverToCounter != null) deliverToCounter.Release(item);
+        }
+
+        // Moves toward the target on the floor. Returns true once close enough to stand in a zone.
+        private bool WalkTo(Vector3 target)
+        {
+            target.y = transform.position.y;
+            Vector3 offset = target - transform.position;
+            if (offset.sqrMagnitude < 0.09f) return true;
+
+            transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(offset), 720f * Time.deltaTime);
+            return false;
+        }
+    }
+}

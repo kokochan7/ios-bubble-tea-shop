@@ -276,14 +276,18 @@ namespace BubbleTea.EditorTools
         }
 
         // Pads in a chain: the counter reveals the tea brewer and the upgrade desk, then
-        // tea brewer -> topping bar -> taro station -> fruit bar.
+        // tea brewer -> topping bar -> taro station -> fruit bar. The topping bar also
+        // reveals the first runner, who reveals the second.
         private static UnlockPad[] CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet)
         {
             Material padMat = GetOrCreateMaterial("UnlockPad", new Color(0.97f, 0.97f, 0.97f));
 
             UnlockPad fruitPad = CreatePad(content.FruitBar, new Vector3(10f, 0f, -5f), billPrefab, wallet, padMat);
             UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(5f, 0f, -8f), billPrefab, wallet, padMat, fruitPad);
-            UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat, taroPad);
+            UnlockPad runner2Pad = CreatePad(content.Runner2, new Vector3(-10f, 0f, 5f), billPrefab, wallet, padMat);
+            UnlockPad runner1Pad = CreatePad(content.Runner1, new Vector3(-10f, 0f, 0f), billPrefab, wallet, padMat, runner2Pad);
+            UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat,
+                taroPad, runner1Pad);
             UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad);
             UnlockPad upgradePad = CreatePad(content.UpgradeDesk, new Vector3(9f, 0f, 1f), billPrefab, wallet, padMat);
             UnlockPad counterPad = CreatePad(content.Counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat,
@@ -295,7 +299,9 @@ namespace BubbleTea.EditorTools
             upgradePad.gameObject.SetActive(false);
             taroPad.gameObject.SetActive(false);
             fruitPad.gameObject.SetActive(false);
-            return new[] { counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad };
+            runner1Pad.gameObject.SetActive(false);
+            runner2Pad.gameObject.SetActive(false);
+            return new[] { counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad, runner1Pad, runner2Pad };
         }
 
         // Loads progress on Play and keeps saving it. Delete it with Bubble Tea > Delete Save Data.

@@ -3,6 +3,7 @@ using BubbleTea.Core;
 using BubbleTea.Cooking;
 using BubbleTea.Customers;
 using BubbleTea.Economy;
+using BubbleTea.Staff;
 using BubbleTea.Upgrades;
 using UnityEditor;
 using UnityEngine;
@@ -28,6 +29,8 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition ToppingBar;
             public BuildableDefinition TaroStation;
             public BuildableDefinition FruitBar;
+            public BuildableDefinition Runner1;
+            public BuildableDefinition Runner2;
             public BuildableDefinition UpgradeDesk;
             public UpgradeDefinition[] Upgrades;
             public Customer CustomerPrefab;
@@ -84,6 +87,7 @@ namespace BubbleTea.EditorTools
                     new[] { 1f, 1.2f, 1.4f, 1.6f, 1.8f }, new[] { 80, 180, 360, 700 }),
             };
             GameObject upgradeDesk = BuildUpgradeDeskPrefab();
+            GameObject runner = BuildRunnerPrefab();
 
             return new Content
             {
@@ -92,6 +96,8 @@ namespace BubbleTea.EditorTools
                 ToppingBar = GetOrCreateBuildable("Topping Bar", 150, toppingBar),
                 TaroStation = GetOrCreateBuildable("Taro Station", 250, taroStation),
                 FruitBar = GetOrCreateBuildable("Fruit Bar", 400, fruitBar),
+                Runner1 = GetOrCreateBuildable("Hire Runner", 300, runner),
+                Runner2 = GetOrCreateBuildable("Hire Runner 2", 600, runner),
                 UpgradeDesk = GetOrCreateBuildable("Upgrades", 40, upgradeDesk),
                 Upgrades = upgrades,
                 CustomerPrefab = BuildCustomerPrefab(),
@@ -270,6 +276,28 @@ namespace BubbleTea.EditorTools
                 new Color(1f, 0.85f, 0.3f));
             root.AddComponent<UpgradeZone>();
             return SavePrefab(root, $"{PrefabFolder}/Stations/UpgradeDesk.prefab");
+        }
+
+        // A green helper with an apron-colored marker, carrying one item at a time.
+        private static GameObject BuildRunnerPrefab()
+        {
+            var root = new GameObject("Runner");
+            Material green = GetOrCreateMaterial("Runner", new Color(0.30f, 0.72f, 0.55f));
+            GameObject body = AddPart(root.transform, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.8f, 0f),
+                new Vector3(0.7f, 0.8f, 0.7f), green);
+            AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
+                new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
+
+            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.55f));
+            var carrier = root.AddComponent<ItemCarrier>();
+            var serialized = new SerializedObject(carrier);
+            serialized.FindProperty("stack.anchor").objectReferenceValue = hands;
+            serialized.FindProperty("stack.capacity").intValue = 1;
+            serialized.FindProperty("usesCarryUpgrade").boolValue = false;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            root.AddComponent<Runner>();
+            return SavePrefab(root, $"{PrefabFolder}/Runner.prefab");
         }
 
         private static Customer BuildCustomerPrefab()
