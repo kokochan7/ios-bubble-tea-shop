@@ -104,3 +104,15 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 - The share (50%), the 2-hour cap and the 1-minute minimum are fields on the **OfflineEarnings** object.
 - **Bubble Tea > Test Away Pop-Up (1 hour)** shows the pop-up during Play without waiting.
 - Still to come: an optional rewarded ad to double the amount. It needs an ad network account (such as Unity LevelPlay) first, so it is a separate step.
+
+## Milestone 11: More features
+
+Kenny picked these, built one pull request at a time in this order:
+
+1. **Customer moods and tips** (done): a light beside each order turns from green to yellow to red as the customer waits. Serve them in the green and they tip half the drink's price, in the yellow a fifth. If it runs out, they say "Too slow!" and leave without buying. Patience drains slower for people further back in line. All the numbers are on the Customer and Car prefabs.
+2. Daily goals
+3. Shop rating
+4. Barista staff
+5. Seating area
+6. Second shop
+7. First-minute tutorial

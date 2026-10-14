@@ -126,9 +126,18 @@ namespace BubbleTea.Customers
         /// <summary>
         /// Picks a drink for a new customer: anything on the menu that a station in the shop
         /// can make. Before any station exists, it falls back to the first menu item.
+        /// A drink left on the counter by someone who walked out is ordered first, so it isn't wasted.
         /// </summary>
         public DrinkRecipe PickOrder()
         {
+            if (menu != null)
+            {
+                foreach (DrinkRecipe recipe in menu)
+                {
+                    if (recipe != null && drinks.CountOf(item => item == recipe.Drink) > Wanted(recipe.Drink)) return recipe;
+                }
+            }
+
             orderChoices.Clear();
             DrinkRecipe fallback = null;
             if (menu != null)
@@ -144,16 +153,18 @@ namespace BubbleTea.Customers
         }
 
         /// <summary>
-        /// Hands the customer the drink they ordered and banks their payment.
-        /// Returns false if that drink isn't on the counter yet.
+        /// Hands the customer the drink they ordered and banks their payment, plus a tip of
+        /// <paramref name="tipShare"/> times the price. Returns false if that drink isn't on the counter yet.
         /// </summary>
-        public bool TrySell(DrinkRecipe order, out CarriedItem drink)
+        public bool TrySell(DrinkRecipe order, out CarriedItem drink, float tipShare = 0f)
         {
             drink = null;
             if (order == null || !drinks.TryTake(item => item == order.Drink, out drink)) return false;
-            int paid = Mathf.RoundToInt(order.Price * priceMultiplier * Stats.Get(StatId.DrinkPrice, 1f));
-            if (cashPile != null) cashPile.AddValue(paid);
-            GameEvents.RaiseDrinkSold(transform.position, paid);
+            int price = Mathf.RoundToInt(order.Price * priceMultiplier * Stats.Get(StatId.DrinkPrice, 1f));
+            int tip = Mathf.RoundToInt(price * Mathf.Max(0f, tipShare));
+            if (cashPile != null) cashPile.AddValue(price + tip);
+            GameEvents.RaiseDrinkSold(transform.position, price + tip);
+            if (tip > 0) GameEvents.RaiseTipped(transform.position, tip);
             return true;
         }
 
