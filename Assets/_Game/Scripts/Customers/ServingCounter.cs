@@ -8,8 +8,9 @@ namespace BubbleTea.Customers
 {
     /// <summary>
     /// Where drinks are sold. Customers line up on the other side, each wanting one drink
-    /// from the menu. The player drops off drinks someone in line is waiting for, and each
-    /// customer takes theirs and pays into the counter's cash pile.
+    /// from the menu. The player drops off any drink on the menu (ones someone in line is
+    /// waiting for go first); extras wait on the counter for a later customer who orders
+    /// them. Each customer takes theirs and pays into the counter's cash pile.
     /// </summary>
     public class ServingCounter : MonoBehaviour
     {
@@ -47,6 +48,9 @@ namespace BubbleTea.Customers
         private readonly Dictionary<ItemDefinition, int> reserved = new();
 
         public string Lane => lane;
+
+        /// <summary>Where customers' payments pile up (a cashier collects from here).</summary>
+        public CashPile CashPile => cashPile;
 
         /// <summary>The counter serving <paramref name="laneName"/>, or null if it isn't built yet.</summary>
         public static ServingCounter FindLane(string laneName)
@@ -104,6 +108,9 @@ namespace BubbleTea.Customers
 
         /// <summary>True if someone in line still needs this drink.</summary>
         public bool Needs(ItemDefinition drink) => IsStillWanted(drink);
+
+        /// <summary>True if this drink is on the menu and the counter has room to keep it for a later customer.</summary>
+        public bool CanStore(ItemDefinition drink) => !drinks.IsFull && FindRecipe(drink) != null;
 
         private int Reserved(ItemDefinition drink) => reserved.TryGetValue(drink, out int count) ? count : 0;
 
@@ -179,12 +186,17 @@ namespace BubbleTea.Customers
             return true;
         }
 
-        // Only takes drinks someone in line still needs, so the counter never fills up
-        // with drinks nobody will buy.
+        // Takes drinks someone in line is waiting for first, then any other drink on the menu,
+        // which waits on the counter. New customers order a waiting drink first (see PickOrder),
+        // so nothing sits there for long.
         private bool Handoff(ItemCarrier carrier)
         {
-            if (drinks.IsFull) return false;
-            if (!carrier.WillGiveTo(this) || !carrier.Stack.TryTake(IsStillWanted, out CarriedItem drink)) return false;
+            if (drinks.IsFull || !carrier.WillGiveTo(this)) return false;
+            if (!carrier.Stack.TryTake(IsStillWanted, out CarriedItem drink) &&
+                !carrier.Stack.TryTake(item => FindRecipe(item) != null, out drink))
+            {
+                return false;
+            }
             drinks.Push(drink);
             return true;
         }

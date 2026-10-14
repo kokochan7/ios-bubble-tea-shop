@@ -58,15 +58,15 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 ## Try the prototype
 
 1. In Unity's menu bar, click **Bubble Tea > Build Prototype Scene**. It creates `Assets/_Game/Scenes/Prototype.unity` with everything wired up and opens it.
-2. Press **Play**. A new game starts with a short tutorial banner near the bottom that walks you through your first sale.
+2. Press **Play**.
 3. Click and drag anywhere in the Game view to use the joystick (or use WASD / arrow keys). Walk up to the green cash stacks and watch the bills fly to you while the counter at the top goes up.
 4. Stand on the white **Counter** pad. Your money drains into it, and when it's paid off the counter pops up and the next pad (Tea Brewer) appears. That one unlocks the Topping Bar.
 5. Once the Counter is built, customers walk in and line up behind it. Stand in front of the **Tea Brewer** to pick up the milk teas it makes, then stand in front of the **Counter** to drop them off. Each customer takes a drink and pays into the cash pile beside the counter, which you collect like any other cash.
 6. For a pricier drink, drop milk teas at the **Topping Bar** first. It turns them into boba milk tea, which sells for more.
 7. Each customer shows the drink they want on a bubble above their head and waits for exactly that one. The Topping Bar leads to the **Taro Station** and then the **Fruit Bar**, which add taro, taro boba and mango drinks to the orders.
-8. The Topping Bar also reveals a **Hire Runner** pad. A runner keeps the counter stocked for you, so you can focus on collecting cash. A second runner pad appears after the first.
+8. The Topping Bar also reveals a **Hire Runner** pad. A runner keeps the counter stocked for you, so you can focus on collecting cash. A second runner pad appears after the first. The Tea Brewer reveals a **Hire Cashier** pad: the cashier stands by the counter and banks customers' payments for you.
 9. After the Fruit Bar, **Expand Shop** opens the east wall onto a new area with a **Drive Thru** window. Cars queue there and pay 1.5x.
-10. A yellow arrow always points to the cheapest pad you can buy next. The **MENU** button (top right) turns sound and vibration on or off and can reset your progress.
+10. The **MENU** button (top right) turns sound and vibration on or off and can reset your progress.
 11. Buying the Counter also reveals the purple **Upgrades** desk. Pay for it, then stand in front of it to buy faster walking, bigger carry stacks, faster brewing and higher drink prices.
 12. After the Drive Thru, **Open Matcha House** builds a bus stop to a second shop. Click **Bubble Tea > Build Second Shop Scene** once so it has somewhere to go.
 
@@ -107,7 +107,7 @@ Assets/_Game/
     Saving/     Saving and loading progress
     Upgrades/   Upgrade levels and the upgrade desk
     Staff/      Hired helpers (runners)
-    Feedback/   Sounds, vibration, confetti, pop-ups, guide arrow
+    Feedback/   Sounds, vibration, confetti, pop-ups
     UI/         HUD, money counter, joystick visuals
 ```
 

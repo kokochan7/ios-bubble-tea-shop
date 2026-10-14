@@ -1,3 +1,4 @@
+using BubbleTea.Core;
 using BubbleTea.Cooking;
 using BubbleTea.Customers;
 using UnityEngine;
@@ -11,7 +12,9 @@ namespace BubbleTea.Staff
     /// <item>if it isn't ready anywhere, carry the ingredient it needs to the station that makes it
     /// (for example plain milk tea to the topping bar, to become boba).</item>
     /// </list>
-    /// They swap items through the same floor zones the player uses.
+    /// They swap items through the same floor zones the player uses. The Walk Speed and
+    /// Carry More upgrades apply to runners too: they walk faster and carry several of the
+    /// same item per trip.
     /// </summary>
     [RequireComponent(typeof(ItemCarrier))]
     public class Runner : MonoBehaviour
@@ -33,6 +36,7 @@ namespace BubbleTea.Staff
         private ItemCarrier carrier;
         private Job job;
         private ItemDefinition item;
+        private int want = 1; // how many of the item to pick up this trip
         private Station pickupFrom;
         private Station deliverToStation;
         private ServingCounter deliverToCounter;
@@ -87,7 +91,7 @@ namespace BubbleTea.Staff
             if (ready != null)
             {
                 counter.Reserve(needed);
-                StartFetch(needed, ready, null, counter);
+                StartFetch(needed, ready, null, counter, CarryLimit());
                 return;
             }
 
@@ -98,7 +102,7 @@ namespace BubbleTea.Staff
                 if (ingredient == null || !maker.Accepts(ingredient)) continue;
                 Station source = Station.FindReady(ingredient);
                 if (source == null || source == maker) continue;
-                StartFetch(ingredient, source, maker, null);
+                StartFetch(ingredient, source, maker, null, CarryLimit());
                 return;
             }
         }
@@ -113,6 +117,13 @@ namespace BubbleTea.Staff
             {
                 if (!counter.Needs(held)) continue;
                 counter.Reserve(held);
+                StartDeliver(held, null, counter);
+                return;
+            }
+            // Nobody is waiting for it, but the counter can keep it for a later customer.
+            foreach (ServingCounter counter in ServingCounter.All)
+            {
+                if (!counter.CanStore(held)) continue;
                 StartDeliver(held, null, counter);
                 return;
             }
@@ -131,13 +142,14 @@ namespace BubbleTea.Staff
 
         // ---------- Doing the job ----------
 
-        private void StartFetch(ItemDefinition what, Station from, Station toStation, ServingCounter toCounter)
+        private void StartFetch(ItemDefinition what, Station from, Station toStation, ServingCounter toCounter, int count)
         {
             item = what;
+            want = Mathf.Max(1, count);
             pickupFrom = from;
             deliverToStation = toStation;
             deliverToCounter = toCounter;
-            carrier.TakeFilter = i => i == item && carrier.Stack.Count == 0;
+            carrier.TakeFilter = i => i == item && carrier.Stack.Count < want;
             timer = 0f;
             job = Job.Fetch;
         }
@@ -150,7 +162,9 @@ namespace BubbleTea.Staff
                 return;
             }
 
-            if (carrier.Stack.Contains(i => i == item))
+            // Leave with a full load, or with what there is once the station has run out.
+            int held = carrier.Stack.CountOf(i => i == item);
+            if (held >= want || (held > 0 && !pickupFrom.HasReady(item)))
             {
                 TakeNothing();
                 StartDeliver(item, deliverToStation, deliverToCounter);
@@ -223,14 +237,19 @@ namespace BubbleTea.Staff
             if (deliverToCounter != null) deliverToCounter.Release(item);
         }
 
+        // One item, plus whatever the Carry More upgrade adds.
+        private static int CarryLimit() => 1 + Mathf.RoundToInt(Stats.Get(StatId.CarryBonus, 0f));
+
         // Moves toward the target on the floor. Returns true once close enough to stand in a zone.
+        // The Walk Speed upgrade speeds runners up as well.
         private bool WalkTo(Vector3 target)
         {
             target.y = transform.position.y;
             Vector3 offset = target - transform.position;
             if (offset.sqrMagnitude < 0.09f) return true;
 
-            transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+            float pace = speed * Stats.Get(StatId.MoveSpeed, 1f);
+            transform.position = Vector3.MoveTowards(transform.position, target, pace * Time.deltaTime);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(offset), 720f * Time.deltaTime);
             return false;
         }
