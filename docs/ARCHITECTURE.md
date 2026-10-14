@@ -87,6 +87,10 @@ Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-
 
 `Customer` tracks how long it has waited against `patienceSeconds` and shows it on a mood light with a MaterialPropertyBlock. `ServingCounter.TrySell` takes a tip share from the customer and raises `GameEvents.Tipped`; a customer out of patience raises `GameEvents.CustomerLeftUpset` and leaves. `PickOrder` gives a new customer any drink left on the counter by someone who walked out.
 
+## Daily goals (milestone 11)
+
+`Goals/DailyGoals` listens to `GameEvents` (`DrinkServed`, `DrinkSold`, `Tipped`, `UpgradeBought`) and advances today's `GoalState`s. Goals are rolled from a seed made from the date and sized by how many drinks the shop can make. `SaveManager` saves them (save version 4) and calls `EnsureToday` after loading. `UI/GoalsPanel` shows them.
+
 ## Conventions
 
 - Namespace: `BubbleTea.<Module>`, for example `BubbleTea.Economy`.

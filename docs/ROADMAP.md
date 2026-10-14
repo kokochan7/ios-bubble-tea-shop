@@ -110,7 +110,7 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 Kenny picked these, built one pull request at a time in this order:
 
 1. **Customer moods and tips** (done): a light beside each order turns from green to yellow to red as the customer waits. Serve them in the green and they tip half the drink's price, in the yellow a fifth. If it runs out, they say "Too slow!" and leave without buying. Patience drains slower for people further back in line. All the numbers are at the top of `Scripts/Customers/Customer.cs` (the prefabs are rebuilt from those defaults).
-2. Daily goals
+2. **Daily goals** (done): a pink GOALS button under MENU opens three goals for today, like "Sell 20 Taro Milk Tea", "Get 8 tips" or "Earn $500 from sales". Each shows its progress and a CLAIM button with its cash reward, a "!" appears on GOALS when one is ready, and a banner pops up when you finish one. New goals arrive at midnight (unclaimed finished ones are paid automatically), and they grow as you unlock more drinks.
 3. Shop rating
 4. Barista staff
 5. Seating area

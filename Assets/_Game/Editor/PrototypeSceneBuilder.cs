@@ -4,6 +4,7 @@ using BubbleTea.Cooking;
 using BubbleTea.Customers;
 using BubbleTea.Economy;
 using BubbleTea.Feedback;
+using BubbleTea.Goals;
 using BubbleTea.Player;
 using BubbleTea.Saving;
 using BubbleTea.UI;
@@ -82,9 +83,11 @@ namespace BubbleTea.EditorTools
             UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
             CreateUpgradePanel(hud, upgrades, content.Upgrades);
             OfflineEarnings offlineEarnings = CreateOfflineEarnings(wallet);
-            SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings);
+            DailyGoals dailyGoals = CreateDailyGoals(wallet, content.Menu, offlineEarnings);
+            SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings, dailyGoals);
             CreateFeedback(player.transform);
             CreateSettingsMenu(hud, saveManager);
+            CreateGoalsPanel(hud, dailyGoals);
             CreateWelcomeBackPopup(hud, offlineEarnings);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -440,13 +443,14 @@ namespace BubbleTea.EditorTools
 
         // Loads progress on Play and keeps saving it. Delete it with Bubble Tea > Delete Save Data.
         private static SaveManager CreateSaveManager(Wallet wallet, UnlockPad[] pads, UpgradeManager upgrades,
-            OfflineEarnings offlineEarnings)
+            OfflineEarnings offlineEarnings, DailyGoals dailyGoals)
         {
             var go = new GameObject("SaveManager");
             var saveManager = go.AddComponent<SaveManager>();
             SetReference(saveManager, "wallet", wallet);
             SetReference(saveManager, "upgradeManager", upgrades);
             SetReference(saveManager, "offlineEarnings", offlineEarnings);
+            SetReference(saveManager, "dailyGoals", dailyGoals);
 
             var serialized = new SerializedObject(saveManager);
             SerializedProperty list = serialized.FindProperty("pads");
@@ -454,6 +458,126 @@ namespace BubbleTea.EditorTools
             for (int i = 0; i < pads.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = pads[i];
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return saveManager;
+        }
+
+        // Three small goals a day that pay a bonus.
+        private static DailyGoals CreateDailyGoals(Wallet wallet, DrinkRecipe[] menu, OfflineEarnings earnings)
+        {
+            var goals = new GameObject("DailyGoals").AddComponent<DailyGoals>();
+            SetReference(goals, "wallet", wallet);
+            SetReference(goals, "earnings", earnings);
+            SetReferences(goals, "menu", menu);
+            return goals;
+        }
+
+        // A GOALS button under MENU that opens today's goals, plus a banner when one is finished.
+        private static void CreateGoalsPanel(Transform hud, DailyGoals goals)
+        {
+            const int rows = 3;
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform root = CreateUiObject("Goals", hud);
+            Stretch(root);
+            var view = root.gameObject.AddComponent<GoalsPanel>();
+
+            Button openButton = CreateMenuButton("GoalsButton", root, "GOALS", rounded, font, new Color(0.91f, 0.51f, 0.6f, 0.9f), out _);
+            var openRect = (RectTransform)openButton.transform;
+            openRect.anchorMin = openRect.anchorMax = new Vector2(1f, 1f);
+            openRect.pivot = new Vector2(1f, 1f);
+            openRect.anchoredPosition = new Vector2(-40f, -235f);
+            openRect.sizeDelta = new Vector2(200f, 110f);
+
+            // A red "!" in the button's corner when a reward is waiting.
+            RectTransform badge = CreateUiObject("Badge", openRect);
+            badge.anchorMin = badge.anchorMax = new Vector2(0f, 1f);
+            badge.sizeDelta = new Vector2(64f, 64f);
+            badge.anchoredPosition = new Vector2(6f, -6f);
+            var badgeImage = badge.gameObject.AddComponent<Image>();
+            badgeImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            badgeImage.color = new Color(0.9f, 0.25f, 0.25f);
+            badgeImage.raycastTarget = false;
+            Text badgeText = CreateHudText("Mark", badge, font, 44, TextAnchor.MiddleCenter);
+            Stretch(badgeText.rectTransform);
+            badgeText.text = "!";
+
+            RectTransform panel = CreateUiObject("Panel", root);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = new Vector2(940f, 220f + rows * 170f + 140f);
+            var panelImage = panel.gameObject.AddComponent<Image>();
+            panelImage.sprite = rounded;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.95f);
+
+            Text title = CreateHudText("Title", panel, font, 60, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 20f, 100f, 0f, 0f);
+            title.text = "DAILY GOALS";
+            Text hint = CreateHudText("Hint", panel, font, 32, TextAnchor.MiddleCenter);
+            SetTopRow(hint.rectTransform, 115f, 60f, 0f, 0f);
+            hint.fontStyle = FontStyle.Normal;
+            hint.color = new Color(0.8f, 0.8f, 0.85f);
+            hint.text = "New goals every day at midnight";
+
+            var descriptions = new Text[rows];
+            var progress = new Text[rows];
+            var claims = new Button[rows];
+            var claimLabels = new Text[rows];
+            for (int i = 0; i < rows; i++)
+            {
+                RectTransform row = CreateUiObject("Goal" + (i + 1), panel);
+                SetTopRow(row, 200f + i * 170f, 150f, 40f, 40f);
+                var rowImage = row.gameObject.AddComponent<Image>();
+                rowImage.sprite = rounded;
+                rowImage.type = Image.Type.Sliced;
+                rowImage.color = new Color(1f, 1f, 1f, 0.08f);
+
+                descriptions[i] = CreateHudText("Description", row, font, 40, TextAnchor.UpperLeft);
+                SetTopRow(descriptions[i].rectTransform, 18f, 60f, 30f, 300f);
+                progress[i] = CreateHudText("Progress", row, font, 36, TextAnchor.UpperLeft);
+                SetTopRow(progress[i].rectTransform, 82f, 50f, 30f, 300f);
+                progress[i].fontStyle = FontStyle.Normal;
+                progress[i].color = new Color(0.8f, 0.8f, 0.85f);
+
+                claims[i] = CreateMenuButton("Claim", row, "$0", rounded, font, new Color(0.45f, 0.45f, 0.55f), out claimLabels[i]);
+                var claimRect = (RectTransform)claims[i].transform;
+                claimRect.anchorMin = claimRect.anchorMax = new Vector2(1f, 0.5f);
+                claimRect.pivot = new Vector2(1f, 0.5f);
+                claimRect.anchoredPosition = new Vector2(-20f, 0f);
+                claimRect.sizeDelta = new Vector2(250f, 110f);
+            }
+
+            Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
+            SetTopRow((RectTransform)close.transform, 220f + rows * 170f, 110f, 250f, 250f);
+
+            // Banner under the money counter when a goal is finished.
+            Text banner = CreateHudText("Banner", root, font, 44, TextAnchor.MiddleCenter);
+            banner.rectTransform.anchorMin = banner.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            banner.rectTransform.anchoredPosition = new Vector2(0f, -330f);
+            banner.rectTransform.sizeDelta = new Vector2(1000f, 80f);
+            banner.color = new Color(1f, 0.85f, 0.3f);
+            var outline = banner.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.6f);
+
+            SetReference(view, "goals", goals);
+            SetReference(view, "panel", panel.gameObject);
+            SetReference(view, "openButton", openButton);
+            SetReference(view, "closeButton", close);
+            SetReference(view, "badge", badge.gameObject);
+            SetReferences(view, "descriptions", descriptions);
+            SetReferences(view, "progressLabels", progress);
+            SetReferences(view, "claimButtons", claims);
+            SetReferences(view, "claimLabels", claimLabels);
+            SetReference(view, "banner", banner);
+        }
+
+        // Fills a private [SerializeField] array the same way dragging items into it in the Inspector would.
+        internal static void SetReferences(Object component, string fieldName, Object[] values)
+        {
+            var serialized = new SerializedObject(component);
+            SerializedProperty list = serialized.FindProperty(fieldName);
+            list.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // Measures how fast the shop earns and pays part of it for time away.

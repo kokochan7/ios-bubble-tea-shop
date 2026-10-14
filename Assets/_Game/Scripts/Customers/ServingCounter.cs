@@ -164,6 +164,7 @@ namespace BubbleTea.Customers
             int tip = Mathf.RoundToInt(price * Mathf.Max(0f, tipShare));
             if (cashPile != null) cashPile.AddValue(price + tip);
             GameEvents.RaiseDrinkSold(transform.position, price + tip);
+            GameEvents.RaiseDrinkServed(order.Drink.name);
             if (tip > 0) GameEvents.RaiseTipped(transform.position, tip);
             return true;
         }

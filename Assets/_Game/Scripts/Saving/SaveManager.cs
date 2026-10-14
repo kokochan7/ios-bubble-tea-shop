@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using BubbleTea.Building;
 using BubbleTea.Economy;
+using BubbleTea.Goals;
 using BubbleTea.Upgrades;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -31,6 +32,9 @@ namespace BubbleTea.Saving
         [SerializeField, Tooltip("Pays for time away. Leave empty to turn that off.")]
         private OfflineEarnings offlineEarnings;
 
+        [SerializeField, Tooltip("Today's goals. Leave empty if the scene has none.")]
+        private DailyGoals dailyGoals;
+
         [SerializeField, Tooltip("Seconds between saves while money keeps changing.")]
         private float autosaveSeconds = 5f;
 
@@ -50,6 +54,7 @@ namespace BubbleTea.Saving
         {
             if (wallet != null) wallet.MoneyChanged += OnMoneyChanged;
             if (upgradeManager != null) upgradeManager.Changed += Save;
+            if (dailyGoals != null) dailyGoals.Changed += MarkDirty;
             foreach (UnlockPad pad in pads)
             {
                 if (pad == null) continue;
@@ -62,6 +67,7 @@ namespace BubbleTea.Saving
         {
             if (wallet != null) wallet.MoneyChanged -= OnMoneyChanged;
             if (upgradeManager != null) upgradeManager.Changed -= Save;
+            if (dailyGoals != null) dailyGoals.Changed -= MarkDirty;
             foreach (UnlockPad pad in pads)
             {
                 if (pad == null) continue;
@@ -74,6 +80,7 @@ namespace BubbleTea.Saving
         private void Start()
         {
             if (loadOnStart) Load();
+            if (dailyGoals != null) dailyGoals.EnsureToday();
             loaded = true;
             dirty = false;
         }
@@ -93,6 +100,7 @@ namespace BubbleTea.Saving
         private void OnApplicationQuit() => Save();
 
         private void OnMoneyChanged(int _) => dirty = true;
+        private void MarkDirty() => dirty = true;
         private void OnPadProgress(int remaining, int cost) => dirty = true;
         private void OnPadUnlocked(UnlockPad _) => Save();
 
@@ -108,7 +116,9 @@ namespace BubbleTea.Saving
                 money = (wallet != null ? wallet.Money : 0) + (offlineEarnings != null ? offlineEarnings.Pending : 0),
                 savedAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 earningsPerMinute = offlineEarnings != null ? offlineEarnings.RatePerMinute : 0f,
+                goalsDay = dailyGoals != null ? dailyGoals.Day : null,
             };
+            if (dailyGoals != null) data.goals.AddRange(dailyGoals.Goals);
             foreach (UnlockPad pad in pads)
             {
                 if (pad == null) continue;
@@ -189,6 +199,8 @@ namespace BubbleTea.Saving
                     if (upgrade != null) upgradeManager.SetLevel(upgrade, entry.level);
                 }
             }
+
+            if (dailyGoals != null) dailyGoals.Restore(data.goalsDay, data.goals);
 
             if (offlineEarnings != null && data.savedAtUnix > 0)
             {

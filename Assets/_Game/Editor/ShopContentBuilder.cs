@@ -37,6 +37,7 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition UpgradeDesk;
             public UpgradeDefinition[] Upgrades;
             public Customer CustomerPrefab;
+            public DrinkRecipe[] Menu;
         }
 
         internal static Content Build(CashBill billPrefab)
@@ -111,6 +112,7 @@ namespace BubbleTea.EditorTools
                 UpgradeDesk = GetOrCreateBuildable("Upgrades", 40, upgradeDesk),
                 Upgrades = upgrades,
                 CustomerPrefab = BuildCustomerPrefab(),
+                Menu = menu,
             };
         }
 

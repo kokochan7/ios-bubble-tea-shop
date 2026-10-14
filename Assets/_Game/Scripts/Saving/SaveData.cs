@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BubbleTea.Goals;
 
 namespace BubbleTea.Saving
 {
@@ -11,7 +12,7 @@ namespace BubbleTea.Saving
     public class SaveData
     {
         /// <summary>Bumped when the layout changes, so old saves can be upgraded instead of lost.</summary>
-        public int version = 3;
+        public int version = 4;
 
         public int money;
         public List<PadSave> pads = new();
@@ -24,6 +25,12 @@ namespace BubbleTea.Saving
 
         /// <summary>Added in version 3: how fast the shop was earning, for money earned while away.</summary>
         public float earningsPerMinute;
+
+        /// <summary>Added in version 4: the day the daily goals belong to (yyyy-MM-dd).</summary>
+        public string goalsDay;
+
+        /// <summary>Added in version 4: today's goals and their progress.</summary>
+        public List<GoalState> goals = new();
     }
 
     /// <summary>One unlock pad's progress.</summary>
