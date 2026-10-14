@@ -1,3 +1,4 @@
+using BubbleTea.Building;
 using BubbleTea.Economy;
 using BubbleTea.Player;
 using BubbleTea.UI;
@@ -21,6 +22,8 @@ namespace BubbleTea.EditorTools
         private const string ScenePath = "Assets/_Game/Scenes/Prototype.unity";
         private const string PrefabFolder = "Assets/_Game/Prefabs";
         private const string MaterialFolder = "Assets/_Game/Materials";
+        private const string DataFolder = "Assets/_Game/Data";
+        private const string StationPrefabFolder = "Assets/_Game/Prefabs/Stations";
 
         private static readonly Vector3[] CashPilePositions =
         {
@@ -63,6 +66,7 @@ namespace BubbleTea.EditorTools
 
             CashPile[] piles = CreateCashPiles(billPrefab, padMat);
             CreateRefiller(piles);
+            CreateUnlockPads(billPrefab, wallet);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuild(ScenePath);
@@ -251,6 +255,169 @@ namespace BubbleTea.EditorTools
                 list.GetArrayElementAtIndex(i).objectReferenceValue = piles[i];
             }
             serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // Three pads in a chain: buying the counter reveals the tea brewer, which reveals the topping bar.
+        private static void CreateUnlockPads(CashBill billPrefab, Wallet wallet)
+        {
+            Material padMat = GetOrCreateMaterial("UnlockPad", new Color(0.97f, 0.97f, 0.97f));
+
+            BuildableDefinition counter = GetOrCreateBuildable("Counter", 30,
+                () => BuildStationPrefab("Counter", new Color(0.62f, 0.42f, 0.28f), new Vector3(2.2f, 1f, 1f), null));
+            BuildableDefinition brewer = GetOrCreateBuildable("Tea Brewer", 80,
+                () => BuildStationPrefab("TeaBrewer", new Color(0.30f, 0.30f, 0.34f), new Vector3(1.4f, 1f, 1f),
+                    new Color(0.55f, 0.32f, 0.16f)));
+            BuildableDefinition toppings = GetOrCreateBuildable("Topping Bar", 150,
+                () => BuildStationPrefab("ToppingBar", new Color(0.95f, 0.78f, 0.55f), new Vector3(2f, 1f, 1f),
+                    new Color(0.15f, 0.1f, 0.08f)));
+
+            UnlockPad toppingPad = CreatePad(toppings, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat, null);
+            UnlockPad brewerPad = CreatePad(brewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad);
+            CreatePad(counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat, brewerPad);
+
+            // Only the first pad is visible at the start.
+            toppingPad.gameObject.SetActive(false);
+            brewerPad.gameObject.SetActive(false);
+        }
+
+        private static UnlockPad CreatePad(BuildableDefinition definition, Vector3 position, CashBill billPrefab,
+            Wallet wallet, Material material, UnlockPad next)
+        {
+            var go = new GameObject($"UnlockPad - {definition.DisplayName}");
+            go.transform.position = position;
+
+            GameObject tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            tile.name = "Tile";
+            Object.DestroyImmediate(tile.GetComponent<BoxCollider>());
+            tile.transform.SetParent(go.transform, false);
+            tile.transform.localPosition = new Vector3(0f, 0.01f, 0f);
+            tile.transform.localScale = new Vector3(2.4f, 0.02f, 2.4f);
+            tile.GetComponent<Renderer>().sharedMaterial = material;
+
+            var pad = go.AddComponent<UnlockPad>();
+            SetReference(pad, "definition", definition);
+            SetReference(pad, "wallet", wallet);
+            SetReference(pad, "billPrefab", billPrefab);
+            if (next != null)
+            {
+                var serialized = new SerializedObject(pad);
+                SerializedProperty list = serialized.FindProperty("unlocksNext");
+                list.arraySize = 1;
+                list.GetArrayElementAtIndex(0).objectReferenceValue = next;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            CreatePadLabel(go.transform, pad);
+            return pad;
+        }
+
+        // A world-space canvas lying flat on the pad, readable from the top-down camera.
+        private static void CreatePadLabel(Transform parent, UnlockPad pad)
+        {
+            var canvasGo = new GameObject("Label", typeof(RectTransform));
+            var rect = (RectTransform)canvasGo.transform;
+            rect.SetParent(parent, false);
+            rect.localPosition = new Vector3(0f, 0.03f, 0f);
+            rect.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            rect.localScale = Vector3.one * 0.01f;
+            rect.sizeDelta = new Vector2(220f, 220f);
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+
+            Sprite square = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform fillRect = CreateUiObject("Fill", rect);
+            Stretch(fillRect);
+            var fill = fillRect.gameObject.AddComponent<Image>();
+            fill.sprite = square;
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Vertical;
+            fill.fillOrigin = (int)Image.OriginVertical.Bottom;
+            fill.fillAmount = 0f;
+            fill.color = new Color(0.35f, 0.78f, 0.38f, 0.8f);
+            fill.raycastTarget = false;
+
+            Text nameLabel = CreateLabel("Name", rect, font, 30, new Vector2(0f, 60f));
+            Text priceLabel = CreateLabel("Price", rect, font, 64, new Vector2(0f, -15f));
+
+            var view = canvasGo.AddComponent<UnlockPadView>();
+            SetReference(view, "pad", pad);
+            SetReference(view, "nameLabel", nameLabel);
+            SetReference(view, "priceLabel", priceLabel);
+            SetReference(view, "fill", fill);
+        }
+
+        private static Text CreateLabel(string name, RectTransform parent, Font font, int size, Vector2 position)
+        {
+            RectTransform labelRect = CreateUiObject(name, parent);
+            labelRect.sizeDelta = new Vector2(220f, 80f);
+            labelRect.anchoredPosition = position;
+            var label = labelRect.gameObject.AddComponent<Text>();
+            label.font = font;
+            label.fontSize = size;
+            label.fontStyle = FontStyle.Bold;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.color = new Color(0.2f, 0.2f, 0.25f);
+            label.raycastTarget = false;
+            return label;
+        }
+
+        // Reuses an existing data asset so your price tweaks survive a rebuild.
+        private static BuildableDefinition GetOrCreateBuildable(string displayName, int cost, System.Func<GameObject> buildPrefab)
+        {
+            string path = $"{DataFolder}/{displayName.Replace(" ", "")}.asset";
+            var definition = AssetDatabase.LoadAssetAtPath<BuildableDefinition>(path);
+            if (definition != null) return definition;
+
+            definition = ScriptableObject.CreateInstance<BuildableDefinition>();
+            AssetDatabase.CreateAsset(definition, path);
+
+            var serialized = new SerializedObject(definition);
+            serialized.FindProperty("displayName").stringValue = displayName;
+            serialized.FindProperty("cost").intValue = cost;
+            serialized.FindProperty("prefab").objectReferenceValue = buildPrefab();
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssets();
+            return definition;
+        }
+
+        // Gray-box station: a body block, plus an optional smaller block on top (a tea urn, topping tubs...).
+        private static GameObject BuildStationPrefab(string name, Color bodyColor, Vector3 bodySize, Color? topColor)
+        {
+            if (!AssetDatabase.IsValidFolder(StationPrefabFolder))
+            {
+                AssetDatabase.CreateFolder(PrefabFolder, "Stations");
+            }
+
+            string path = $"{StationPrefabFolder}/{name}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            var root = new GameObject(name);
+
+            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.name = "Body";
+            body.transform.SetParent(root.transform, false);
+            body.transform.localScale = bodySize;
+            body.transform.localPosition = new Vector3(0f, bodySize.y * 0.5f, 0f);
+            body.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial(name, bodyColor);
+
+            if (topColor.HasValue)
+            {
+                GameObject top = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                top.name = "Top";
+                Object.DestroyImmediate(top.GetComponent<CapsuleCollider>());
+                top.transform.SetParent(root.transform, false);
+                top.transform.localScale = new Vector3(0.5f, 0.3f, 0.5f);
+                top.transform.localPosition = new Vector3(0f, bodySize.y + 0.3f, 0f);
+                top.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial(name + "Top", topColor.Value);
+            }
+
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return prefab;
         }
 
         private static CashBill CreateBillPrefab(Material material)

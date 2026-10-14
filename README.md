@@ -60,8 +60,9 @@ In the **Game** view, use the resolution dropdown to pick an iPhone size (or add
 1. In Unity's menu bar, click **Bubble Tea > Build Prototype Scene**. It creates `Assets/_Game/Scenes/Prototype.unity` with everything wired up and opens it.
 2. Press **Play**.
 3. Click and drag anywhere in the Game view to use the joystick (or use WASD / arrow keys). Walk up to the green cash stacks and watch the bills fly to you while the counter at the top goes up.
+4. Stand on the white **Counter** pad. Your money drains into it, and when it's paid off the counter pops up and the next pad (Tea Brewer) appears. That one unlocks the Topping Bar.
 
-The piles refill every few seconds so there's always something to collect. You can tweak speeds and values by selecting objects in the Hierarchy and editing their fields in the Inspector. Rebuilding the scene from the menu resets those changes.
+The piles refill every few seconds so there's always something to collect. You can tweak speeds and values by selecting objects in the Hierarchy and editing their fields in the Inspector. Rebuilding the scene from the menu resets changes made in the scene, but keeps prices and prefabs you edited in `Assets/_Game/Data` and `Assets/_Game/Prefabs/Stations`. To add a new station, right-click in the Project window, choose **Create > Bubble Tea > Buildable**, and fill in its name, price and prefab.
 
 ## Folder layout
 
