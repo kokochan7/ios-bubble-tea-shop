@@ -15,7 +15,7 @@ namespace BubbleTea.EditorTools
         /// <summary>Every slot the scene builder knows about, in the order shown in the Inspector.</summary>
         public static readonly string[] SlotNames =
         {
-            "Player", "Customer", "Runner", "Barista", "Car",
+            "Player", "Customer", "Runner", "Barista", "Cashier", "Car",
             "Counter", "DriveThru", "TeaBrewer", "ToppingBar", "TaroStation", "FruitBar", "UpgradeDesk",
             "Cup",
             "Planter", "MenuBoard", "Statue", "Table", "BusStop",

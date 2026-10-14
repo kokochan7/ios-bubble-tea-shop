@@ -1,3 +1,4 @@
+using BubbleTea.Core;
 using BubbleTea.Cooking;
 using BubbleTea.Customers;
 using UnityEngine;
@@ -7,7 +8,8 @@ namespace BubbleTea.Staff
     /// <summary>
     /// A hired barista. They pick the station customers need most, stand behind it, and make it
     /// work faster while they're there. Every few seconds they look again and move if another
-    /// station is clearly busier. Only one barista works at each station.
+    /// station is clearly busier. Only one barista works at each station. The Walk Speed
+    /// upgrade makes them walk faster too (Brew Speed already speeds up every station).
     /// </summary>
     public class Barista : MonoBehaviour
     {
@@ -146,7 +148,8 @@ namespace BubbleTea.Staff
             Vector3 offset = target - transform.position;
             if (offset.sqrMagnitude < 0.04f) return true;
 
-            transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+            float pace = speed * Stats.Get(StatId.MoveSpeed, 1f);
+            transform.position = Vector3.MoveTowards(transform.position, target, pace * Time.deltaTime);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(offset), 720f * Time.deltaTime);
             return false;
         }

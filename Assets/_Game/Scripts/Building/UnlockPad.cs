@@ -48,7 +48,7 @@ namespace BubbleTea.Building
         [SerializeField, Tooltip("Payments per second while draining. Each one sends a bill flying.")]
         private float paymentsPerSecond = 20f;
 
-        // Pads currently visible, so the guide arrow can find the next one to buy.
+        // Pads currently visible.
         private static readonly List<UnlockPad> active = new();
         public static IReadOnlyList<UnlockPad> Active => active;
 

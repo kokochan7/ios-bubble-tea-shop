@@ -48,6 +48,7 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition Barista1;
             public BuildableDefinition Barista2;
             public BuildableDefinition Seating;
+            public BuildableDefinition Cashier;
 
             /// <summary>Shop 1 only: the pad that opens the second shop. Null in other shops.</summary>
             public BuildableDefinition SecondShop;
@@ -136,6 +137,7 @@ namespace BubbleTea.EditorTools
                 Seating = GetOrCreateBuildable("Seating Area", 500, BuildSeatingPrefab(billPrefab)),
                 Barista1 = GetOrCreateBuildable("Hire Barista", 350, barista),
                 Barista2 = GetOrCreateBuildable("Hire Barista 2", 700, barista),
+                Cashier = GetOrCreateBuildable("Hire Cashier", 150, BuildCashierPrefab()),
                 Planter = GetOrCreateBuildable("Planter", 120,
                     BuildDecorPrefab("Planter", new Color(0.42f, 0.73f, 0.47f), new Vector3(1.2f, 1.3f, 1.2f))),
                 MenuBoard = GetOrCreateBuildable("Menu Board", 200,
@@ -430,7 +432,7 @@ namespace BubbleTea.EditorTools
             for (int i = 0; i < menu.Length; i++) menuList.GetArrayElementAtIndex(i).objectReferenceValue = menu[i];
             serialized.FindProperty("drinks.anchor").objectReferenceValue =
                 AddAnchor(root.transform, "DrinkStack", new Vector3(-0.6f, bodySize.y, 0f));
-            serialized.FindProperty("drinks.capacity").intValue = 6;
+            serialized.FindProperty("drinks.capacity").intValue = 8;
             serialized.FindProperty("cashPile").objectReferenceValue = cashPile;
             serialized.FindProperty("queueStart").objectReferenceValue = queueStart;
             serialized.FindProperty("lane").stringValue = lane;
@@ -523,7 +525,7 @@ namespace BubbleTea.EditorTools
             var serialized = new SerializedObject(carrier);
             serialized.FindProperty("stack.anchor").objectReferenceValue = hands;
             serialized.FindProperty("stack.capacity").intValue = 1;
-            serialized.FindProperty("usesCarryUpgrade").boolValue = false;
+            serialized.FindProperty("usesCarryUpgrade").boolValue = true; // Carry More lets runners carry more too
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             root.AddComponent<Runner>();
@@ -592,6 +594,21 @@ namespace BubbleTea.EditorTools
         }
 
         // A lavender barista who stands behind the busiest station and speeds it up.
+        // A cashier who stands by the counter and banks customers' payments for you.
+        private static GameObject BuildCashierPrefab()
+        {
+            var root = new GameObject("Cashier");
+            GameObject body = AddPart(root.transform, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.8f, 0f),
+                new Vector3(0.7f, 0.8f, 0.7f), GetOrCreateMaterial("Cashier", new Color(0.95f, 0.78f, 0.35f)));
+            AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
+                new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
+            AddCharacterArt("Cashier", root, body);
+            Transform hands = AddAnchor(root.transform, "Hands", new Vector3(0f, 0.9f, 0.4f));
+            var cashier = root.AddComponent<Cashier>();
+            SetReference(cashier, "hands", hands);
+            return SavePrefab(root, $"{PrefabFolder}/Cashier.prefab");
+        }
+
         private static GameObject BuildBaristaPrefab()
         {
             var root = new GameObject("Barista");

@@ -5,7 +5,6 @@ using BubbleTea.Customers;
 using BubbleTea.Economy;
 using BubbleTea.Feedback;
 using BubbleTea.Goals;
-using BubbleTea.Onboarding;
 using BubbleTea.Player;
 using BubbleTea.Rating;
 using BubbleTea.Saving;
@@ -150,12 +149,11 @@ namespace BubbleTea.EditorTools
             var saveFile = new SerializedObject(saveManager);
             saveFile.FindProperty("fileName").stringValue = plan.SaveFile;
             saveFile.ApplyModifiedPropertiesWithoutUndo();
-            CreateFeedback(player.transform);
+            CreateFeedback();
             CreateSettingsMenu(hud, saveManager);
             CreateGoalsPanel(hud, dailyGoals);
             CreateRatingView(hud, rating);
             CreateWelcomeBackPopup(hud, offlineEarnings);
-            if (plan.Number == 1) CreateTutorial(hud, player, wallet, pads[0], pads[1]);
 
             EditorSceneManager.SaveScene(scene, plan.ScenePath);
             AddSceneToBuild(plan.ScenePath, first: plan.Number == 1);
@@ -493,7 +491,10 @@ namespace BubbleTea.EditorTools
                 seatingPad);
             UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat,
                 taroPad, runner1Pad, planterPad);
-            UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad);
+            // The cashier stands beside the counter's cash pile (the counter's pad is at -5, -3).
+            UnlockPad cashierPad = CreatePad(content.Cashier, new Vector3(-2f, 0f, -1.2f), billPrefab, wallet, padMat);
+            UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad,
+                cashierPad);
             UnlockPad upgradePad = CreatePad(content.UpgradeDesk, new Vector3(9f, 0f, 1f), billPrefab, wallet, padMat);
             UnlockPad counterPad = CreatePad(content.Counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat,
                 brewerPad, upgradePad);
@@ -514,11 +515,12 @@ namespace BubbleTea.EditorTools
             barista2Pad.gameObject.SetActive(false);
             menuBoardPad.gameObject.SetActive(false);
             statuePad.gameObject.SetActive(false);
+            cashierPad.gameObject.SetActive(false);
             var all = new System.Collections.Generic.List<UnlockPad>
             {
                 counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad, runner1Pad, runner2Pad,
                 expansionPad, driveThruPad, planterPad, menuBoardPad, statuePad, barista1Pad, barista2Pad,
-                seatingPad,
+                seatingPad, cashierPad,
             };
             if (secondShopPad != null)
             {
@@ -763,40 +765,6 @@ namespace BubbleTea.EditorTools
         }
 
         // Measures how fast the shop earns and pays part of it for time away.
-        // The first-minute tutorial: a banner near the bottom with one instruction at a time.
-        // pads[0] is the Counter and pads[1] the Tea Brewer (see CreateUnlockPads).
-        private static void CreateTutorial(Transform hud, GameObject player, Wallet wallet, UnlockPad counterPad,
-            UnlockPad brewerPad)
-        {
-            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
-            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-
-            RectTransform banner = CreateUiObject("Tutorial Banner", hud);
-            banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 0f);
-            banner.pivot = new Vector2(0.5f, 0f);
-            banner.anchoredPosition = new Vector2(0f, 320f);
-            banner.sizeDelta = new Vector2(960f, 130f);
-            var image = banner.gameObject.AddComponent<Image>();
-            image.sprite = rounded;
-            image.type = Image.Type.Sliced;
-            image.color = new Color(0.15f, 0.15f, 0.2f, 0.85f);
-            image.raycastTarget = false; // the joystick works anywhere, including under the banner
-
-            Text label = CreateHudText("Text", banner, font, 50, TextAnchor.MiddleCenter);
-            Stretch(label.rectTransform);
-            label.color = new Color(1f, 0.9f, 0.45f);
-            banner.gameObject.SetActive(false);
-
-            var guide = new GameObject("TutorialGuide").AddComponent<TutorialGuide>();
-            SetReference(guide, "player", player.transform);
-            SetReference(guide, "wallet", wallet);
-            SetReference(guide, "carrier", player.GetComponent<ItemCarrier>());
-            SetReference(guide, "counterPad", counterPad);
-            SetReference(guide, "brewerPad", brewerPad);
-            SetReference(guide, "banner", banner);
-            SetReference(guide, "label", label);
-        }
-
         private static OfflineEarnings CreateOfflineEarnings(Wallet wallet)
         {
             var earnings = new GameObject("OfflineEarnings").AddComponent<OfflineEarnings>();
@@ -856,8 +824,8 @@ namespace BubbleTea.EditorTools
             SetReference(popup, "earnings", earnings);
         }
 
-        // Sounds, vibration, confetti, sale pop-ups and the guide arrow.
-        private static void CreateFeedback(Transform player)
+        // Sounds, vibration, confetti and sale pop-ups.
+        private static void CreateFeedback()
         {
             var go = new GameObject("Feedback");
             go.AddComponent<AudioSource>();
@@ -865,39 +833,6 @@ namespace BubbleTea.EditorTools
             go.AddComponent<Haptics>();
             go.AddComponent<UnlockConfetti>();
             go.AddComponent<SalePopups>();
-
-            Material arrowMat = GetOrCreateMaterial("GuideArrow", new Color(1f, 0.82f, 0.2f));
-
-            // The marker: a fat yellow "down arrow" made of a post and a diamond tip.
-            var marker = new GameObject("GoalMarker").transform;
-            marker.SetParent(go.transform, false);
-            AddShape(marker, PrimitiveType.Cube, new Vector3(0f, 0.45f, 0f), new Vector3(0.3f, 0.6f, 0.3f), Quaternion.identity, arrowMat);
-            AddShape(marker, PrimitiveType.Cube, new Vector3(0f, 0f, 0f), new Vector3(0.5f, 0.5f, 0.5f),
-                Quaternion.Euler(45f, 0f, 45f), arrowMat);
-
-            // The pointer: a flat arrow on the floor, pointing along its forward (z) direction.
-            var pointer = new GameObject("GoalPointer").transform;
-            pointer.SetParent(go.transform, false);
-            AddShape(pointer, PrimitiveType.Cube, new Vector3(0f, 0f, 1.1f), new Vector3(0.18f, 0.02f, 0.6f), Quaternion.identity, arrowMat);
-            AddShape(pointer, PrimitiveType.Cube, new Vector3(0f, 0f, 1.45f), new Vector3(0.35f, 0.02f, 0.35f),
-                Quaternion.Euler(0f, 45f, 0f), arrowMat);
-
-            var arrow = go.AddComponent<GoalArrow>();
-            SetReference(arrow, "player", player);
-            SetReference(arrow, "marker", marker);
-            SetReference(arrow, "pointer", pointer);
-        }
-
-        private static void AddShape(Transform parent, PrimitiveType type, Vector3 position, Vector3 scale, Quaternion rotation,
-            Material material)
-        {
-            GameObject shape = GameObject.CreatePrimitive(type);
-            Object.DestroyImmediate(shape.GetComponent<Collider>());
-            shape.transform.SetParent(parent, false);
-            shape.transform.localPosition = position;
-            shape.transform.localRotation = rotation;
-            shape.transform.localScale = scale;
-            shape.GetComponent<Renderer>().sharedMaterial = material;
         }
 
         // A MENU button in the top-right corner that opens sound, vibration and reset options.

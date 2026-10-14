@@ -22,7 +22,7 @@ This is the plan for how the prototype's code fits together. It's written so a n
 | Customers | `Scripts/Customers` | Spawning, queueing at the counter, buying drinks, dropping cash | Step 4 |
 | Upgrades | `Scripts/Upgrades` | Upgrade levels, buying them, and the zone at the upgrade desk | Milestone 2 |
 | Staff | `Scripts/Staff` | Hired helpers that move items between stations and the counter | Milestone 4 |
-| Feedback | `Scripts/Feedback` | Sounds, vibration, confetti, sale pop-ups, guide arrow | Milestone 6 |
+| Feedback | `Scripts/Feedback` | Sounds, vibration, confetti, sale pop-ups | Milestone 6 |
 | Saving | `Scripts/Saving` | Writing progress to a JSON file and putting it back on start | Milestone 1 |
 
 Dependencies only point one way: Player, Economy, Building, Cooking and Customers may use Core, Upgrades uses Economy (to pay), UI and Saving may read from any of them, but Core never depends on gameplay code.
@@ -107,9 +107,12 @@ Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-
 
 Each shop is its own scene, built by the same `PrototypeSceneBuilder` from a `ShopPlan` (scene path, save file, floor and wall materials). `ShopContentBuilder.Build(billPrefab, shop)` swaps in that shop's menu and puts its data and prefabs in a `Shop2` subfolder with costs scaled up, so the shops never overwrite each other. `Travel/ShopTravel` saves the current shop, clears `Stats` (the next shop applies its own upgrades and rating) and loads the other scene; `SaveManager.fileName` keeps each shop's progress in its own file. The first shop must stay scene 0 in the build.
 
-## Tutorial (milestone 11)
+## Kenny's playtest changes (milestone 10)
 
-`Onboarding/TutorialGuide` (first shop only) runs a list of steps, each with a check of game state (player moved, money, pad unlocked, carrying a drink, `GameEvents.DrinkSold`, cash collected after a sale) and a spot for `GoalArrow.Override` to point at. A save whose Tea Brewer is already built skips it, and `SaveManager.TutorialDoneKey` in PlayerPrefs stops it showing twice.
+- The tutorial and the guide arrow were removed; players find the next pad themselves.
+- `Staff/Cashier` stands by a counter and sends bills from its `ServingCounter.CashPile` straight to the player's `Wallet`.
+- `ServingCounter` takes any menu drink (wanted ones first) and keeps extras for later customers; `PickOrder` already makes new customers order a waiting drink.
+- Runners, baristas and the cashier read `StatId.MoveSpeed`, and runners also `StatId.CarryBonus` (several of the same item per trip).
 
 ## Conventions
 
