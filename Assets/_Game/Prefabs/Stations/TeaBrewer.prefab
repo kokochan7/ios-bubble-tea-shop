@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8407695920704170235}
+  - component: {fileID: 1499683754119720398}
   m_Layer: 0
   m_Name: TeaBrewer
   m_TagString: Untagged
@@ -31,8 +32,35 @@ Transform:
   m_Children:
   - {fileID: 8423608535626776642}
   - {fileID: 2037978749737324520}
+  - {fileID: 135706290270665033}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1499683754119720398
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1739285964290243908}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb615fb75c4448c598344441f4c7adc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BubbleTea.Cooking.Station
+  steps:
+  - {fileID: 11400000, guid: 109f78feb9a50ac4f8b32869f3de0015, type: 2}
+  input:
+    anchor: {fileID: 0}
+    capacity: 0
+    itemHeight: 0.32
+  output:
+    anchor: {fileID: 135706290270665033}
+    capacity: 4
+    itemHeight: 0.32
+  zone:
+    offset: {x: 0, y: 0, z: 1.4}
+    halfSize: 1
+    secondsPerHandoff: 0.15
 --- !u!1 &4089855988552846267
 GameObject:
   m_ObjectHideFlags: 0
@@ -60,7 +88,7 @@ Transform:
   m_GameObject: {fileID: 4089855988552846267}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.3, z: 0}
+  m_LocalPosition: {x: 0, y: 1.3, z: -0.15}
   m_LocalScale: {x: 0.5, y: 0.3, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -235,3 +263,34 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &7234063197107776411
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 135706290270665033}
+  m_Layer: 0
+  m_Name: OutputStack
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &135706290270665033
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7234063197107776411}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.39999998, y: 1, z: 0.2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8407695920704170235}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
