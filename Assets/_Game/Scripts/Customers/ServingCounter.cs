@@ -46,7 +46,7 @@ namespace BubbleTea.Customers
         private float queueSpacing = 1.1f;
 
         [SerializeField, Min(0f), Tooltip("Seconds before a drink nobody in line wants is thrown out (one at a time). 0 = never.")]
-        private float expireSeconds = 5f;
+        private float expireSeconds = 2f;
 
         private float expireTimer;
 
@@ -228,11 +228,19 @@ namespace BubbleTea.Customers
             return true;
         }
 
+        /// <summary>What this drink sells for here: its normal price (with upgrades) times the price you set.</summary>
+        public int PriceOf(DrinkRecipe order) =>
+            order == null ? 0 : Mathf.Max(1, Mathf.RoundToInt(FairPriceOf(order) * PriceBook.Factor(order.Drink)));
+
+        /// <summary>The normal price, which customers expect to pay.</summary>
+        public float FairPriceOf(DrinkRecipe order) =>
+            order == null ? 0f : order.Price * priceMultiplier * Stats.Get(StatId.DrinkPrice, 1f);
+
         /// <summary>Banks the payment (and tip) for a drink handed straight to a customer.</summary>
         public void Bank(DrinkRecipe order, float tipShare)
         {
             if (order == null) return;
-            int price = Mathf.RoundToInt(order.Price * priceMultiplier * Stats.Get(StatId.DrinkPrice, 1f));
+            int price = PriceOf(order);
             int tip = Mathf.RoundToInt(price * Mathf.Max(0f, tipShare));
             if (cashPile != null) cashPile.AddValue(price + tip);
             GameEvents.RaiseDrinkSold(transform.position, price + tip);

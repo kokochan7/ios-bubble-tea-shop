@@ -34,8 +34,9 @@ namespace BubbleTea.Customers
             ServingCounter counter = ServingCounter.FindLane(lane);
             if (customerPrefab == null || counter == null || !counter.CanMakeAnything) return;
 
-            timer += Time.deltaTime * Stats.Get(StatId.CustomerRate, 1f);
-            int max = maxCustomers + Mathf.RoundToInt(Stats.Get(StatId.ExtraCustomers, 0f));
+            // A better rating and rush hours (see GameClock) both bring customers faster.
+            timer += Time.deltaTime * Stats.Get(StatId.CustomerRate, 1f) * GameClock.RushMultiplier;
+            int max = maxCustomers + Mathf.RoundToInt(Stats.Get(StatId.ExtraCustomers, 0f)) + GameClock.RushExtraCustomers;
             if (timer < secondsBetweenCustomers || inside.Count >= max) return;
             timer = 0f;
 

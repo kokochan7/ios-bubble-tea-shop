@@ -37,9 +37,10 @@ namespace BubbleTea.Goals
     }
 
     /// <summary>
-    /// Three small goals a day ("Sell 20 Taro Milk Tea", "Get 8 tips"...) that pay a cash bonus.
-    /// New goals arrive at local midnight; goals finished but not claimed by then are paid
-    /// automatically. Targets and rewards grow as the shop unlocks more drinks.
+    /// Three small goals at a time ("Sell 20 Taro Milk Tea", "Get 8 tips"...) that pay a cash
+    /// bonus. Claiming a finished goal replaces it with a new one straight away, so there is
+    /// always something to work toward. Targets and rewards grow as the shop unlocks more drinks.
+    /// (The class keeps its old name so saves and scenes still find it.)
     /// </summary>
     public class DailyGoals : MonoBehaviour
     {
@@ -52,19 +53,19 @@ namespace BubbleTea.Goals
         [SerializeField, Tooltip("Used to size money goals to how fast the shop earns. Optional.")]
         private OfflineEarnings earnings;
 
-        [SerializeField, Range(1, 5), Tooltip("Goals per day.")]
+        [SerializeField, Range(1, 5), Tooltip("Goals shown at once.")]
         private int goalsPerDay = 3;
 
         [SerializeField, Min(0.1f), Tooltip("Multiplies every reward.")]
         private float rewardMultiplier = 1f;
 
         private readonly List<GoalState> goals = new();
+        private readonly System.Random rng = new();
         private string day;
-        private float dayCheckTimer;
 
         public IReadOnlyList<GoalState> Goals => goals;
 
-        /// <summary>The day these goals belong to, as yyyy-MM-dd. Saved with the game.</summary>
+        /// <summary>Kept for older saves; goals no longer change by day.</summary>
         public string Day => day;
 
         /// <summary>True if any goal is finished and waiting to be claimed.</summary>
@@ -75,8 +76,6 @@ namespace BubbleTea.Goals
 
         /// <summary>Raised the moment a goal is finished.</summary>
         public event Action<GoalState> Completed;
-
-        private static string Today => DateTime.Now.ToString("yyyy-MM-dd");
 
         private void OnEnable()
         {
@@ -92,20 +91,6 @@ namespace BubbleTea.Goals
             GameEvents.DrinkSold -= OnDrinkSold;
             GameEvents.Tipped -= OnTipped;
             GameEvents.UpgradeBought -= OnUpgradeBought;
-        }
-
-        private void Update()
-        {
-            // Roll over to new goals at midnight, even if the game is left running.
-            dayCheckTimer += Time.unscaledDeltaTime;
-            if (dayCheckTimer < 30f) return;
-            dayCheckTimer = 0f;
-            EnsureToday();
-        }
-
-        private void OnApplicationPause(bool paused)
-        {
-            if (!paused) EnsureToday();
         }
 
         private void OnDrinkServed(string itemId)
@@ -127,22 +112,13 @@ namespace BubbleTea.Goals
             Changed?.Invoke();
         }
 
-        /// <summary>Makes new goals if there are none for today. Call after the save is loaded.</summary>
-        public void EnsureToday()
+        /// <summary>Fills up to the full set of goals (dropping claimed ones). Call after the save is loaded.</summary>
+        public void EnsureGoals()
         {
-            if (day == Today && goals.Count > 0) return;
-
-            // Yesterday's finished goals still pay out.
-            foreach (GoalState goal in goals)
-            {
-                if (!goal.IsComplete || goal.claimed) continue;
-                goal.claimed = true;
-                if (wallet != null) wallet.Add(goal.reward);
-            }
-
-            day = Today;
+            int before = goals.Count;
+            goals.RemoveAll(g => g.claimed);
             Generate();
-            Changed?.Invoke();
+            if (goals.Count != before) Changed?.Invoke();
         }
 
         /// <summary>Pays the reward for a finished goal.</summary>
@@ -155,6 +131,10 @@ namespace BubbleTea.Goals
             goal.claimed = true;
             if (wallet != null) wallet.Add(goal.reward);
             GameEvents.RaiseBonusCollected();
+
+            // A new goal takes its place.
+            goals.RemoveAt(index);
+            Generate(index);
             Changed?.Invoke();
             return true;
         }
@@ -174,13 +154,10 @@ namespace BubbleTea.Goals
             if (changed) Changed?.Invoke();
         }
 
-        private void Generate()
+        // Adds goals until there are enough, inserting the first new one at insertAt (so a
+        // replaced goal keeps its place in the list). Avoids repeating a kind already shown.
+        private void Generate(int insertAt = -1)
         {
-            goals.Clear();
-
-            // The same day always rolls the same goals, so reinstalling doesn't reshuffle them.
-            var rng = new System.Random(int.Parse(day.Replace("-", "")));
-
             var makeable = new List<DrinkRecipe>();
             if (menu != null)
             {
@@ -202,8 +179,9 @@ namespace BubbleTea.Goals
             if (makeable.Count > 0) kinds.Add(GoalKind.SellDrink);
             if (HasUpgradeToBuy()) kinds.Add(GoalKind.BuyUpgrades);
 
-            // A second "sell this drink" goal makes days with many drinks more interesting.
+            // A second "sell this drink" goal makes shops with many drinks more interesting.
             if (makeable.Count >= 3) kinds.Add(GoalKind.SellDrink);
+            foreach (GoalState existing in goals) kinds.Remove(existing.kind);
 
             while (goals.Count < goalsPerDay && kinds.Count > 0)
             {
@@ -211,7 +189,16 @@ namespace BubbleTea.Goals
                 GoalKind kind = kinds[pick];
                 kinds.RemoveAt(pick);
                 GoalState goal = MakeGoal(kind, rng, level, averagePrice, makeable);
-                if (goal != null) goals.Add(goal);
+                if (goal == null) continue;
+                if (insertAt >= 0 && insertAt <= goals.Count)
+                {
+                    goals.Insert(insertAt, goal);
+                    insertAt = -1;
+                }
+                else
+                {
+                    goals.Add(goal);
+                }
             }
         }
 

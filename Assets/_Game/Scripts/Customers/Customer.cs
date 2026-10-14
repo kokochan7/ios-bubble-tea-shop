@@ -30,7 +30,7 @@ namespace BubbleTea.Customers
         private float bubbleIconScale = 1.3f;
 
         [SerializeField, Min(0f), Tooltip("Seconds a customer will wait before leaving without buying. 0 = they wait forever.")]
-        private float patienceSeconds = 30f;
+        private float patienceSeconds = 10f;
 
         [SerializeField, Range(0f, 1f), Tooltip("How fast patience drains for customers behind the front of the line (0.5 = half speed).")]
         private float backOfLineDrain = 0.5f;
@@ -46,6 +46,9 @@ namespace BubbleTea.Customers
 
         [SerializeField, Range(0f, 2f), Tooltip("Small tip, as a share of the drink's price.")]
         private float smallTip = 0.2f;
+
+        [SerializeField, Tooltip("Most a customer will pay, as a share of a drink's normal price. Each customer picks a limit between these two.")]
+        private Vector2 priceTolerance = new(1f, 1.8f);
 
         [SerializeField, Tooltip("Whether they turn to face the counter at the front of the line (cars keep facing the lane).")]
         private bool faceCounter = true;
@@ -83,6 +86,8 @@ namespace BubbleTea.Customers
         private SeatingTable table;
         private int seat = -1;
         private float sitTimer;
+        private float tolerance;
+        private bool checkedPrice;
 
         /// <summary>The drink this customer wants.</summary>
         public DrinkRecipe Order { get; private set; }
@@ -97,6 +102,8 @@ namespace BubbleTea.Customers
             onGone = gone;
             state = State.Queueing;
             waited = 0f;
+            tolerance = UnityEngine.Random.Range(priceTolerance.x, priceTolerance.y);
+            checkedPrice = false;
             Order = counter.PickOrder();
             ShowOrder();
             counter.JoinQueue(this);
@@ -195,7 +202,18 @@ namespace BubbleTea.Customers
                 return;
             }
 
-            // At the front of the line: face the counter and buy once a drink is there.
+            // At the front of the line they read the price; too expensive and they leave.
+            if (!checkedPrice)
+            {
+                checkedPrice = true;
+                if (TooExpensive())
+                {
+                    RefusePrice();
+                    return;
+                }
+            }
+
+            // Face the counter and buy once a drink is there.
             Vector3 toCounter = counter.transform.position - transform.position;
             toCounter.y = 0f;
             if (faceCounter && toCounter.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(toCounter);
@@ -212,6 +230,11 @@ namespace BubbleTea.Customers
         public bool ServeNow(CarriedItem drink)
         {
             if (state != State.Queueing || counter == null || drink == null) return false;
+            if (TooExpensive())
+            {
+                RefusePrice();
+                return false;
+            }
             counter.Bank(Order, TipShare());
             TakeDrink(drink);
             return true;
@@ -232,6 +255,15 @@ namespace BubbleTea.Customers
             if (used <= fastServiceShare) return bigTip;
             if (used <= okServiceShare) return smallTip;
             return 0f;
+        }
+
+        private bool TooExpensive() => counter.PriceOf(Order) > counter.FairPriceOf(Order) * tolerance + 0.01f;
+
+        // The price is more than this customer will pay: they leave without buying (costs a star).
+        private void RefusePrice()
+        {
+            GameEvents.RaiseCustomerRefusedPrice(transform.position);
+            StopWaiting();
         }
 
         // Out of patience: leave the line without buying.

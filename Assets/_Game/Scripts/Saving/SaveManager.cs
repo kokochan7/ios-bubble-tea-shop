@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using BubbleTea.Building;
+using BubbleTea.Core;
+using BubbleTea.Customers;
 using BubbleTea.Economy;
 using BubbleTea.Goals;
 using BubbleTea.Rating;
@@ -37,7 +39,7 @@ namespace BubbleTea.Saving
         [SerializeField, Tooltip("Pays for time away. Leave empty to turn that off.")]
         private OfflineEarnings offlineEarnings;
 
-        [SerializeField, Tooltip("Today's goals. Leave empty if the scene has none.")]
+        [SerializeField, Tooltip("The goals. Leave empty if the scene has none.")]
         private DailyGoals dailyGoals;
 
         [SerializeField, Tooltip("The shop's star rating. Leave empty if the scene has none.")]
@@ -80,6 +82,7 @@ namespace BubbleTea.Saving
         private void OnEnable()
         {
             if (wallet != null) wallet.MoneyChanged += OnMoneyChanged;
+            PriceBook.Changed += MarkDirty;
             if (upgradeManager != null) upgradeManager.Changed += Save;
             if (dailyGoals != null) dailyGoals.Changed += MarkDirty;
             foreach (UnlockPad pad in pads)
@@ -93,6 +96,7 @@ namespace BubbleTea.Saving
         private void OnDisable()
         {
             if (wallet != null) wallet.MoneyChanged -= OnMoneyChanged;
+            PriceBook.Changed -= MarkDirty;
             if (upgradeManager != null) upgradeManager.Changed -= Save;
             if (dailyGoals != null) dailyGoals.Changed -= MarkDirty;
             foreach (UnlockPad pad in pads)
@@ -106,8 +110,9 @@ namespace BubbleTea.Saving
         // Start runs after every Awake and OnEnable, so the pads and HUD are ready to be updated.
         private void Start()
         {
+            PriceBook.Clear(); // each shop has its own prices
             if (loadOnStart) Load();
-            if (dailyGoals != null) dailyGoals.EnsureToday();
+            if (dailyGoals != null) dailyGoals.EnsureGoals();
             loaded = true;
             dirty = false;
         }
@@ -147,6 +152,9 @@ namespace BubbleTea.Saving
                 ratingService = rating != null ? rating.Service : -1f,
                 ratingLost = rating != null ? rating.Lost : 0f,
                 floorCashGiven = floorCash != null ? floorCash.Given : 0,
+                prices = PriceBook.Snapshot(),
+                clockMinutes = GameClock.Instance != null ? GameClock.Instance.MinuteOfDay : -1f,
+                clockDay = GameClock.Instance != null ? GameClock.Instance.Day : 1,
             };
             if (dailyGoals != null) data.goals.AddRange(dailyGoals.Goals);
             foreach (UnlockPad pad in pads)
@@ -243,6 +251,8 @@ namespace BubbleTea.Saving
             if (dailyGoals != null) dailyGoals.Restore(data.goalsDay, data.goals);
             if (rating != null && data.ratingService >= 0f) rating.Restore(data.ratingService, data.ratingLost);
             if (floorCash != null) floorCash.Restore(data.floorCashGiven);
+            PriceBook.Restore(data.prices);
+            if (GameClock.Instance != null && data.clockMinutes >= 0f) GameClock.Instance.Restore(data.clockMinutes, data.clockDay);
 
             if (offlineEarnings != null && data.savedAtUnix > 0)
             {

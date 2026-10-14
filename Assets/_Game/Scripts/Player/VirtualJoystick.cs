@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -26,6 +27,12 @@ namespace BubbleTea.Player
         private int activePointerId;
         private bool isHeld;
 
+        /// <summary>A quick tap (not a drag) on the play area, with its screen position. Used to tap on things in the shop.</summary>
+        public static event Action<Vector2> Tapped;
+
+        private Vector2 pressPosition;
+        private float pressTime;
+
         /// <summary>Stick direction, each axis from -1 to 1. Zero when released.</summary>
         public Vector2 Value { get; private set; }
 
@@ -45,6 +52,8 @@ namespace BubbleTea.Player
 
             isHeld = true;
             activePointerId = eventData.pointerId;
+            pressPosition = eventData.position;
+            pressTime = Time.unscaledTime;
             background.anchoredPosition = point;
             handle.anchoredPosition = Vector2.zero;
             SetVisible(true);
@@ -62,8 +71,14 @@ namespace BubbleTea.Player
 
         public void OnPointerUp(PointerEventData eventData)
         {
-            if (eventData.pointerId == activePointerId) Release();
+            if (eventData.pointerId != activePointerId) return;
+            bool tap = Time.unscaledTime - pressTime < 0.35f && (eventData.position - pressPosition).magnitude < Screen.dpi * 0.15f + 10f;
+            Release();
+            if (tap) Tapped?.Invoke(eventData.position);
         }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => Tapped = null;
 
         private void Release()
         {

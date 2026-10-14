@@ -186,6 +186,8 @@ namespace BubbleTea.EditorTools
             CreateFeedback();
             CreateSettingsMenu(hud, saveManager, wallet, upgrades);
             CreateGoalsPanel(hud, dailyGoals);
+            CreateClock(hud);
+            CreatePricePanel(hud, content.Menu);
             CreateRatingView(hud, rating);
             CreateWelcomeBackPopup(hud, offlineEarnings);
             CreateGameOverPopup(hud, rating, saveManager);
@@ -674,7 +676,7 @@ namespace BubbleTea.EditorTools
             return goals;
         }
 
-        // A GOALS button under MENU that opens today's goals, plus a banner when one is finished.
+        // A GOALS button under MENU that opens the current goals, plus a banner when one is finished.
         private static void CreateGoalsPanel(Transform hud, DailyGoals goals)
         {
             const int rows = 3;
@@ -715,7 +717,7 @@ namespace BubbleTea.EditorTools
 
             Text title = CreateHudText("Title", panel, font, 60, TextAnchor.MiddleCenter);
             SetTopRow(title.rectTransform, 20f, 100f, 0f, 0f);
-            title.text = "DAILY GOALS";
+            title.text = "GOALS";
             Text hint = CreateHudText("Hint", panel, font, 32, TextAnchor.MiddleCenter);
             SetTopRow(hint.rectTransform, 115f, 60f, 0f, 0f);
             hint.fontStyle = FontStyle.Normal;
@@ -927,6 +929,119 @@ namespace BubbleTea.EditorTools
             SetReference(popup, "awayLabel", away);
             SetReference(popup, "collectButton", collect);
             SetReference(popup, "earnings", earnings);
+        }
+
+        // The shop clock (rush hours) and its display in the top-left corner.
+        private static void CreateClock(Transform hud)
+        {
+            var clock = new GameObject("GameClock").AddComponent<GameClock>();
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+
+            RectTransform root = CreateUiObject("Clock", hud);
+            root.anchorMin = root.anchorMax = new Vector2(0f, 1f);
+            root.pivot = new Vector2(0f, 1f);
+            root.anchoredPosition = new Vector2(40f, -110f);
+            root.sizeDelta = new Vector2(250f, 120f);
+            var back = root.gameObject.AddComponent<Image>();
+            back.sprite = rounded;
+            back.type = Image.Type.Sliced;
+            back.color = new Color(0.15f, 0.15f, 0.2f, 0.75f);
+            back.raycastTarget = false;
+
+            Text time = CreateHudText("Time", root, font, 50, TextAnchor.MiddleCenter);
+            SetTopRow(time.rectTransform, 8f, 66f, 0f, 0f);
+            Text day = CreateHudText("Day", root, font, 32, TextAnchor.MiddleCenter);
+            SetTopRow(day.rectTransform, 70f, 44f, 0f, 0f);
+            day.color = new Color(0.8f, 0.8f, 0.88f);
+
+            Text period = CreateHudText("Period", root, font, 36, TextAnchor.UpperLeft);
+            period.rectTransform.anchorMin = period.rectTransform.anchorMax = new Vector2(0f, 0f);
+            period.rectTransform.pivot = new Vector2(0f, 1f);
+            period.rectTransform.anchoredPosition = new Vector2(4f, -8f);
+            period.rectTransform.sizeDelta = new Vector2(420f, 50f);
+            period.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.7f);
+
+            var view = root.gameObject.AddComponent<ClockView>();
+            SetReference(view, "clock", clock);
+            SetReference(view, "timeLabel", time);
+            SetReference(view, "dayLabel", day);
+            SetReference(view, "periodLabel", period);
+        }
+
+        // Opens when you tap a counter: a row per drink to raise or lower its price.
+        private static void CreatePricePanel(Transform hud, DrinkRecipe[] menu)
+        {
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            const float rowHeight = 120f, top = 140f;
+
+            RectTransform root = CreateUiObject("Prices", hud);
+            Stretch(root);
+            var prices = root.gameObject.AddComponent<PricePanel>();
+
+            RectTransform backdrop = CreateUiObject("Backdrop", root);
+            Stretch(backdrop);
+            backdrop.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.45f);
+
+            RectTransform panel = CreateUiObject("Panel", backdrop);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = new Vector2(940f, top + rowHeight * menu.Length + 260f);
+            var panelImage = panel.gameObject.AddComponent<Image>();
+            panelImage.sprite = rounded;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.97f);
+
+            Text title = CreateHudText("Title", panel, font, 60, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 20f, 100f, 0f, 0f);
+            title.text = "DRINK PRICES";
+
+            var serialized = new SerializedObject(prices);
+            SerializedProperty rows = serialized.FindProperty("rows");
+            rows.arraySize = menu.Length;
+            var green = new Color(0.35f, 0.78f, 0.38f);
+            var red = new Color(0.85f, 0.45f, 0.4f);
+            for (int i = 0; i < menu.Length; i++)
+            {
+                RectTransform row = CreateUiObject(menu[i] != null ? menu[i].name : "Row", panel);
+                SetTopRow(row, top + i * rowHeight, rowHeight, 40f, 40f);
+
+                Text name = CreateHudText("Name", row, font, 40, TextAnchor.MiddleLeft);
+                SetColumn(name.rectTransform, 0f, 0.42f);
+                Text price = CreateHudText("Price", row, font, 40, TextAnchor.MiddleCenter);
+                SetColumn(price.rectTransform, 0.42f, 0.72f);
+                Button lower = CreateMenuButton("Lower", row, "-", rounded, font, red, out _);
+                SetColumn((RectTransform)lower.transform, 0.73f, 0.85f);
+                ((RectTransform)lower.transform).offsetMin = new Vector2(0f, 15f);
+                ((RectTransform)lower.transform).offsetMax = new Vector2(0f, -15f);
+                Button raise = CreateMenuButton("Raise", row, "+", rounded, font, green, out _);
+                SetColumn((RectTransform)raise.transform, 0.87f, 1f);
+                ((RectTransform)raise.transform).offsetMin = new Vector2(0f, 15f);
+                ((RectTransform)raise.transform).offsetMax = new Vector2(0f, -15f);
+
+                SerializedProperty entry = rows.GetArrayElementAtIndex(i);
+                entry.FindPropertyRelative("recipe").objectReferenceValue = menu[i];
+                entry.FindPropertyRelative("root").objectReferenceValue = row.gameObject;
+                entry.FindPropertyRelative("nameLabel").objectReferenceValue = name;
+                entry.FindPropertyRelative("priceLabel").objectReferenceValue = price;
+                entry.FindPropertyRelative("lowerButton").objectReferenceValue = lower;
+                entry.FindPropertyRelative("raiseButton").objectReferenceValue = raise;
+            }
+
+            Text hint = CreateHudText("Hint", panel, font, 32, TextAnchor.MiddleCenter);
+            SetTopRow(hint.rectTransform, top + rowHeight * menu.Length + 10f, 100f, 40f, 40f);
+            hint.horizontalOverflow = HorizontalWrapMode.Wrap;
+            hint.fontStyle = FontStyle.Normal;
+            hint.color = new Color(0.85f, 0.85f, 0.9f);
+            hint.text = "Higher prices earn more, but customers who think it's too much walk out and cost a star.";
+
+            Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
+            SetTopRow((RectTransform)close.transform, top + rowHeight * menu.Length + 130f, 110f, 260f, 260f);
+
+            serialized.FindProperty("panel").objectReferenceValue = backdrop.gameObject;
+            serialized.FindProperty("titleLabel").objectReferenceValue = title;
+            serialized.FindProperty("closeButton").objectReferenceValue = close;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // This shop's background music, looping.

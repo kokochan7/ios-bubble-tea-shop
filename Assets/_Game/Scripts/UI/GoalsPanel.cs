@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace BubbleTea.UI
 {
     /// <summary>
-    /// The GOALS button and panel: today's goals with their progress and a Claim button,
+    /// The GOALS button and panel: the current goals with their progress and a Claim button,
     /// a "!" on the button when a reward is waiting, and a short "Goal complete!" banner.
     /// </summary>
     public class GoalsPanel : MonoBehaviour

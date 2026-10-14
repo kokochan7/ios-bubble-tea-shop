@@ -1,6 +1,7 @@
 using BubbleTea.Core;
 using BubbleTea.Cooking;
 using BubbleTea.Customers;
+using BubbleTea.Upgrades;
 using UnityEngine;
 
 namespace BubbleTea.Staff
@@ -429,8 +430,17 @@ namespace BubbleTea.Staff
 
         private void OnDestroy() => ReleaseReservation();
 
-        // One item, plus whatever the Carry More upgrade adds.
-        private static int CarryLimit() => 1 + Mathf.RoundToInt(Stats.Get(StatId.CarryBonus, 0f));
+        // One drink at a time, plus one for each level of the Carry More upgrade.
+        private static int CarryLimit()
+        {
+            UpgradeManager manager = UpgradeManager.Instance;
+            if (manager == null) return 1;
+            foreach (UpgradeDefinition upgrade in manager.All)
+            {
+                if (upgrade != null && upgrade.Stat == StatId.CarryBonus) return 1 + manager.LevelOf(upgrade);
+            }
+            return 1;
+        }
 
         // Moves toward the target on the floor. Returns true once close enough to stand in a zone.
         // The Walk Speed upgrade speeds runners up as well.

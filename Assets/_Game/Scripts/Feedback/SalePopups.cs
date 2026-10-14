@@ -46,6 +46,7 @@ namespace BubbleTea.Feedback
             GameEvents.DrinkSold += OnSale;
             GameEvents.Tipped += OnTip;
             GameEvents.CustomerLeftUpset += OnUpset;
+            GameEvents.CustomerRefusedPrice += OnPricey;
             GameEvents.TableCleaned += OnCleaned;
         }
 
@@ -54,12 +55,14 @@ namespace BubbleTea.Feedback
             GameEvents.DrinkSold -= OnSale;
             GameEvents.Tipped -= OnTip;
             GameEvents.CustomerLeftUpset -= OnUpset;
+            GameEvents.CustomerRefusedPrice -= OnPricey;
             GameEvents.TableCleaned -= OnCleaned;
         }
 
         private void OnSale(Vector3 position, int amount) => Show(position, "+$" + amount.ToString("N0"), color, 1.6f);
         private void OnTip(Vector3 position, int amount) => Show(position, "TIP!", tipColor, 2.3f);
         private void OnUpset(Vector3 position) => Show(position, "Too slow!", upsetColor, 2.4f);
+        private void OnPricey(Vector3 position) => Show(position, "Too pricey!", upsetColor, 2.4f);
         private void OnCleaned(Vector3 position) => Show(position, "Clean!", cleanColor, 0.8f);
 
         private void Show(Vector3 position, string label, Color labelColor, float height)
