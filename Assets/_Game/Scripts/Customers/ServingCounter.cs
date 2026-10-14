@@ -107,7 +107,17 @@ namespace BubbleTea.Customers
 
         private int Reserved(ItemDefinition drink) => reserved.TryGetValue(drink, out int count) ? count : 0;
 
-        private int Wanted(ItemDefinition drink)
+        /// <summary>The drink each customer in line ordered, front of the line first.</summary>
+        public IEnumerable<ItemDefinition> QueuedOrders()
+        {
+            foreach (Customer customer in queue)
+            {
+                if (customer != null && customer.Order != null) yield return customer.Order.Drink;
+            }
+        }
+
+        /// <summary>How many customers in line ordered <paramref name="drink"/>.</summary>
+        public int Wanted(ItemDefinition drink)
         {
             int wanted = 0;
             foreach (Customer customer in queue)

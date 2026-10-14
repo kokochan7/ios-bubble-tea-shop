@@ -408,7 +408,10 @@ namespace BubbleTea.EditorTools
             SetObjectList(expansionPad, "hideWhenUnlocked", eastWall);
             UnlockPad fruitPad = CreatePad(content.FruitBar, new Vector3(10f, 0f, -5f), billPrefab, wallet, padMat,
                 expansionPad);
-            UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(5f, 0f, -8f), billPrefab, wallet, padMat, fruitPad);
+            UnlockPad barista2Pad = CreatePad(content.Barista2, new Vector3(-6f, 0f, 9f), billPrefab, wallet, padMat);
+            UnlockPad barista1Pad = CreatePad(content.Barista1, new Vector3(-6f, 0f, 4f), billPrefab, wallet, padMat, barista2Pad);
+            UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(5f, 0f, -8f), billPrefab, wallet, padMat, fruitPad,
+                barista1Pad);
             UnlockPad runner2Pad = CreatePad(content.Runner2, new Vector3(-10f, 0f, 5f), billPrefab, wallet, padMat);
             UnlockPad runner1Pad = CreatePad(content.Runner1, new Vector3(-10f, 0f, 0f), billPrefab, wallet, padMat, runner2Pad);
             UnlockPad statuePad = CreatePad(content.Statue, new Vector3(-11f, 0f, -9f), billPrefab, wallet, padMat);
@@ -432,12 +435,14 @@ namespace BubbleTea.EditorTools
             expansionPad.gameObject.SetActive(false);
             driveThruPad.gameObject.SetActive(false);
             planterPad.gameObject.SetActive(false);
+            barista1Pad.gameObject.SetActive(false);
+            barista2Pad.gameObject.SetActive(false);
             menuBoardPad.gameObject.SetActive(false);
             statuePad.gameObject.SetActive(false);
             return new[]
             {
                 counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad, runner1Pad, runner2Pad,
-                expansionPad, driveThruPad, planterPad, menuBoardPad, statuePad,
+                expansionPad, driveThruPad, planterPad, menuBoardPad, statuePad, barista1Pad, barista2Pad,
             };
         }
 

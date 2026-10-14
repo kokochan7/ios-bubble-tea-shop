@@ -91,6 +91,7 @@ namespace BubbleTea.EditorTools
                 { "Player", Save("Barista", BuildCharacter(Palette.Blush, Palette.Cream, CharacterStyle.Buns)) },
                 { "Runner", Save("Runner", BuildCharacter(Palette.Mint, Palette.Cream, CharacterStyle.Cap)) },
                 { "Customer", Save("Customer", BuildCharacter(Palette.Butter, null, CharacterStyle.Bob)) },
+                { "Barista", Save("BaristaHelper", BuildCharacter(Palette.Lavender, Palette.Cream, CharacterStyle.Headband)) },
                 { "Car", Save("Car", BuildCar()) },
             };
             GameObject plant = Save("Plant", BuildPlant());
@@ -330,7 +331,7 @@ namespace BubbleTea.EditorTools
 
         // ---------- Characters ----------
 
-        private enum CharacterStyle { Buns, Cap, Bob }
+        private enum CharacterStyle { Buns, Cap, Bob, Headband }
 
         // A chibi character about 1.6 m tall, facing +Z, with an optional apron.
         private static GameObject BuildCharacter(Color shirt, Color? apron, CharacterStyle style)
@@ -369,6 +370,10 @@ namespace BubbleTea.EditorTools
                 case CharacterStyle.Cap:
                     Sphere(root, "Cap", new Vector3(0f, 1.32f, -0.02f), new Vector3(0.64f, 0.42f, 0.64f), Palette.DeepMint);
                     Box(root, "Visor", new Vector3(0f, 1.36f, 0.3f), new Vector3(0.4f, 0.03f, 0.22f), Palette.DeepMint);
+                    break;
+                case CharacterStyle.Headband:
+                    Sphere(root, "Band", new Vector3(0f, 1.3f, -0.01f), new Vector3(0.68f, 0.1f, 0.66f), Palette.DeepPink);
+                    Sphere(root, "Bow", new Vector3(0.24f, 1.42f, 0.05f), new Vector3(0.16f, 0.1f, 0.06f), Palette.DeepPink);
                     break;
                 case CharacterStyle.Bob:
                     Sphere(root, "Bob", new Vector3(0f, 1.1f, -0.08f), new Vector3(0.7f, 0.42f, 0.6f), Palette.Hair);

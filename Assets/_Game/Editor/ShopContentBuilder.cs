@@ -41,6 +41,8 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition Planter;
             public BuildableDefinition MenuBoard;
             public BuildableDefinition Statue;
+            public BuildableDefinition Barista1;
+            public BuildableDefinition Barista2;
         }
 
         internal static Content Build(CashBill billPrefab)
@@ -99,6 +101,7 @@ namespace BubbleTea.EditorTools
             };
             GameObject upgradeDesk = BuildUpgradeDeskPrefab();
             GameObject runner = BuildRunnerPrefab();
+            GameObject barista = BuildBaristaPrefab();
 
             return new Content
             {
@@ -117,6 +120,8 @@ namespace BubbleTea.EditorTools
                 Upgrades = upgrades,
                 CustomerPrefab = BuildCustomerPrefab(),
                 Menu = menu,
+                Barista1 = GetOrCreateBuildable("Hire Barista", 350, barista),
+                Barista2 = GetOrCreateBuildable("Hire Barista 2", 700, barista),
                 Planter = GetOrCreateBuildable("Planter", 120,
                     BuildDecorPrefab("Planter", new Color(0.42f, 0.73f, 0.47f), new Vector3(1.2f, 1.3f, 1.2f))),
                 MenuBoard = GetOrCreateBuildable("Menu Board", 200,
@@ -365,6 +370,19 @@ namespace BubbleTea.EditorTools
 
             root.AddComponent<Runner>();
             return SavePrefab(root, $"{PrefabFolder}/Runner.prefab");
+        }
+
+        // A lavender barista who stands behind the busiest station and speeds it up.
+        private static GameObject BuildBaristaPrefab()
+        {
+            var root = new GameObject("Barista");
+            GameObject body = AddPart(root.transform, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.8f, 0f),
+                new Vector3(0.7f, 0.8f, 0.7f), GetOrCreateMaterial("Barista", new Color(0.66f, 0.56f, 0.86f)));
+            AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
+                new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
+            AddCharacterArt("Barista", root, body);
+            root.AddComponent<Barista>();
+            return SavePrefab(root, $"{PrefabFolder}/Barista.prefab");
         }
 
         private static Customer BuildCustomerPrefab()

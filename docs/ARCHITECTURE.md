@@ -83,6 +83,10 @@ Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-
 
 `Economy/OfflineEarnings` listens to `GameEvents.DrinkSold` and keeps a smoothed dollars-per-minute rate, measured one minute of play at a time. The save file (version 3) stores that rate and the time it was written; on load, `SaveManager` hands the time away to `OfflineEarnings.Grant`, which also handles the app returning from the background. The reward waits in `Pending` until `UI/WelcomeBackPopup`'s Collect button adds it to the wallet, and it is saved as part of the money so quitting before collecting loses nothing.
 
+## Baristas (milestone 11)
+
+`Staff/Barista` scores each `Station` by the drinks waiting customers ordered (`ServingCounter.QueuedOrders`): 2 per drink it makes, 1 per drink made from its output. They stand behind the best unclaimed station and call `Station.AddBarista`, which speeds it up by `baristaSpeedBonus` per barista.
+
 ## Customer moods (milestone 11)
 
 `Customer` tracks how long it has waited against `patienceSeconds` and shows it on a mood light with a MaterialPropertyBlock. `ServingCounter.TrySell` takes a tip share from the customer and raises `GameEvents.Tipped`; a customer out of patience raises `GameEvents.CustomerLeftUpset` and leaves. `PickOrder` gives a new customer any drink left on the counter by someone who walked out.
