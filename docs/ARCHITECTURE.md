@@ -45,7 +45,7 @@ The cooking system is built from three kinds of data and one kind of station.
 
 Items move between **ItemStacks** (the player's hands, a station's input and output, the counter). A station's **HandoffZone** is the square in front of it: while the player stands there, the station takes any item it can use and hands back finished ones.
 
-The **ServingCounter** (Customers module) accepts any drink on its menu. **Customers** queue behind it, take a drink, pay its price into the counter's cash pile, and walk out.
+The **ServingCounter** (Customers module) holds the menu. Each **Customer** picks an order from the menu when they arrive (only drinks some station in the shop can make), shows it in a bubble, queues, takes exactly that drink, pays its price into the counter's cash pile, and walks out. The counter only accepts a drink from the player while someone in line still needs one.
 
 Because stations only care about "do my inputs match a step I know", new drinks and new station types are added entirely in the Inspector. Upgrades later (faster brewing, more output slots, higher prices) become extra fields on the same assets.
 

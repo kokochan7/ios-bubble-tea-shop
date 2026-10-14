@@ -275,13 +275,15 @@ namespace BubbleTea.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        // Pads in a chain: buying the counter reveals the tea brewer and the upgrade desk,
-        // and the tea brewer reveals the topping bar.
+        // Pads in a chain: the counter reveals the tea brewer and the upgrade desk, then
+        // tea brewer -> topping bar -> taro station -> fruit bar.
         private static UnlockPad[] CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet)
         {
             Material padMat = GetOrCreateMaterial("UnlockPad", new Color(0.97f, 0.97f, 0.97f));
 
-            UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat);
+            UnlockPad fruitPad = CreatePad(content.FruitBar, new Vector3(10f, 0f, -5f), billPrefab, wallet, padMat);
+            UnlockPad taroPad = CreatePad(content.TaroStation, new Vector3(5f, 0f, -8f), billPrefab, wallet, padMat, fruitPad);
+            UnlockPad toppingPad = CreatePad(content.ToppingBar, new Vector3(5f, 0f, -3f), billPrefab, wallet, padMat, taroPad);
             UnlockPad brewerPad = CreatePad(content.TeaBrewer, new Vector3(0f, 0f, -6f), billPrefab, wallet, padMat, toppingPad);
             UnlockPad upgradePad = CreatePad(content.UpgradeDesk, new Vector3(9f, 0f, 1f), billPrefab, wallet, padMat);
             UnlockPad counterPad = CreatePad(content.Counter, new Vector3(-5f, 0f, -3f), billPrefab, wallet, padMat,
@@ -291,7 +293,9 @@ namespace BubbleTea.EditorTools
             toppingPad.gameObject.SetActive(false);
             brewerPad.gameObject.SetActive(false);
             upgradePad.gameObject.SetActive(false);
-            return new[] { counterPad, brewerPad, toppingPad, upgradePad };
+            taroPad.gameObject.SetActive(false);
+            fruitPad.gameObject.SetActive(false);
+            return new[] { counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad };
         }
 
         // Loads progress on Play and keeps saving it. Delete it with Bubble Tea > Delete Save Data.

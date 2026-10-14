@@ -32,3 +32,11 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 - Stand in front of the desk and a panel opens with four upgrades, each with 4 levels: **Walk Speed**, **Carry More**, **Brew Speed** and **Drink Price**. Buttons grey out when you can't afford them.
 - Upgrades are data: each is an asset in `Assets/_Game/Data/Upgrades` with a list of values and prices you can edit, and new ones are made with **Create > Bubble Tea > Upgrade**.
 - Upgrade levels are saved with the rest of your progress.
+
+## Milestone 3: More drinks and orders
+
+- Each customer now wants one specific drink, shown as a little cup on a white bubble above their head. They only take that drink.
+- The counter only accepts drinks someone in line is waiting for, so it never clogs up with drinks nobody buys.
+- Customers only order drinks your shop can make, so new drinks show up in orders as you unlock their stations.
+- New drinks: **Taro Milk Tea** ($12), **Taro Boba** ($20, taro tea through the Topping Bar) and **Mango Fruit Tea** ($14).
+- New stations on the pad chain after the Topping Bar: **Taro Station** ($250), then **Fruit Bar** ($400).
