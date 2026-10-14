@@ -23,6 +23,12 @@ namespace BubbleTea.Feedback
         [SerializeField, Tooltip("Played when a customer buys a drink. Leave empty for a generated ding.")]
         private AudioClip saleClip;
 
+        [SerializeField, Tooltip("Played when a customer tips. Leave empty for a generated sparkle.")]
+        private AudioClip tipClip;
+
+        [SerializeField, Tooltip("Played when a customer walks out. Leave empty for a generated low tone.")]
+        private AudioClip upsetClip;
+
         [SerializeField, Tooltip("Played when an upgrade is bought. Leave empty for a generated chime.")]
         private AudioClip upgradeClip;
 
@@ -47,6 +53,8 @@ namespace BubbleTea.Feedback
             if (payClip == null) payClip = Tone("Pay", new[] { 660f }, 0.04f);
             if (unlockClip == null) unlockClip = Tone("Unlock", new[] { 523f, 659f, 784f, 1047f }, 0.09f);
             if (saleClip == null) saleClip = Tone("Sale", new[] { 988f, 1319f }, 0.08f);
+            if (tipClip == null) tipClip = Tone("Tip", new[] { 1568f, 2093f, 2637f }, 0.05f);
+            if (upsetClip == null) upsetClip = Tone("Upset", new[] { 392f, 311f }, 0.14f);
             if (upgradeClip == null) upgradeClip = Tone("Upgrade", new[] { 659f, 988f }, 0.1f);
         }
 
@@ -58,6 +66,8 @@ namespace BubbleTea.Feedback
             GameEvents.DrinkSold += OnSale;
             GameEvents.UpgradeBought += OnUpgrade;
             GameEvents.BonusCollected += OnBonus;
+            GameEvents.Tipped += OnTip;
+            GameEvents.CustomerLeftUpset += OnUpset;
         }
 
         private void OnDisable()
@@ -68,6 +78,8 @@ namespace BubbleTea.Feedback
             GameEvents.DrinkSold -= OnSale;
             GameEvents.UpgradeBought -= OnUpgrade;
             GameEvents.BonusCollected -= OnBonus;
+            GameEvents.Tipped -= OnTip;
+            GameEvents.CustomerLeftUpset -= OnUpset;
         }
 
         private void OnCash(Vector3 _)
@@ -89,6 +101,8 @@ namespace BubbleTea.Feedback
         private void OnSale(Vector3 _, int amount) => Play(saleClip, 1f, 0.8f);
         private void OnUpgrade() => Play(upgradeClip, 1f, 1f);
         private void OnBonus() => Play(unlockClip, 1f, 1f);
+        private void OnTip(Vector3 _, int amount) => Play(tipClip, 1f, 0.7f);
+        private void OnUpset(Vector3 _) => Play(upsetClip, 1f, 0.8f);
 
         private void Play(AudioClip clip, float pitch, float loudness)
         {

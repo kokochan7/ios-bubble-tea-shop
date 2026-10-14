@@ -365,9 +365,17 @@ namespace BubbleTea.EditorTools
             var serialized = new SerializedObject(customer);
             serialized.FindProperty("drinkHoldPosition").vector3Value = new Vector3(0f, 0.9f, 0.55f);
             serialized.FindProperty("orderBubble").objectReferenceValue = bubble;
+            serialized.FindProperty("moodLight").objectReferenceValue = AddMoodLight(bubble);
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return SavePrefab(root, $"{PrefabFolder}/Customer.prefab").GetComponent<Customer>();
+        }
+
+        // A round light beside the order bubble that shows the customer's mood (its color is set at runtime).
+        private static Renderer AddMoodLight(Transform bubble)
+        {
+            return AddPart(bubble, PrimitiveType.Sphere, "MoodLight", new Vector3(0.55f, 0.1f, 0f),
+                Vector3.one * 0.24f, GetOrCreateMaterial("MoodLight", Color.white)).GetComponent<Renderer>();
         }
 
         // A drive-through customer: a boxy car that drives up, orders, and drives off.
@@ -394,6 +402,7 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("speed").floatValue = 5f;
             serialized.FindProperty("drinkHoldPosition").vector3Value = new Vector3(0.9f, 1f, 0.4f);
             serialized.FindProperty("orderBubble").objectReferenceValue = bubble;
+            serialized.FindProperty("moodLight").objectReferenceValue = AddMoodLight(bubble);
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return SavePrefab(root, $"{PrefabFolder}/Car.prefab").GetComponent<Customer>();
