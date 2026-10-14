@@ -75,6 +75,10 @@ Gameplay scripts announce moments through `Core/GameEvents` (cash collected, pad
 
 Art is applied only by the scene builder, never at runtime. `ArtSet` (an editor-only asset) maps slot names (`TeaBrewer`, `Customer`, `Cup`...) to models, and `ArtLibrary.Attach` puts a model inside a prefab, scaled to the gray box's footprint or height and standing on the floor. The gray-box parts stay as invisible colliders, so swapping art can never change gameplay. `Core/WalkBob` gives characters a procedural waddle until real animations arrive.
 
+## iPhone (milestone 8)
+
+`Core/AppSetup` runs before the first scene loads and sets 60 fps and no screen sleep. All HUD panels except the joystick live under a `SafeArea` object (`UI/SafeArea`) that shrinks to `Screen.safeArea`. `Editor/IosSetup` writes the iOS Player Settings; the Mac build steps are in [IOS_BUILD.md](IOS_BUILD.md).
+
 ## Conventions
 
 - Namespace: `BubbleTea.<Module>`, for example `BubbleTea.Economy`.
