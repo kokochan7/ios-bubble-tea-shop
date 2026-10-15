@@ -7,13 +7,19 @@ using UnityEngine;
 namespace BubbleTea.EditorTools
 {
     /// <summary>
-    /// After an iPhone build, turns off Xcode's "User Script Sandboxing" in the generated Xcode
-    /// project. Newer Xcode versions switch it on, and it stops Unity's IL2CPP build step from
-    /// reading and writing its files ("Sandbox: ... deny file-write-create"), so the build fails.
+    /// After an iPhone build, turns off two checks that newer Xcode versions switch on and that
+    /// make Unity's Xcode project fail to build:
+    ///  - User Script Sandboxing, which stops Unity's IL2CPP build step from reading and writing
+    ///    its files ("Sandbox: ... deny file-write-create");
+    ///  - the Module Verifier, which rejects UnityFramework's headers ("umbrella header for module
+    ///    'UnityFramework' does not include header", "double-quoted include in framework header",
+    ///    "could not build module 'Test'").
     /// Runs by itself every time Unity builds for iOS; nothing to click.
     /// </summary>
     public class XcodeSandboxFix : IPostprocessBuildWithReport
     {
+        private static readonly string[] Settings = { "ENABLE_USER_SCRIPT_SANDBOXING", "ENABLE_MODULE_VERIFIER" };
+
         public int callbackOrder => 1000;
 
         public void OnPostprocessBuild(BuildReport report)
@@ -27,7 +33,7 @@ namespace BubbleTea.EditorTools
             }
 
             string text = File.ReadAllText(path);
-            text = text.Replace("ENABLE_USER_SCRIPT_SANDBOXING = YES;", "ENABLE_USER_SCRIPT_SANDBOXING = NO;");
+            foreach (string setting in Settings) text = text.Replace(setting + " = YES;", setting + " = NO;");
             // Every build configuration gets the setting, so no target falls back to Xcode's default (on).
             var result = new System.Text.StringBuilder();
             int from = 0;
@@ -39,13 +45,16 @@ namespace BubbleTea.EditorTools
                 int end = at + marker.Length;
                 result.Append(text, from, end - from);
                 int close = text.IndexOf("};", end, System.StringComparison.Ordinal);
-                bool hasSetting = close > end && text.IndexOf("ENABLE_USER_SCRIPT_SANDBOXING", end, close - end, System.StringComparison.Ordinal) >= 0;
-                if (!hasSetting) result.Append("\n\t\t\t\tENABLE_USER_SCRIPT_SANDBOXING = NO;");
+                foreach (string setting in Settings)
+                {
+                    bool hasSetting = close > end && text.IndexOf(setting, end, close - end, System.StringComparison.Ordinal) >= 0;
+                    if (!hasSetting) result.Append("\n\t\t\t\t" + setting + " = NO;");
+                }
                 from = end;
             }
             result.Append(text, from, text.Length - from);
             File.WriteAllText(path, result.ToString());
-            Debug.Log("Bubble Tea: turned off Xcode's User Script Sandboxing so the IL2CPP step can run.");
+            Debug.Log("Bubble Tea: turned off Xcode's User Script Sandboxing and Module Verifier so the project builds.");
         }
     }
 }
