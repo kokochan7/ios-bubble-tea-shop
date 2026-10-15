@@ -103,7 +103,7 @@ namespace BubbleTea.Feedback
         }
 
         private void OnUnlock(Vector3 _) => Play(unlockClip, 1f, 1f);
-        // A cash register "ka-ching" when a customer pays.
+        // A single cashier's bell "ding" when a customer pays.
         private void OnSale(Vector3 _, int amount) => Play(saleClip, 1f, 0.7f);
         private void OnUpgrade() => Play(upgradeClip, 1f, 1f);
         private void OnBonus() => Play(unlockClip, 1f, 1f);
@@ -118,30 +118,18 @@ namespace BubbleTea.Feedback
             source.PlayOneShot(clip, volume * loudness);
         }
 
-        // A cash register: a short drawer clunk, then two bright bell strikes that ring out.
+        // A single cashier's bell "ding" that rings out.
         private static AudioClip Register()
         {
             const int sampleRate = 44100;
-            int length = Mathf.CeilToInt(0.55f * sampleRate);
+            int length = Mathf.CeilToInt(0.6f * sampleRate);
             var samples = new float[length];
-            var random = new System.Random(7);
             for (int i = 0; i < length; i++)
             {
                 float t = (float)i / sampleRate;
-                float value = 0f;
-                // Drawer clunk: a burst of low noise in the first 60 ms.
-                if (t < 0.06f)
-                {
-                    float clunk = 1f - t / 0.06f;
-                    value += ((float)random.NextDouble() * 2f - 1f) * clunk * clunk * 0.35f
-                             + Mathf.Sin(2f * Mathf.PI * 140f * t) * clunk * 0.3f;
-                }
-                // Two bell strikes ("ka" then "ching"), with inharmonic overtones like a real bell.
-                value += Bell(t - 0.05f, 2093f, 0.12f) * 0.5f;
-                value += Bell(t - 0.13f, 2637f, 0.4f);
-                samples[i] = Mathf.Clamp(value * 0.5f, -1f, 1f);
+                samples[i] = Mathf.Clamp(Bell(t, 2349f, 0.32f) * Mathf.Clamp01(t / 0.002f) * 0.8f, -1f, 1f);
             }
-            AudioClip clip = AudioClip.Create("Register", length, 1, sampleRate, false);
+            AudioClip clip = AudioClip.Create("Ding", length, 1, sampleRate, false);
             clip.SetData(samples, 0);
             return clip;
         }

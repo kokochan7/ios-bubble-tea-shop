@@ -9,7 +9,7 @@ namespace BubbleTea.EditorTools
     /// The look of a shop beyond its gameplay pieces, styled like a Taiwanese tea house: wood
     /// floors and paneling, glass walls between the dining room and the kitchen, trim along the
     /// walls, lattice windows, a red and gold shop sign, red paper lanterns, bamboo plants, a
-    /// noren curtain over the front door, a gate with a tiled roof and couplet banners, a red runner,
+    /// noren curtain over the front door, a gate with a tiled roof and couplet banners,
     /// lantern strings, plum trees in blossom, paper-cut window flowers, shelves of tea tins and celadon cups, wall lamps,
     /// swing doors on the staff entrance, the front door, the drive-thru lane, and a street with trees outside. Everything is
     /// built from primitives and textures drawn in code, so nothing needs downloading.
@@ -365,13 +365,12 @@ namespace BubbleTea.EditorTools
         private static Material Gold() => Mat("LanternGold", new Color(0.95f, 0.75f, 0.32f), 0.7f);
 
         // Bright festive touches: a gate with a tiled roof and red pillars over the front door,
-        // red couplet banners, a red runner up the queue, strings of lanterns across the dining
+        // red couplet banners, strings of lanterns across the dining
         // room and a potted plum tree in blossom.
         private static void CreateFestiveDecor(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
         {
             float w = layout.HalfWidth, d = layout.HalfDepth;
             CreateGate(root, style, layout);
-            CreateRunner(root, style, layout);
             // Lantern strings strung between tall red posts on the side walls.
             CreateLanternString(root, -w - 0.25f, w + 0.25f, -d * 0.5f, 2.7f);
             CreatePlumTree(root, new Vector3(layout.DoorFrom - 2.2f, 0f, -d + 0.8f));
@@ -421,17 +420,6 @@ namespace BubbleTea.EditorTools
                 eave.transform.localRotation = Quaternion.Euler(0f, 0f, side * 25f);
                 Part(gate, PrimitiveType.Sphere, "Eave Tip", new Vector3(x + side * 0.28f, 3.48f, z), new Vector3(0.14f, 0.14f, 0.14f), gold);
             }
-        }
-
-        // A red runner with a gold border from the front door up to the counter, under the queue.
-        private static void CreateRunner(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
-        {
-            float x = layout.Counter.x, from = -layout.HalfDepth + 1.4f, to = layout.PartitionZ - 0.9f;
-            if (to - from < 1f) return;
-            float z = (from + to) / 2f, length = to - from;
-            Part(root, PrimitiveType.Cube, "Runner Border", new Vector3(x, 0.006f, z), new Vector3(1.8f, 0.004f, length), Gold());
-            Part(root, PrimitiveType.Cube, "Runner", new Vector3(x, 0.008f, z), new Vector3(1.6f, 0.004f, length - 0.2f),
-                Mat(style.Prefix + "Runner", Color.Lerp(style.Accent, new Color(0.85f, 0.15f, 0.12f), 0.5f), 0.1f));
         }
 
         // A sagging cord of lanterns across the room, hung from a red post at each end.

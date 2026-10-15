@@ -21,8 +21,12 @@ namespace BubbleTea.Economy
         [SerializeField, Min(0), Tooltip("Total money the floor hands out before it stops. 0 = never stops.")]
         private int totalLimit = 500;
 
+        [SerializeField, Tooltip("Optional text showing the money lying on the piles / the money still to collect, like $30/$500. Hidden once it's all collected.")]
+        private TextMesh label;
+
         private float timer;
         private int placed; // money put on the floor so far, collected or not
+        private string shown;
 
         /// <summary>
         /// Money the player has picked up from the floor so far (saved with the game). Bills still
@@ -41,11 +45,26 @@ namespace BubbleTea.Economy
         /// <summary>Called by the save manager when a game loads.</summary>
         public void Restore(int given) => placed = Mathf.Max(0, given);
 
+        private void UpdateLabel()
+        {
+            if (label == null || totalLimit <= 0) return;
+            int lying = 0;
+            foreach (CashPile pile in piles) if (pile != null) lying += pile.Count * pile.ValuePerBill;
+            int left = Mathf.Max(0, totalLimit - Given);
+            bool visible = left > 0;
+            if (label.gameObject.activeSelf != visible) label.gameObject.SetActive(visible);
+            string text = $"${lying}/${left}";
+            if (text == shown) return;
+            shown = text;
+            label.text = text;
+        }
+
         // Starts at the full interval, so the first bills appear right away (after the save loads in Start).
         private void Awake() => timer = interval;
 
         private void Update()
         {
+            UpdateLabel();
             timer += Time.deltaTime;
             if (timer < interval) return;
             timer = 0f;

@@ -239,3 +239,10 @@ Back wall and hip hop pass:
 - The upgrade desk stands free in the kitchen's west corner, and its zone surrounds the whole desk, so you can use it from any side.
 - Music: laid-back hip hop beats for both shops (boom-bap drums, hi-hat rolls, 808 bass, electric-piano chords, a plucked pentatonic hook). New file names, so the tracks regenerate.
 - Brighter scenes (stronger sun and ambient light, lighter floors, walls and grass) and Chinese decor: a gate with a jade-tiled roof and red couplet banners over the front door, a red runner up the queue, a string of lanterns across the dining room, a potted plum tree, paper-cut flowers on the windows, and plum trees in blossom outside.
+
+Tap to open pass:
+
+- **Tappable objects:** tap the Counter (or drive-thru window) to set drink prices, and tap the Upgrade Desk to open the upgrade menu (`UI/PricePanel` and `UI/UpgradePanel` listen to `VirtualJoystick.Tapped`; the desk is found by its `UpgradeZone` marker). Standing next to the desk no longer opens it.
+- The red carpet is gone; the To Matcha House bus stop now stands on the left of the dining room, like level 2's To Boba Shop stop.
+- Cash Pile 1 (the starting floor money) sits in the kitchen just left of the counter, with a "$on the pile/$left to collect" label (like $30/$500) that disappears once all $500 is collected.
+- A sale plays a single cashier's bell "ding" instead of the ka-ching.

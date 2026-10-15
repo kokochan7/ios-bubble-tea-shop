@@ -1,3 +1,4 @@
+using BubbleTea.Player;
 using BubbleTea.Upgrades;
 using UnityEngine;
 using UnityEngine.UI;
@@ -5,9 +6,9 @@ using UnityEngine.UI;
 namespace BubbleTea.UI
 {
     /// <summary>
-    /// Shows the upgrade menu when the player steps onto the upgrade desk and pauses the game
-    /// while it's open. The close button hides it and unpauses; it opens again the next time
-    /// the player walks onto the desk. Put this on an object that stays active, and point it at the panel.
+    /// Shows the upgrade menu when the player taps the upgrade desk (like tapping a counter opens
+    /// its prices) and pauses the game while it's open. The close button hides it and unpauses.
+    /// Put this on an object that stays active, and point it at the panel.
     /// </summary>
     public class UpgradePanel : MonoBehaviour
     {
@@ -17,31 +18,40 @@ namespace BubbleTea.UI
         [SerializeField, Tooltip("Closes the menu and unpauses the game.")]
         private Button closeButton;
 
-        private bool dismissed;
-
         private void Start()
         {
             if (panel != null) panel.SetActive(false);
             if (closeButton != null) closeButton.onClick.AddListener(Close);
         }
 
-        private void Update()
-        {
-            if (panel == null) return;
-            bool inside = UpgradeZone.AnyPlayerInside();
-            if (!inside) dismissed = false;
-            bool show = inside && !dismissed;
-            if (panel.activeSelf == show) return;
-            panel.SetActive(show);
-            Time.timeScale = show ? 0f : 1f;
-        }
-
-        /// <summary>Hides the menu until the player steps off the desk and back on.</summary>
-        public void Close() => dismissed = true;
+        private void OnEnable() => VirtualJoystick.Tapped += OnTapped;
 
         private void OnDisable()
         {
+            VirtualJoystick.Tapped -= OnTapped;
             if (panel != null && panel.activeSelf) Time.timeScale = 1f;
+        }
+
+        // A tap on the upgrade desk (its model or anything under it) opens the menu.
+        private void OnTapped(Vector2 screenPosition)
+        {
+            Camera camera = Camera.main;
+            if (camera == null || panel == null || panel.activeSelf) return;
+            Ray ray = camera.ScreenPointToRay(screenPosition);
+            foreach (RaycastHit hit in Physics.RaycastAll(ray, 200f))
+            {
+                if (hit.collider.GetComponentInParent<UpgradeZone>() == null) continue;
+                panel.SetActive(true);
+                Time.timeScale = 0f;
+                return;
+            }
+        }
+
+        /// <summary>Hides the menu and unpauses the game.</summary>
+        public void Close()
+        {
+            if (panel != null) panel.SetActive(false);
+            Time.timeScale = 1f;
         }
     }
 }

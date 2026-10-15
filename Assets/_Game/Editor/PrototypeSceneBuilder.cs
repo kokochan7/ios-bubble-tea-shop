@@ -84,8 +84,8 @@ namespace BubbleTea.EditorTools
         // Both shops share one compact floor plan, 18 x 15 meters, so nobody walks far:
         //  - the kitchen (north of the counter): every bar in one row against the back wall, a row of
         //    staff pads in front of them (cashier beside the counter's cash, then the baristas), the
-        //    upgrade desk standing free in the west corner so you can walk up to it from any side,
-        //    and the trash can by the west wall;
+        //    upgrade desk standing free in the west corner (tap it to open the upgrades), the floor cash
+        //    beside the counter, and the trash can by the west wall;
         //  - the dining room (south): the queue runs from the front door up to the counter, the café
         //    tables sit east of it, and the staff door is at the far east end of the glass wall so
         //    nothing stands in front of it.
@@ -101,8 +101,8 @@ namespace BubbleTea.EditorTools
             Seating = new(3f, 0f, -4.6f),      // east of the queue, clear of the staff door
             DriveThru = new(14f, 0f, 3.5f),
             TrashCan = new(-8.3f, 0f, 4.6f),
-            FloorCash = new(7.6f, 0f, -1.4f),  // just through the staff door
-            PlayerStart = new(7.4f, 1f, -3f),
+            FloorCash = new(-4.6f, 0f, 0.9f),  // in the kitchen, just left of the counter
+            PlayerStart = new(-4.4f, 1f, 3f),
             TeaBrewer = bars[0],
             ToppingBar = bars[1],
             TaroStation = bars[2],
@@ -114,7 +114,7 @@ namespace BubbleTea.EditorTools
             MoreSeating = new(12f, 0f, -4.5f),
             Cleaner = new(-6.4f, 0f, -4.6f),
             DriveThruCashier = new(11f, 0f, 6f),
-            SecondShopPad = new(12.5f, 0f, -1.6f),
+            SecondShopPad = new(-6.4f, 0f, -1.6f), // both bus stops stand on the left of the dining room
             TravelBack = new(-6.4f, 0f, -1.6f),
             Baristas = new Vector3[] { new(3f, 0f, 2.6f), new(5.4f, 0f, 2.6f), new(7.8f, 0f, 2.6f), new(7.6f, 0f, 6.2f) },
             Windows = new[] { -6.2f, 6.2f },
@@ -800,6 +800,26 @@ namespace BubbleTea.EditorTools
                 list.GetArrayElementAtIndex(i).objectReferenceValue = piles[i];
             }
             serialized.FindProperty("billsPerRefill").intValue = 3;
+
+            // "$30/$500" floating over the first pile: money lying there now / money still to collect.
+            if (piles.Length > 0)
+            {
+                var labelGo = new GameObject("Amount Left");
+                labelGo.transform.SetParent(piles[0].transform, false);
+                labelGo.transform.localPosition = new Vector3(0f, 1.3f, 0f);
+                labelGo.transform.rotation = Quaternion.Euler(55f, 0f, 0f); // faces the camera
+                var text = labelGo.AddComponent<TextMesh>();
+                Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                text.font = font;
+                labelGo.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+                text.fontSize = 64;
+                text.characterSize = 0.05f;
+                text.fontStyle = FontStyle.Bold;
+                text.anchor = TextAnchor.MiddleCenter;
+                text.alignment = TextAlignment.Center;
+                text.color = new Color(0.25f, 0.6f, 0.25f);
+                serialized.FindProperty("label").objectReferenceValue = text;
+            }
             serialized.ApplyModifiedPropertiesWithoutUndo();
             return refiller;
         }
