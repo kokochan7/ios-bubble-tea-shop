@@ -83,80 +83,81 @@ namespace BubbleTea.EditorTools
             };
         }
 
-        // Boba Shop: a small corner café, 22 x 20 meters.
+        // Boba Shop: a small corner café, 18 x 15 meters, packed tight so nobody walks far.
         private static readonly ShopLayout Small = new()
         {
-            HalfWidth = 11f, HalfDepth = 10f,
-            DoorFrom = -5f, DoorTo = 3f,
-            StaffDoorFrom = 3f, StaffDoorTo = 5.5f,
-            LaneWallX = 18f,
+            HalfWidth = 9f, HalfDepth = 7.5f,
+            DoorFrom = -4.5f, DoorTo = 1.5f,
+            StaffDoorFrom = 2.5f, StaffDoorTo = 5f,
+            LaneWallX = 15f,
             Counter = new(-2f, 0f, 0f),
-            Seating = new(5f, 0f, -6.5f),      // in line with More Seating
-            DriveThru = new(17f, 0f, 4f),
-            TrashCan = new(-9.5f, 0f, 1f),
-            FloorCash = new(7.5f, 0f, 2.2f),
-            PlayerStart = new(5f, 1f, 2.2f),
-            TeaBrewer = new(-8.5f, 0f, 5.5f),
-            ToppingBar = new(-4.5f, 0f, 5.5f),
-            TaroStation = new(-0.5f, 0f, 5.5f),
-            FruitBar = new(3.5f, 0f, 5.5f),
-            UpgradeDesk = new(9f, 0f, 4.5f),
+            Seating = new(4.5f, 0f, -4.5f),    // in line with More Seating
+            DriveThru = new(14f, 0f, 3.5f),
+            TrashCan = new(-8f, 0f, 1.4f),
+            FloorCash = new(6.5f, 0f, 1.6f),
+            PlayerStart = new(4f, 1f, 1.6f),
+            // The bars sit just far enough back that their hand-off spots don't overlap the counter's.
+            TeaBrewer = new(-6.8f, 0f, 4.9f),
+            ToppingBar = new(-3.2f, 0f, 4.9f),
+            TaroStation = new(0.4f, 0f, 4.9f),
+            FruitBar = new(3.4f, 0f, 4.9f),
+            UpgradeDesk = new(7f, 0f, 4.9f),
             Cashier = new(1f, 0f, 1.8f),
-            Expansion = new(7f, 0f, 8.6f),
-            MoreSeating = new(14.5f, 0f, -6.5f),
-            Cleaner = new(0.5f, 0f, -5.5f), // just west of the café tables
-            DriveThruCashier = new(14f, 0f, 6.5f),
-            SecondShopPad = new(16.6f, 0f, 8.2f),
-            TravelBack = new(8f, 0f, -8f),
-            Baristas = new Vector3[] { new(-8f, 0f, 8.6f), new(-5f, 0f, 8.6f), new(-2f, 0f, 8.6f), new(1f, 0f, 8.6f), new(4f, 0f, 8.6f) },
-            Windows = new[] { -7.5f, 7.5f },
-            Lamps = new[] { -5f, 5f },
-            ExpansionWindows = new[] { 13.5f },
-            ExpansionLamps = new[] { 16.5f },
+            Expansion = new(4.5f, 0f, 6.5f),
+            MoreSeating = new(12f, 0f, -4.5f),
+            Cleaner = new(1f, 0f, -4.5f),      // just west of the café tables
+            DriveThruCashier = new(11f, 0f, 6f),
+            SecondShopPad = new(12.5f, 0f, -1.6f),
+            TravelBack = new(7f, 0f, -6f),
+            Baristas = new Vector3[] { new(-6f, 0f, 6.5f), new(-3f, 0f, 6.5f), new(0f, 0f, 6.5f), new(3f, 0f, 6.5f), new(6f, 0f, 6.5f) },
+            Windows = new[] { -6.2f, 6.2f },
+            Lamps = new[] { -4.4f, 4.4f },
+            ExpansionWindows = new[] { 12f },
+            ExpansionLamps = new[] { 14.2f },
             Trees = new Vector3[]
             {
-                new(-15f, 0f, -12f), new(-15f, 0f, -3f), new(-15f, 0f, 6f), new(-15f, 0f, 13f),
-                new(-8f, 0f, 14f), new(0f, 0f, 14.5f), new(8f, 0f, 14f), new(15f, 0f, 14.5f), new(21f, 0f, 14f),
-                new(27f, 0f, 9f), new(27f, 0f, 0f), new(27f, 0f, -9f), new(4f, 0f, -13.5f), new(12f, 0f, -13.5f),
+                new(-12f, 0f, -9.5f), new(-12f, 0f, -2f), new(-12f, 0f, 5f), new(-12f, 0f, 10f),
+                new(-6f, 0f, 10.5f), new(0f, 0f, 11f), new(6f, 0f, 10.5f), new(12f, 0f, 11f), new(18f, 0f, 10.5f),
+                new(24f, 0f, 7f), new(24f, 0f, 0f), new(24f, 0f, -7f), new(3f, 0f, -11.5f), new(10f, 0f, -11.5f),
             },
         };
 
-        // Matcha House and later shops: the full 30 x 30 meter café.
+        // Matcha House and later shops: a bigger café, 24 x 22 meters (kept compact so workers don't walk far).
         private static readonly ShopLayout Large = new()
         {
-            HalfWidth = 15f, HalfDepth = 15f,
-            DoorFrom = -5.5f, DoorTo = 6.5f,
+            HalfWidth = 12f, HalfDepth = 11f,
+            DoorFrom = -4.5f, DoorTo = 4.5f,
             StaffDoorFrom = 2f, StaffDoorTo = 4.5f,
-            LaneWallX = 25.5f,
+            LaneWallX = 21f,
             Counter = new(-3f, 0f, 1f),
-            Seating = new(7f, 0f, -7f),
-            DriveThru = new(24.5f, 0f, 5f),
-            TrashCan = new(-8f, 0f, 2.2f),
-            FloorCash = new(8f, 0f, 3f),
-            PlayerStart = new(5f, 1f, 3f),
-            TeaBrewer = new(-9f, 0f, 7f),
-            ToppingBar = new(-4f, 0f, 7f),
-            TaroStation = new(1f, 0f, 7f),
-            FruitBar = new(6f, 0f, 7f),
-            ExtraBar = new(-13.2f, 0f, 7f),     // the Yuzu Bar, in the west corner of the kitchen
-            UpgradeDesk = new(12.5f, 0f, 9f),
+            Seating = new(6f, 0f, -5.5f),
+            DriveThru = new(20f, 0f, 4f),
+            TrashCan = new(-9.5f, 0f, 2.4f),
+            FloorCash = new(7f, 0f, 2.8f),
+            PlayerStart = new(5f, 1f, 2.8f),
+            TeaBrewer = new(-8.2f, 0f, 5.8f),
+            ToppingBar = new(-4.2f, 0f, 5.8f),
+            TaroStation = new(-0.5f, 0f, 5.8f),
+            FruitBar = new(3.3f, 0f, 5.8f),
+            ExtraBar = new(-10.9f, 0f, 5.8f),   // the Yuzu Bar, in the west corner of the kitchen
+            UpgradeDesk = new(8f, 0f, 5.8f),
             Cashier = new(0f, 0f, 2.8f),
-            Expansion = new(8f, 0f, 11.5f),
-            MoreSeating = new(20f, 0f, -7f),   // in line with the first seating
-            Cleaner = new(2f, 0f, -5.5f),
-            DriveThruCashier = new(21.5f, 0f, 7.5f),
-            SecondShopPad = new(18f, 0f, 11.5f),
-            TravelBack = new(12f, 0f, -12f),
-            Baristas = new Vector3[] { new(-12f, 0f, 12f), new(-8f, 0f, 12f), new(-4f, 0f, 12f), new(0f, 0f, 12f), new(4f, 0f, 12f) },
-            Windows = new[] { -11f, -5.5f, 5.5f, 11f },
-            Lamps = new[] { -8.25f, 8.25f },
-            ExpansionWindows = new[] { 18.5f },
-            ExpansionLamps = new[] { 22.5f },
+            Expansion = new(6f, 0f, 9f),
+            MoreSeating = new(16.5f, 0f, -5.5f),   // in line with the first seating
+            Cleaner = new(1.5f, 0f, -4.5f),
+            DriveThruCashier = new(17f, 0f, 6.5f),
+            SecondShopPad = new(16f, 0f, -1.5f),
+            TravelBack = new(10f, 0f, -9f),
+            Baristas = new Vector3[] { new(-9f, 0f, 9f), new(-6f, 0f, 9f), new(-3f, 0f, 9f), new(0f, 0f, 9f), new(3f, 0f, 9f) },
+            Windows = new[] { -9f, -5.2f, 5.2f, 9f },
+            Lamps = new[] { -7.1f, 7.1f },
+            ExpansionWindows = new[] { 16f },
+            ExpansionLamps = new[] { 19f },
             Trees = new Vector3[]
             {
-                new(-19f, 0f, -17f), new(-19f, 0f, -6f), new(-19f, 0f, 5f), new(-19f, 0f, 14f),
-                new(-12f, 0f, 19f), new(-2f, 0f, 19.5f), new(9f, 0f, 19f), new(19f, 0f, 19.5f), new(28f, 0f, 19f),
-                new(35f, 0f, 12f), new(35f, 0f, 1f), new(35f, 0f, -10f), new(4f, 0f, -18.5f), new(16f, 0f, -18.5f),
+                new(-16f, 0f, -13f), new(-16f, 0f, -4f), new(-16f, 0f, 5f), new(-16f, 0f, 12f),
+                new(-9f, 0f, 14f), new(0f, 0f, 14.5f), new(9f, 0f, 14f), new(18f, 0f, 14.5f), new(25f, 0f, 14f),
+                new(30f, 0f, 9f), new(30f, 0f, 0f), new(30f, 0f, -9f), new(4f, 0f, -15f), new(14f, 0f, -15f),
             },
         };
 
@@ -413,7 +414,7 @@ namespace BubbleTea.EditorTools
 
             // The Matcha House dresses the player in its green uniform (if the Art Set has it).
             string playerSlot = plan.Number > 1 && ArtLibrary.Load().Get("MatchaPlayer") != null ? "MatchaPlayer" : "Player";
-            GameObject player = CreatePlayer(playerMat, playerSlot, out Wallet wallet);
+            GameObject player = CreatePlayer(playerMat, playerSlot, plan.Number > 1, out Wallet wallet);
             Camera camera = CreateCamera(player.transform);
             VirtualJoystick joystick = CreateHud(wallet, out Transform hud);
             CreateEventSystem();
@@ -544,13 +545,13 @@ namespace BubbleTea.EditorTools
             CreateWall(root.transform, "South", new Vector3(w + buildingLength / 2f, 0.5f, -d - 0.25f), new Vector3(buildingLength, 1f, 0.5f), wallMat);
             // The lane wall, with a gap for the drive-thru window.
             float windowZ = Layout.DriveThru.z;
-            float windowFrom = windowZ - 1.2f, windowTo = windowZ + 1.2f, end = d + 0.5f;
+            float windowFrom = windowZ - 1.5f, windowTo = windowZ + 1.5f, end = d + 0.5f;
             CreateWall(root.transform, "Lane Wall (south)", new Vector3(laneWall + 0.25f, 1.2f, (-end + windowFrom) / 2f),
                 new Vector3(0.5f, 2.4f, windowFrom + end), wallMat);
             CreateWall(root.transform, "Lane Wall (north)", new Vector3(laneWall + 0.25f, 1.2f, (windowTo + end) / 2f),
                 new Vector3(0.5f, 2.4f, end - windowTo), wallMat);
             CreateBlocker(root.transform, "Window (keeps the player in)", new Vector3(laneWall + 0.25f, 1f, windowZ),
-                new Vector3(0.5f, 2f, 2.4f));
+                new Vector3(0.5f, 2f, 3f));
 
             root.SetActive(false);
             return root;
@@ -616,7 +617,7 @@ namespace BubbleTea.EditorTools
             return wall;
         }
 
-        private static GameObject CreatePlayer(Material material, string artSlot, out Wallet wallet)
+        private static GameObject CreatePlayer(Material material, string artSlot, bool matchaTray, out Wallet wallet)
         {
             GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             player.name = "Player";
@@ -658,14 +659,14 @@ namespace BubbleTea.EditorTools
             // Items the player carries ride on a tray in front of them.
             var hands = new GameObject("HandStack").transform;
             hands.SetParent(player.transform, false);
-            hands.localPosition = new Vector3(0f, 0.1f, 0.75f);
+            hands.localPosition = new Vector3(0f, 0.1f, 0.95f);
             var carrier = player.AddComponent<ItemCarrier>();
             var serializedCarrier = new SerializedObject(carrier);
             serializedCarrier.FindProperty("stack.anchor").objectReferenceValue = hands;
             serializedCarrier.FindProperty("stack.capacity").intValue = 1; // +1 per Carry More level, like baristas
             // Drinks ride side by side on a tray instead of piling up.
-            SetStackGrid(serializedCarrier, "stack", 3, 2, 0.27f, 1.1f);
-            serializedCarrier.FindProperty("tray").objectReferenceValue = AddTray(hands);
+            SetStackGrid(serializedCarrier, "stack", 3, 2, TraySpacing, DrinkSize);
+            serializedCarrier.FindProperty("tray").objectReferenceValue = AddTray(hands, matchaTray);
             serializedCarrier.ApplyModifiedPropertiesWithoutUndo();
             return player;
         }
@@ -1867,19 +1868,29 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty(stack + ".itemScale").floatValue = itemScale;
         }
 
-        // A red lacquered serving tray under a carrier's hands. The ItemCarrier shows it only
-        // while something is being carried. Drinks sit in a 3 x 2 grid on top.
-        internal static GameObject AddTray(Transform hands)
+        /// <summary>Every drink in the world (bars, counter, trays, order bubbles) is shown this big.</summary>
+        internal const float DrinkSize = 2f;
+
+        // Gap between drinks on a tray, so drinks at full size fit side by side.
+        internal const float TraySpacing = 0.46f;
+
+        // A lacquered serving tray under a carrier's hands: red in the Boba Shop, green in the
+        // Matcha House. The ItemCarrier shows it only while something is being carried. Drinks sit
+        // in a 3 x 2 grid on top, at full size.
+        internal static GameObject AddTray(Transform hands, bool matcha)
         {
             var tray = new GameObject("Tray");
             tray.transform.SetParent(hands, false);
-            Material lacquer = GetOrCreateMaterial("TrayLacquer", new Color(0.72f, 0.16f, 0.14f));
+            Material lacquer = matcha
+                ? GetOrCreateMaterial("TrayLacquerMatcha", new Color(0.33f, 0.52f, 0.26f))
+                : GetOrCreateMaterial("TrayLacquer", new Color(0.72f, 0.16f, 0.14f));
             Material gold = GetOrCreateMaterial("TrayGold", new Color(0.93f, 0.72f, 0.30f));
-            TrayPart(tray.transform, new Vector3(0f, -0.02f, 0f), new Vector3(0.9f, 0.035f, 0.64f), lacquer);
-            TrayPart(tray.transform, new Vector3(0f, 0.01f, 0.31f), new Vector3(0.9f, 0.05f, 0.03f), gold);
-            TrayPart(tray.transform, new Vector3(0f, 0.01f, -0.31f), new Vector3(0.9f, 0.05f, 0.03f), gold);
-            TrayPart(tray.transform, new Vector3(0.44f, 0.01f, 0f), new Vector3(0.03f, 0.05f, 0.64f), gold);
-            TrayPart(tray.transform, new Vector3(-0.44f, 0.01f, 0f), new Vector3(0.03f, 0.05f, 0.64f), gold);
+            const float width = 1.5f, depth = 1.02f;
+            TrayPart(tray.transform, new Vector3(0f, -0.02f, 0f), new Vector3(width, 0.035f, depth), lacquer);
+            TrayPart(tray.transform, new Vector3(0f, 0.01f, depth / 2f), new Vector3(width, 0.05f, 0.03f), gold);
+            TrayPart(tray.transform, new Vector3(0f, 0.01f, -depth / 2f), new Vector3(width, 0.05f, 0.03f), gold);
+            TrayPart(tray.transform, new Vector3(width / 2f, 0.01f, 0f), new Vector3(0.03f, 0.05f, depth), gold);
+            TrayPart(tray.transform, new Vector3(-width / 2f, 0.01f, 0f), new Vector3(0.03f, 0.05f, depth), gold);
             tray.SetActive(false);
             return tray;
         }

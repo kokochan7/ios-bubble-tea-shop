@@ -22,10 +22,10 @@ namespace BubbleTea.Customers
         private Transform backing;
 
         [SerializeField, Tooltip("Size of the drink models.")]
-        private float iconScale = 1.6f;
+        private float iconScale = 2f;
 
         [SerializeField, Tooltip("Gap between drink models, in meters.")]
-        private float iconSpacing = 0.5f;
+        private float iconSpacing = 0.55f;
 
         private readonly List<GameObject> icons = new();
         private Customer shown;

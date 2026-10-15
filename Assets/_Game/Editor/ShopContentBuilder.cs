@@ -25,6 +25,7 @@ namespace BubbleTea.EditorTools
         private static string DataFolder = "Assets/_Game/Data";
         private static string PrefabFolder = "Assets/_Game/Prefabs";
         private static int costScale = 1;
+        private static int shopNumber = 1;
         private static string staffSlotPrefix = ""; // "Matcha" in the Matcha House: green uniforms
 
         /// <summary>
@@ -110,6 +111,7 @@ namespace BubbleTea.EditorTools
             EnsureFolder(PrefabFolder, "Stations");
             EnsureFolder(PrefabFolder, "Decor");
 
+            shopNumber = shop;
             staffSlotPrefix = shop > 1 ? "Matcha" : "";
             MenuSet set = shop > 1 ? BuildMatchaMenu() : BuildClassicMenu();
             DrinkRecipe[] menu = set.Menu;
@@ -457,8 +459,8 @@ namespace BubbleTea.EditorTools
         // them can be big too.
         private const float BarScale = 1.25f;
 
-        // Size of the drinks on the bars and the counter (the order bubbles show 2.4).
-        private const float DrinkSizeOnBars = 2f;
+        // Size of the drinks on the bars and the counter: the same as everywhere else.
+        private const float DrinkSizeOnBars = DrinkSize;
 
         // A sign over the counter showing what the customer at the front still wants.
         private static void AddOrderBoard(GameObject root, ServingCounter counter, float counterTop)
@@ -468,8 +470,8 @@ namespace BubbleTea.EditorTools
             backing.name = "Backing";
             Object.DestroyImmediate(backing.GetComponent<Collider>());
             backing.transform.SetParent(board, false);
-            backing.transform.localPosition = new Vector3(0f, 0.32f, 0.08f);
-            backing.transform.localScale = new Vector3(1f, 0.95f, 0.04f);
+            backing.transform.localPosition = new Vector3(0f, 0.42f, 0.08f);
+            backing.transform.localScale = new Vector3(1f, 1.1f, 0.04f);
             backing.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial("OrderBoard", new Color(1f, 0.95f, 0.84f));
             Transform icons = AddAnchor(board, "Icons", Vector3.zero);
             board.gameObject.SetActive(false);
@@ -546,6 +548,7 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("drinks.anchor").objectReferenceValue =
                 AddAnchor(root.transform, "DrinkStack", new Vector3(-0.62f, bodySize.y, 0f));
             serialized.FindProperty("drinks.capacity").intValue = 8;
+            serialized.FindProperty("maxDrinksPerCustomer").intValue = shopNumber > 1 ? 4 : 3;
             SetStackGrid(serialized, "drinks", 4, 2, 0.4f, DrinkSizeOnBars); // side by side, nearly as big as the order bubbles
             serialized.FindProperty("cashPile").objectReferenceValue = cashPile;
             serialized.FindProperty("queueStart").objectReferenceValue = queueStart;
@@ -720,14 +723,14 @@ namespace BubbleTea.EditorTools
                 new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
             AddCharacterArt(StaffSlot("Barista"), root, body);
 
-            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.62f));
+            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.82f));
             var carrier = root.AddComponent<ItemCarrier>();
             var serialized = new SerializedObject(carrier);
             serialized.FindProperty("stack.anchor").objectReferenceValue = hands;
             serialized.FindProperty("stack.capacity").intValue = 1;
             // Drinks ride side by side on a tray.
-            SetStackGrid(serialized, "stack", 3, 2, 0.27f, 1.1f);
-            serialized.FindProperty("tray").objectReferenceValue = AddTray(hands);
+            SetStackGrid(serialized, "stack", 3, 2, TraySpacing, DrinkSize);
+            serialized.FindProperty("tray").objectReferenceValue = AddTray(hands, shopNumber > 1);
             serialized.FindProperty("usesCarryUpgrade").boolValue = true; // Carry More lets baristas carry more too
             serialized.ApplyModifiedPropertiesWithoutUndo();
 

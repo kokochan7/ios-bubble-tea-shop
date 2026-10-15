@@ -28,7 +28,7 @@ namespace BubbleTea.Customers
         private Transform orderBubble;
 
         [SerializeField, Tooltip("Size of the drink model shown in the bubble.")]
-        private float bubbleIconScale = 2.4f;
+        private float bubbleIconScale = 2f;
 
         [SerializeField, Min(0f), Tooltip("Seconds a customer will wait before leaving without buying. 0 = they wait forever.")]
         private float patienceSeconds = 30f;
@@ -128,13 +128,13 @@ namespace BubbleTea.Customers
         private void ShowOrder()
         {
             if (orderBubble == null) return;
-            float scale = orders.Count > 1 ? bubbleIconScale * 0.65f : bubbleIconScale;
-            DrinkIcons.Show(orderBubble, orders, scale, scale * 0.26f, icons);
+            float scale = bubbleIconScale; // the same size however many drinks they want
+            DrinkIcons.Show(orderBubble, orders, scale, scale * 0.23f, icons);
             if (moodLight != null && moodLight.transform.parent == orderBubble)
             {
                 // Keep the mood light just past the last drink.
                 Vector3 spot = moodLight.transform.localPosition;
-                spot.x = Mathf.Max(0.7f, (orders.Count - 1) * 0.5f * scale * 0.26f + 0.45f);
+                spot.x = Mathf.Max(0.7f, (orders.Count - 1) * 0.5f * scale * 0.23f + 0.55f);
                 moodLight.transform.localPosition = spot;
             }
         }
@@ -265,8 +265,8 @@ namespace BubbleTea.Customers
             for (int i = 0; i < held.Count; i++)
             {
                 // Several drinks are carried side by side.
-                Vector3 spot = drinkHoldPosition + Vector3.right * ((i - (held.Count - 1) * 0.5f) * 0.26f);
-                if (held[i] != null) held[i].MoveTo(transform, spot);
+                Vector3 spot = drinkHoldPosition + Vector3.right * ((i - (held.Count - 1) * 0.5f) * 0.46f);
+                if (held[i] != null) held[i].MoveTo(transform, spot, bubbleIconScale);
             }
             ShowOrder();
             if (orders.Count > 0) return;

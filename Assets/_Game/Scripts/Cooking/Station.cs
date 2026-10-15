@@ -102,6 +102,32 @@ namespace BubbleTea.Cooking
             return null;
         }
 
+        /// <summary>
+        /// How many <paramref name="product"/> this station is already on its way to making: ingredients
+        /// dropped off for it plus the one being worked on. Baristas count these so they don't bring a
+        /// second ingredient for a drink that's already being made.
+        /// </summary>
+        public int PendingFor(ItemDefinition product)
+        {
+            if (steps == null || product == null) return 0;
+            int count = current != null && current.Input != null && current.Output == product ? 1 : 0;
+            foreach (RecipeStep step in steps)
+            {
+                if (step == null || step.Input == null || step.Output != product) continue;
+                ItemDefinition ingredient = step.Input;
+                count += input.CountOf(i => i == ingredient);
+            }
+            return count;
+        }
+
+        /// <summary>How many <paramref name="product"/> all stations together are already making from dropped-off ingredients.</summary>
+        public static int TotalPending(ItemDefinition product)
+        {
+            int count = 0;
+            foreach (Station station in active) count += station.PendingFor(product);
+            return count;
+        }
+
         /// <summary>A station with a finished <paramref name="item"/> ready, or null.</summary>
         public static Station FindReady(ItemDefinition item)
         {

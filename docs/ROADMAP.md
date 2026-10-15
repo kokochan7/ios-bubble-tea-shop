@@ -222,3 +222,12 @@ Matcha House pass:
 - Too-pricey walkouts cost 0.1 star and show a 5-second banner suggesting lower prices; customers accept prices up to 1.4x to 2.6x the normal price.
 - The Upgrades menu pauses the game; its X closes it until you step off the desk and back on.
 - Art: boba pearls sit inside a clear cup; the Tea Brewer is one large stainless steel urn.
+
+Tighter shops pass:
+
+- Customers order up to 3 drinks in the Boba Shop and 4 in the Matcha House (`ServingCounter.maxDrinksPerCustomer`).
+- Offline earnings: 12% of the normal earning speed, for at most 1.5 hours away.
+- Every drink is the same size (2x) on bars, the counter, trays, order bubbles and the order board. Trays are bigger to fit; green in the Matcha House.
+- Baristas reserve the drink they're working on (fetching it or feeding its ingredient), and drinks being made from dropped-off ingredients count too, so two never do the same job. They no longer stock the counter with unordered drinks, and anything no customer wants goes straight in the trash.
+- Both shops are more compact: the Boba Shop is 18 x 15 m (was 22 x 20), the Matcha House 24 x 22 m (was 30 x 30), with bars, desk and pads closer together.
+- New upbeat, catchy music for both shops (faster, with a repeating melody hook).

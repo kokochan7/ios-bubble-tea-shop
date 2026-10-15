@@ -48,6 +48,9 @@ namespace BubbleTea.Customers
         [SerializeField, Min(0f), Tooltip("Seconds before a drink nobody in line wants is thrown out (one at a time). 0 = never.")]
         private float expireSeconds = 2f;
 
+        [SerializeField, Range(1, 5), Tooltip("The most drinks one customer orders (3 in the Boba Shop, 4 in the Matcha House).")]
+        private int maxDrinksPerCustomer = 3;
+
         private float expireTimer;
 
         private readonly List<Customer> queue = new();
@@ -116,7 +119,9 @@ namespace BubbleTea.Customers
             foreach (ItemDefinition drink in QueuedOrders())
             {
                 if (drink == null) continue;
-                if (Wanted(drink) - drinks.CountOf(i => i == drink) - Reserved(drink) > 0) return drink;
+                // Drinks already on the counter, on their way (reserved by a barista) or being made
+                // from a dropped-off ingredient are covered, so nobody does the same work twice.
+                if (Wanted(drink) - drinks.CountOf(i => i == drink) - Reserved(drink) - Station.TotalPending(drink) > 0) return drink;
             }
             return null;
         }
@@ -206,7 +211,7 @@ namespace BubbleTea.Customers
         /// <summary>
         /// Picks the drinks a new customer wants, into <paramref name="into"/>: only drinks the shop
         /// can make right now (see <see cref="Station.AnyCanMake"/>). The more kinds it can make,
-        /// the bigger orders can get, up to 5; small orders stay the most common. A drink left on
+        /// the bigger orders can get, up to the counter's limit; small orders stay the most common. A drink left on
         /// the counter by someone who walked out is ordered first, so it isn't wasted.
         /// </summary>
         public void PickOrders(List<DrinkRecipe> into)
@@ -219,7 +224,7 @@ namespace BubbleTea.Customers
             }
             if (orderChoices.Count == 0) return;
 
-            int most = Mathf.Clamp(orderChoices.Count, 1, MaxDrinksPerCustomer);
+            int most = Mathf.Clamp(orderChoices.Count, 1, maxDrinksPerCustomer);
             int count = Mathf.Min(most, 1 + Mathf.FloorToInt(Mathf.Pow(Random.value, 1.5f) * most));
 
             foreach (DrinkRecipe recipe in orderChoices)
@@ -230,8 +235,6 @@ namespace BubbleTea.Customers
             while (into.Count < count) into.Add(orderChoices[Random.Range(0, orderChoices.Count)]);
         }
 
-        /// <summary>The most drinks one customer orders.</summary>
-        public const int MaxDrinksPerCustomer = 5;
 
         /// <summary>
         /// Hands over one of the <paramref name="orders"/> if it's on the counter, and banks its

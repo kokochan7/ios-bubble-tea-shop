@@ -13,10 +13,10 @@ namespace BubbleTea.Staff
     /// <item>bring a drink someone in line is waiting for from the station where it's ready, or</item>
     /// <item>if it isn't ready anywhere, carry the ingredient it needs to the station that makes it
     /// (for example plain milk tea to the topping bar, to become boba), or</item>
-    /// <item>when nobody is waiting, stock the counter with whatever drink is ready, the one
-    /// it has fewest of first, so later customers are served straight away.</item>
     /// </list>
-    /// Anything they hold that nobody needs goes in the nearest trash can.
+    /// Each job is reserved at the counter, and drinks already being made count too, so two
+    /// baristas never work on the same drink. Anything they hold that no customer wants goes
+    /// straight in the nearest trash can.
     /// With nothing to carry, they stand behind the station customers need most and make it work
     /// faster (one barista per station). They swap items through the same floor zones the player
     /// uses. The Walk Speed and Carry More upgrades apply to baristas too: they walk faster and
@@ -35,7 +35,7 @@ namespace BubbleTea.Staff
         private float giveUpSeconds = 4f;
 
         [SerializeField, Tooltip("Seconds to hold an item nobody needs before throwing it away.")]
-        private float discardSeconds = 2f;
+        private float discardSeconds = 0.5f;
 
         [SerializeField, Tooltip("Seconds between looking for a busier station while helping at one.")]
         private float rethinkSeconds = 8f;
@@ -49,7 +49,8 @@ namespace BubbleTea.Staff
         private Job job;
         private ItemDefinition item;
         private int want = 1; // how many of the item to pick up this trip
-        private bool reserved; // whether this job holds a reservation on deliverToCounter
+        private ServingCounter reservedAt; // the counter this job holds a reservation on, if any
+        private ItemDefinition reservedDrink;
         private Station pickupFrom;
         private Station deliverToStation;
         private ServingCounter deliverToCounter;
@@ -218,61 +219,39 @@ namespace BubbleTea.Staff
                 counter = candidate;
                 break;
             }
-            if (counter == null)
-            {
-                PlanStocking();
-                return;
-            }
+            if (counter == null) return; // nobody waiting on anything: help at a station
 
             // Is the drink ready somewhere? Fetch it for the counter.
             Station ready = Station.FindReady(needed);
             if (ready != null)
             {
-                counter.Reserve(needed);
                 StartFetch(needed, ready, null, counter, CarryLimit());
-                reserved = true;
+                Reserve(counter, needed);
                 return;
             }
 
-            // Otherwise feed a station that turns an ingredient into it.
+            // Otherwise feed a station that turns an ingredient into it (one ingredient: the drink
+            // is reserved, so other baristas pick a different job).
             foreach (Station maker in Station.All)
             {
                 ItemDefinition ingredient = maker.InputFor(needed);
                 if (ingredient == null || !maker.Accepts(ingredient)) continue;
                 Station source = Station.FindReady(ingredient);
                 if (source == null || source == maker) continue;
-                StartFetch(ingredient, source, maker, null, CarryLimit());
+                StartFetch(ingredient, source, maker, null, 1);
+                Reserve(counter, needed);
                 return;
             }
-
-            // Nothing to fetch for that order yet: keep busy stocking the counter meanwhile.
-            PlanStocking();
+            // Nothing to do for that order yet: help at a station meanwhile. (Baristas no longer
+            // stock the counter with drinks nobody ordered; those would only be thrown away.)
         }
 
-        // Nobody is waiting on anything we can help with, so bring a ready drink to a counter
-        // that has room, picking the drink it has fewest of.
-        private void PlanStocking()
+        private void Reserve(ServingCounter counter, ItemDefinition drink)
         {
-            foreach (ServingCounter counter in ServingCounter.All)
-            {
-                ItemDefinition best = null;
-                Station bestSource = null;
-                int fewest = int.MaxValue;
-                foreach (DrinkRecipe recipe in counter.Menu)
-                {
-                    if (recipe == null || recipe.Drink == null || !counter.CanStore(recipe.Drink)) continue;
-                    Station source = Station.FindReady(recipe.Drink);
-                    if (source == null) continue;
-                    int stored = counter.Stored(recipe.Drink);
-                    if (stored >= fewest) continue;
-                    fewest = stored;
-                    best = recipe.Drink;
-                    bestSource = source;
-                }
-                if (best == null) continue;
-                StartFetch(best, bestSource, null, counter, CarryLimit());
-                return;
-            }
+            ReleaseReservation();
+            counter.Reserve(drink);
+            reservedAt = counter;
+            reservedDrink = drink;
         }
 
         // Already holding something (a job was cut short): find somewhere it's useful.
@@ -284,24 +263,18 @@ namespace BubbleTea.Staff
             foreach (ServingCounter counter in ServingCounter.All)
             {
                 if (!counter.Needs(held)) continue;
-                counter.Reserve(held);
                 StartDeliver(held, null, counter);
-                reserved = true;
+                Reserve(counter, held);
                 return;
             }
-            // Nobody is waiting for it, but the counter can keep it for a later customer.
-            foreach (ServingCounter counter in ServingCounter.All)
-            {
-                if (!counter.CanStore(held)) continue;
-                StartDeliver(held, null, counter);
-                return;
-            }
+            // An ingredient for a drink someone is waiting on goes to the station that makes it.
             foreach (Station station in Station.All)
             {
-                if (!station.Accepts(held)) continue;
+                if (!station.Accepts(held) || !IsWanted(OutputOf(station, held))) continue;
                 StartDeliver(held, station, null);
                 return;
             }
+            // Nobody wants it: straight to the trash.
 
             holdingUselessTimer += secondsBetweenPlans;
             if (holdingUselessTimer < discardSeconds) return;
@@ -388,6 +361,12 @@ namespace BubbleTea.Staff
                 Finish();
                 return;
             }
+            // The customer it was for left: think again (it goes in the trash if nobody wants it).
+            if (deliverToCounter != null && !deliverToCounter.Needs(item))
+            {
+                Finish();
+                return;
+            }
 
             Vector3 spot = deliverToStation != null ? deliverToStation.ZoneCenter : deliverToCounter.ZoneCenter;
             if (!WalkTo(spot)) return;
@@ -405,8 +384,33 @@ namespace BubbleTea.Staff
 
         private void ReleaseReservation()
         {
-            if (reserved && deliverToCounter != null) deliverToCounter.Release(item);
-            reserved = false;
+            if (reservedAt != null) reservedAt.Release(reservedDrink);
+            reservedAt = null;
+            reservedDrink = null;
+        }
+
+        // True if a customer in line is still waiting for this drink.
+        private static bool IsWanted(ItemDefinition drink)
+        {
+            if (drink == null) return false;
+            foreach (ServingCounter counter in ServingCounter.All)
+            {
+                if (counter.Needs(drink)) return true;
+            }
+            return false;
+        }
+
+        // What this station makes from the given ingredient.
+        private static ItemDefinition OutputOf(Station station, ItemDefinition ingredient)
+        {
+            foreach (ServingCounter counter in ServingCounter.All)
+            {
+                foreach (DrinkRecipe recipe in counter.Menu)
+                {
+                    if (recipe != null && station.InputFor(recipe.Drink) == ingredient) return recipe.Drink;
+                }
+            }
+            return null;
         }
 
         private void Clear()

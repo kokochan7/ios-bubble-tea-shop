@@ -7,8 +7,9 @@ namespace BubbleTea.EditorTools
 {
     /// <summary>
     /// Writes each shop's background music as a looping WAV file, composed and played by code
-    /// (no downloads, no licences). The Boba Shop gets a bouncy pop tune; the Matcha House a
-    /// slow, mellow lo-fi one. The scene builder calls this, and you can rebuild the tracks from
+    /// (no downloads, no licences). Both shops get upbeat, catchy pop tunes built on a short
+    /// melody hook that repeats: a bright marimba tune in C for the Boba Shop and a sunny one in F
+    /// for the Matcha House. The scene builder calls this, and you can rebuild the tracks from
     /// Bubble Tea > Audio > Rebuild Music.
     /// </summary>
     internal static class MusicMaker
@@ -30,13 +31,14 @@ namespace BubbleTea.EditorTools
             public float Swing;              // 0 = straight eighths
             public float RestChance;         // melody density
             public bool Bouncy;              // pop drums and strummed chords, else lo-fi
+            public int HookBars = 2;         // the melody's rhythm and shape repeat every this many bars
             public int Seed;
         }
 
         private static readonly Song BobaSong = new()
         {
-            FileName = "Music_BobaShop",
-            Bpm = 108f,
+            FileName = "Music_BobaShop_Upbeat",
+            Bpm = 128f,
             Root = 60, // C
             Chords = new[]
             {
@@ -47,26 +49,30 @@ namespace BubbleTea.EditorTools
             },
             Scale = new[] { 0, 2, 4, 7, 9, 12, 14, 16 },
             Swing = 0f,
-            RestChance = 0.3f,
+            RestChance = 0.22f,
             Bouncy = true,
+            HookBars = 2,
             Seed = 7,
         };
 
         private static readonly Song MatchaSong = new()
         {
-            FileName = "Music_MatchaHouse",
-            Bpm = 76f,
+            FileName = "Music_MatchaHouse_Upbeat",
+            Bpm = 120f,
             Root = 53, // F
             Chords = new[]
             {
-                (0, Quality.Major7), (-1, Quality.Minor7), (-3, Quality.Minor7), (-5, Quality.Major7),
-                (5, Quality.Major7), (4, Quality.Minor7), (2, Quality.Minor7), (-5, Quality.Dominant7),
+                (0, Quality.Major), (7, Quality.Major), (9, Quality.Minor), (5, Quality.Major),
+                (0, Quality.Major), (7, Quality.Major), (5, Quality.Major), (7, Quality.Major),
+                (9, Quality.Minor), (5, Quality.Major), (0, Quality.Major), (7, Quality.Major),
+                (2, Quality.Minor), (5, Quality.Major), (7, Quality.Major), (7, Quality.Dominant7),
             },
             Scale = new[] { 0, 2, 4, 7, 9, 12, 14, 16, 19 },
-            Swing = 0.16f,
-            RestChance = 0.5f,
-            Bouncy = false,
-            Seed = 11,
+            Swing = 0.08f,
+            RestChance = 0.25f,
+            Bouncy = true,
+            HookBars = 2,
+            Seed = 23,
         };
 
         [MenuItem("Bubble Tea/Audio/Rebuild Music")]
@@ -164,16 +170,20 @@ namespace BubbleTea.EditorTools
                     }
                 }
 
-                // Melody: eighth notes picked from the scale, landing on chord tones on the beat.
+                // Melody: eighth notes picked from the scale, landing on chord tones on the beat. The
+                // choices repeat every few bars (the hook), which is what makes a tune catchy.
+                var hook = new System.Random(song.Seed * 31 + bar % Mathf.Max(1, song.HookBars));
                 for (int eighth = 0; eighth < 8; eighth++)
                 {
                     bool onBeat = eighth % 2 == 0;
-                    if (random.NextDouble() < song.RestChance + (onBeat ? -0.15 : 0.1)) continue;
+                    double roll = hook.NextDouble();
+                    int wander = hook.Next(-2, 3);
+                    if (roll < song.RestChance + (onBeat ? -0.15 : 0.1)) continue;
                     if (bar % 4 == 3 && eighth >= 5) continue; // breathe at the end of each phrase
 
                     int step;
                     if (onBeat) step = NearestChordTone(song, previous, offset, chord);
-                    else step = Mathf.Clamp(previous + random.Next(-2, 3), 0, song.Scale.Length - 1);
+                    else step = Mathf.Clamp(previous + wander, 0, song.Scale.Length - 1);
                     previous = step;
 
                     float at = barStart + eighth * 0.5f * beat;

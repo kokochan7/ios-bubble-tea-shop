@@ -16,10 +16,10 @@ namespace BubbleTea.Economy
         private Wallet wallet;
 
         [SerializeField, Range(0f, 1f), Tooltip("Share of the normal earning speed paid while away. 0.5 = half.")]
-        private float efficiency = 0.5f;
+        private float efficiency = 0.12f;
 
         [SerializeField, Tooltip("The shop stops earning after this many hours away, so players come back.")]
-        private float maxHours = 2f;
+        private float maxHours = 1.5f;
 
         [SerializeField, Tooltip("Ignore absences shorter than this many minutes (no pop-up for a quick app switch).")]
         private float minMinutes = 1f;
