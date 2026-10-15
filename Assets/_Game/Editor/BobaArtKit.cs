@@ -29,6 +29,13 @@ namespace BubbleTea.EditorTools
             // Taiwanese tea house accents: lacquer red, lantern gold and jade.
             public static readonly Color TeaRed = Hex("C8433A");
             public static readonly Color Jade = Hex("4E9C7E");
+            // Matcha House: matcha green uniforms and bars, hojicha brown, yuzu yellow.
+            public static readonly Color MatchaGreen = Hex("5E8C3A");
+            public static readonly Color Matcha = Hex("8DB255");
+            public static readonly Color Hojicha = Hex("9A6A44");
+            public static readonly Color Yuzu = Hex("F7D84A");
+            public static readonly Color Ceramic = Hex("F4EFE4");
+            public static readonly Color Bamboo = Hex("D9C48A");
             public static readonly Color Mint = Hex("A9E2CC");
             public static readonly Color DeepMint = Hex("6CC4A6");
             public static readonly Color Lavender = Hex("C7B3E8");
@@ -105,6 +112,16 @@ namespace BubbleTea.EditorTools
                 { "Cashier", Save("Cashier", BuildCharacter(Palette.TeaRed, Palette.Cream, CharacterStyle.Uniform, randomLook: true)) },
                 { "Cleaner", Save("Cleaner", BuildCharacter(Palette.TeaRed, Palette.Cream, CharacterStyle.Uniform, randomLook: true)) },
                 { "Car", Save("Car", BuildCar()) },
+                // The Matcha House: its own bars, and staff in green uniforms.
+                { "MatchaPlayer", Save("MatchaPlayer", BuildCharacter(Palette.MatchaGreen, Palette.Cream, CharacterStyle.Buns)) },
+                { "MatchaBarista", Save("MatchaBarista", BuildCharacter(Palette.MatchaGreen, Palette.Cream, CharacterStyle.Uniform, randomLook: true)) },
+                { "MatchaCashier", Save("MatchaCashier", BuildCharacter(Palette.MatchaGreen, Palette.Cream, CharacterStyle.Uniform, randomLook: true)) },
+                { "MatchaCleaner", Save("MatchaCleaner", BuildCharacter(Palette.MatchaGreen, Palette.Cream, CharacterStyle.Uniform, randomLook: true)) },
+                { "WhiskBar", Save("WhiskBar", BuildWhiskBar()) },
+                { "FoamBar", Save("FoamBar", BuildFoamBar()) },
+                { "HojichaBar", Save("HojichaBar", BuildHojichaBar()) },
+                { "StrawberryBar", Save("StrawberryBar", BuildStrawberryBar()) },
+                { "YuzuBar", Save("YuzuBar", BuildYuzuBar()) },
             };
             GameObject plant = Save("Plant", BuildPlant());
             models["Planter"] = plant;
@@ -205,21 +222,131 @@ namespace BubbleTea.EditorTools
             return counter;
         }
 
+        // One large stainless steel tea brewer: a tall urn on a stand with a sight glass,
+        // a front tap over a drip tray, side handles and a little control panel.
         private static GameObject BuildTeaBar()
         {
             Transform root = CounterBase("TeaBar", 1.4f, 1f, Palette.Cream, Palette.DeepPink);
             float top = CounterHeight;
-            Color[] teas = { Palette.BlackTea, Palette.GreenTea, Palette.Oolong };
-            for (int i = 0; i < teas.Length; i++)
+            const float x = -0.12f, z = -0.15f;
+            Box(root, "Stand", new Vector3(x, top + 0.04f, z), new Vector3(0.62f, 0.08f, 0.56f), Palette.Charcoal);
+            Cylinder(root, "Urn", new Vector3(x, top + 0.42f, z), 0.26f, 0.68f, Palette.Steel);
+            Cylinder(root, "Band", new Vector3(x, top + 0.2f, z), 0.265f, 0.04f, Color.Lerp(Palette.Steel, Palette.Charcoal, 0.25f));
+            Cylinder(root, "Band", new Vector3(x, top + 0.68f, z), 0.265f, 0.04f, Color.Lerp(Palette.Steel, Palette.Charcoal, 0.25f));
+            Sphere(root, "Lid", new Vector3(x, top + 0.76f, z), new Vector3(0.52f, 0.16f, 0.52f), Palette.Steel);
+            Sphere(root, "Knob", new Vector3(x, top + 0.86f, z), Vector3.one * 0.08f, Palette.Charcoal);
+            // Sight glass showing the tea level.
+            Cylinder(root, "SightGlass", new Vector3(x + 0.16f, top + 0.42f, z + 0.21f), 0.025f, 0.4f, Palette.Glass);
+            Cylinder(root, "Tea", new Vector3(x + 0.16f, top + 0.35f, z + 0.21f), 0.02f, 0.26f, Palette.BlackTea);
+            // Tap and drip tray.
+            Box(root, "Tap", new Vector3(x, top + 0.2f, z + 0.3f), new Vector3(0.07f, 0.07f, 0.12f), Palette.Charcoal);
+            Box(root, "TapHandle", new Vector3(x, top + 0.27f, z + 0.33f), new Vector3(0.04f, 0.1f, 0.04f), Palette.Charcoal);
+            Box(root, "DripTray", new Vector3(x, top + 0.02f, z + 0.38f), new Vector3(0.3f, 0.04f, 0.16f), Palette.Steel);
+            // Handles on each side.
+            Box(root, "HandleL", new Vector3(x - 0.3f, top + 0.55f, z), new Vector3(0.05f, 0.04f, 0.18f), Palette.Charcoal);
+            Box(root, "HandleR", new Vector3(x + 0.3f, top + 0.55f, z), new Vector3(0.05f, 0.04f, 0.18f), Palette.Charcoal);
+            // Control panel with a glowing display.
+            Box(root, "Panel", new Vector3(x + 0.48f, top + 0.12f, z + 0.05f), new Vector3(0.24f, 0.24f, 0.2f), Palette.Steel);
+            Box(root, "Display", new Vector3(x + 0.48f, top + 0.17f, z + 0.155f), new Vector3(0.14f, 0.06f, 0.01f), Palette.Screen, emissive: true);
+            Sphere(root, "Button", new Vector3(x + 0.48f, top + 0.08f, z + 0.16f), new Vector3(0.05f, 0.05f, 0.02f), Palette.TeaRed);
+            return root.gameObject;
+        }
+
+        // ---------- Matcha House bars ----------
+
+        // Matcha whisking: ceramic chawan bowls, bamboo whisks on their stands and a matcha tin.
+        private static GameObject BuildWhiskBar()
+        {
+            Transform root = CounterBase("WhiskBar", 1.4f, 1f, Palette.MatchaGreen, Palette.Cream);
+            float top = CounterHeight;
+            for (int i = 0; i < 2; i++)
             {
-                float x = -0.38f + i * 0.38f;
-                Box(root, "UrnStand", new Vector3(x, top + 0.05f, -0.22f), new Vector3(0.28f, 0.1f, 0.28f), Palette.Steel);
-                Cylinder(root, "Urn", new Vector3(x, top + 0.33f, -0.22f), 0.14f, 0.46f, Palette.Steel);
-                Cylinder(root, "Label", new Vector3(x, top + 0.36f, -0.22f), 0.145f, 0.12f, teas[i]);
-                Sphere(root, "Lid", new Vector3(x, top + 0.56f, -0.22f), new Vector3(0.28f, 0.1f, 0.28f), Palette.Steel);
-                Sphere(root, "Knob", new Vector3(x, top + 0.62f, -0.22f), Vector3.one * 0.06f, Palette.Charcoal);
-                Box(root, "Tap", new Vector3(x, top + 0.17f, -0.06f), new Vector3(0.05f, 0.05f, 0.08f), Palette.Charcoal);
+                float x = -0.4f + i * 0.34f;
+                Sphere(root, "Chawan", new Vector3(x, top + 0.06f, -0.2f), new Vector3(0.26f, 0.14f, 0.26f), Palette.Ceramic);
+                Cylinder(root, "Matcha", new Vector3(x, top + 0.11f, -0.2f), 0.1f, 0.01f, Palette.Matcha);
+                Cylinder(root, "WhiskStand", new Vector3(x + 0.05f, top + 0.06f, -0.38f), 0.05f, 0.12f, Palette.Ceramic);
+                Cylinder(root, "Whisk", new Vector3(x + 0.05f, top + 0.18f, -0.38f), 0.045f, 0.14f, Palette.Bamboo);
+                Cylinder(root, "WhiskHandle", new Vector3(x + 0.05f, top + 0.3f, -0.38f), 0.018f, 0.12f, Palette.Bamboo);
             }
+            Cylinder(root, "MatchaTin", new Vector3(0.38f, top + 0.12f, -0.25f), 0.09f, 0.24f, Palette.MatchaGreen);
+            Cylinder(root, "TinLid", new Vector3(0.38f, top + 0.25f, -0.25f), 0.095f, 0.03f, Palette.Gold);
+            Transform scoop = Box(root, "Chashaku", new Vector3(0.15f, top + 0.015f, -0.05f), new Vector3(0.22f, 0.012f, 0.025f), Palette.Bamboo);
+            scoop.localRotation = Quaternion.Euler(0f, 25f, 0f);
+            return root.gameObject;
+        }
+
+        // Cream foam: a milk frother, steel pitchers and a jug of sweet cream.
+        private static GameObject BuildFoamBar()
+        {
+            Transform root = CounterBase("FoamBar", 2f, 1f, Palette.Cream, Palette.MatchaGreen);
+            float top = CounterHeight;
+            Box(root, "FrotherBase", new Vector3(-0.3f, top + 0.05f, -0.22f), new Vector3(0.3f, 0.1f, 0.28f), Palette.Charcoal);
+            Box(root, "FrotherBody", new Vector3(-0.3f, top + 0.3f, -0.32f), new Vector3(0.3f, 0.42f, 0.1f), Palette.Steel);
+            Cylinder(root, "Wand", new Vector3(-0.3f, top + 0.3f, -0.22f), 0.012f, 0.2f, Palette.Steel);
+            Cylinder(root, "Pitcher", new Vector3(-0.3f, top + 0.16f, -0.18f), 0.06f, 0.14f, Palette.Steel);
+            for (int i = 0; i < 3; i++)
+            {
+                Cylinder(root, "Pitcher", new Vector3(0.05f + i * 0.16f, top + 0.08f, -0.3f), 0.06f, 0.16f, Palette.Steel);
+            }
+            Cylinder(root, "CreamJug", new Vector3(0.6f, top + 0.12f, -0.25f), 0.09f, 0.24f, Palette.Ceramic);
+            Sphere(root, "Cream", new Vector3(0.6f, top + 0.25f, -0.25f), new Vector3(0.16f, 0.06f, 0.16f), Palette.Jelly);
+            return root.gameObject;
+        }
+
+        // Hojicha: a clay roasting pan (houroku) on a little burner, and a cast-iron kettle.
+        private static GameObject BuildHojichaBar()
+        {
+            Transform root = CounterBase("HojichaBar", 1.4f, 1f, Palette.Hojicha, Palette.Cream);
+            float top = CounterHeight;
+            Box(root, "Burner", new Vector3(-0.3f, top + 0.05f, -0.2f), new Vector3(0.36f, 0.1f, 0.36f), Palette.Charcoal);
+            Cylinder(root, "Flame", new Vector3(-0.3f, top + 0.11f, -0.2f), 0.1f, 0.02f, Palette.Mango);
+            Sphere(root, "Houroku", new Vector3(-0.3f, top + 0.17f, -0.2f), new Vector3(0.34f, 0.1f, 0.34f), Palette.Terracotta);
+            Sphere(root, "Leaves", new Vector3(-0.3f, top + 0.2f, -0.2f), new Vector3(0.22f, 0.04f, 0.22f), Palette.Hojicha);
+            Transform handle = Cylinder(root, "Handle", new Vector3(-0.08f, top + 0.2f, -0.2f), 0.03f, 0.2f, Palette.Terracotta);
+            handle.localRotation = Quaternion.Euler(0f, 0f, 80f);
+            Sphere(root, "Kettle", new Vector3(0.3f, top + 0.14f, -0.22f), new Vector3(0.3f, 0.26f, 0.3f), Palette.Charcoal);
+            Transform spout = Cylinder(root, "Spout", new Vector3(0.47f, top + 0.18f, -0.22f), 0.025f, 0.14f, Palette.Charcoal);
+            spout.localRotation = Quaternion.Euler(0f, 0f, -50f);
+            Transform bail = Box(root, "KettleHandle", new Vector3(0.3f, top + 0.33f, -0.22f), new Vector3(0.24f, 0.02f, 0.03f), Palette.DarkWood);
+            bail.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            return root.gameObject;
+        }
+
+        // Strawberry matcha: a bowl of strawberries, a jar of strawberry milk and a muddler.
+        private static GameObject BuildStrawberryBar()
+        {
+            Transform root = CounterBase("StrawberryBar", 2f, 1f, Palette.Blush, Palette.MatchaGreen);
+            float top = CounterHeight;
+            Cylinder(root, "Bowl", new Vector3(-0.1f, top + 0.05f, -0.24f), 0.24f, 0.1f, Palette.Ceramic);
+            for (int i = 0; i < 7; i++)
+            {
+                float angle = i * Mathf.PI * 2f / 6f;
+                float radius = i == 6 ? 0f : 0.13f;
+                Sphere(root, "Strawberry", new Vector3(-0.1f + Mathf.Cos(angle) * radius, top + (i == 6 ? 0.17f : 0.12f), -0.24f + Mathf.Sin(angle) * radius),
+                    new Vector3(0.1f, 0.12f, 0.1f), Palette.Strawberry);
+            }
+            Cylinder(root, "MilkJar", new Vector3(0.35f, top + 0.16f, -0.28f), 0.1f, 0.32f, Palette.Glass);
+            Cylinder(root, "StrawberryMilk", new Vector3(0.35f, top + 0.12f, -0.28f), 0.09f, 0.22f, Palette.Blush);
+            Transform muddler = Cylinder(root, "Muddler", new Vector3(0.6f, top + 0.03f, -0.1f), 0.02f, 0.3f, Palette.DarkWood);
+            muddler.localRotation = Quaternion.Euler(90f, 30f, 0f);
+            return root.gameObject;
+        }
+
+        // Yuzu matcha fizz: a crate of yuzu, a juicer and a soda tap.
+        private static GameObject BuildYuzuBar()
+        {
+            Transform root = CounterBase("YuzuBar", 1.4f, 1f, Palette.Yuzu, Palette.MatchaGreen);
+            float top = CounterHeight;
+            Box(root, "Crate", new Vector3(-0.32f, top + 0.08f, -0.22f), new Vector3(0.4f, 0.16f, 0.32f), Palette.Bamboo);
+            for (int i = 0; i < 6; i++)
+            {
+                Sphere(root, "Yuzu", new Vector3(-0.44f + (i % 3) * 0.12f, top + 0.19f, -0.28f + (i / 3) * 0.12f), Vector3.one * 0.11f, Palette.Yuzu);
+            }
+            Cylinder(root, "Juicer", new Vector3(0.05f, top + 0.05f, -0.2f), 0.1f, 0.1f, Palette.Ceramic);
+            Sphere(root, "Ridge", new Vector3(0.05f, top + 0.12f, -0.2f), new Vector3(0.09f, 0.1f, 0.09f), Palette.Ceramic);
+            Box(root, "SodaTower", new Vector3(0.38f, top + 0.3f, -0.3f), new Vector3(0.16f, 0.6f, 0.14f), Palette.Steel);
+            Box(root, "SodaTap", new Vector3(0.38f, top + 0.46f, -0.18f), new Vector3(0.05f, 0.05f, 0.12f), Palette.Charcoal);
+            Box(root, "Label", new Vector3(0.38f, top + 0.35f, -0.225f), new Vector3(0.12f, 0.08f, 0.01f), Palette.Matcha);
             return root.gameObject;
         }
 
@@ -324,28 +451,36 @@ namespace BubbleTea.EditorTools
 
         // ---------- Cup ----------
 
-        // A drink-filled boba cup. The parts named "Drink" and "Pearls" are recolored per drink by the scene builder.
+        // A boba drink in a clear cup: the pearls sit inside at the bottom, the drink fills the cup above
+        // them, and an optional "Foam" layer sits on top. The parts named "Drink", "Pearls" and "Foam" are
+        // recolored per drink by the scene builder (which hides the pearls and foam a drink doesn't have).
         private static GameObject BuildCup()
         {
             var root = new GameObject("BobaCup").transform;
-            Mesh cupMesh = Taper("CupBody", 0.085f, 0.11f, 0.28f);
-            Part(root, "Drink", cupMesh, new Vector3(0f, 0f, 0f), Palette.MilkTea);
+            Transform shell = Part(root, "Cup", Taper("CupBody", 0.085f, 0.11f, 0.28f), Vector3.zero, Palette.Glass);
+            shell.GetComponent<MeshRenderer>().sharedMaterial = GetClearMaterial(Palette.Glass, 0.3f);
+            Part(root, "Drink", Taper("CupDrink", 0.079f, 0.103f, 0.2f), new Vector3(0f, 0.07f, 0f), Palette.MilkTea);
+            Part(root, "Foam", Taper("CupFoam", 0.1f, 0.104f, 0.05f), new Vector3(0f, 0.222f, 0f), Palette.Jelly);
             Part(root, "Rim", Taper("CupRim", 0.112f, 0.115f, 0.025f), new Vector3(0f, 0.27f, 0f), Color.white);
-            Sphere(root, "Dome", new Vector3(0f, 0.295f, 0f), new Vector3(0.22f, 0.09f, 0.22f), Palette.Glass);
+            Transform dome = Sphere(root, "Dome", new Vector3(0f, 0.295f, 0f), new Vector3(0.22f, 0.09f, 0.22f), Palette.Glass);
+            dome.GetComponent<Renderer>().sharedMaterial = GetClearMaterial(Palette.Glass, 0.35f);
 
-            // Pearls pressed against the bottom of the cup, as if seen through it.
+            // Pearls settled inside the bottom of the cup, seen through the clear plastic.
             var pearls = new GameObject("Pearls").transform;
             pearls.SetParent(root, false);
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 14; i++)
             {
-                float angle = i * Mathf.PI * 2f / 10f;
-                float y = 0.035f + (i % 2) * 0.04f;
-                float r = 0.085f + y * 0.09f;
-                Sphere(pearls, "Pearl", new Vector3(Mathf.Cos(angle) * r, y, Mathf.Sin(angle) * r), Vector3.one * 0.045f, Palette.Pearl);
+                bool lower = i < 8;
+                int ring = lower ? 8 : 6;
+                float angle = (i % ring) * Mathf.PI * 2f / ring + (lower ? 0f : 0.4f);
+                float r = lower ? 0.052f : 0.05f;
+                float y = lower ? 0.024f : 0.056f;
+                Sphere(pearls, "Pearl", new Vector3(Mathf.Cos(angle) * r, y, Mathf.Sin(angle) * r), Vector3.one * 0.04f, Palette.Pearl);
             }
+            Sphere(pearls, "Pearl", new Vector3(0f, 0.024f, 0f), Vector3.one * 0.04f, Palette.Pearl);
 
-            // A fat pink boba straw, tipped a little.
-            Transform straw = Cylinder(root, "Straw", new Vector3(0.025f, 0.36f, 0f), 0.018f, 0.24f, Palette.DeepPink);
+            // A fat pink boba straw reaching down into the pearls, tipped a little.
+            Transform straw = Cylinder(root, "Straw", new Vector3(0.025f, 0.27f, 0f), 0.018f, 0.42f, Palette.DeepPink);
             straw.localRotation = Quaternion.Euler(0f, 0f, -8f);
             return root.gameObject;
         }
@@ -390,7 +525,7 @@ namespace BubbleTea.EditorTools
             Sphere(root, "Hair", new Vector3(0f, 1.22f, -0.04f), new Vector3(0.66f, 0.56f, 0.64f), Palette.Hair);
             if (randomLook)
             {
-                AddRandomLook(root, style);
+                AddRandomLook(root, style, shirt);
                 return root.gameObject;
             }
             switch (style)
@@ -416,7 +551,7 @@ namespace BubbleTea.EditorTools
             return root.gameObject;
         }
 
-        private static void AddRandomLook(Transform root, CharacterStyle style)
+        private static void AddRandomLook(Transform root, CharacterStyle style, Color uniform)
         {
             var female = new GameObject("Female").transform;
             female.SetParent(root, false);
@@ -438,9 +573,9 @@ namespace BubbleTea.EditorTools
                     Box(root, "Bag", new Vector3(0f, 0.55f, -0.27f), new Vector3(0.3f, 0.32f, 0.14f), Palette.Peach);
                     break;
                 case CharacterStyle.Uniform:
-                    Sphere(root, "Cap", new Vector3(0f, 1.32f, -0.02f), new Vector3(0.64f, 0.42f, 0.64f), Palette.TeaRed);
+                    Sphere(root, "Cap", new Vector3(0f, 1.32f, -0.02f), new Vector3(0.64f, 0.42f, 0.64f), uniform);
                     Sphere(root, "CapBand", new Vector3(0f, 1.27f, -0.02f), new Vector3(0.66f, 0.08f, 0.66f), Palette.Gold);
-                    Box(root, "Visor", new Vector3(0f, 1.36f, 0.3f), new Vector3(0.4f, 0.03f, 0.22f), Palette.TeaRed);
+                    Box(root, "Visor", new Vector3(0f, 1.36f, 0.3f), new Vector3(0.4f, 0.03f, 0.22f), uniform);
                     break;
             }
 
@@ -874,6 +1009,36 @@ namespace BubbleTea.EditorTools
                 material.SetColor("_EmissionColor", color * 0.8f);
                 material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             }
+            EditorUtility.SetDirty(material);
+            Materials[key] = material;
+            return material;
+        }
+
+        // A see-through material (URP Lit, transparent), for the clear plastic cup.
+        private static Material GetClearMaterial(Color color, float alpha)
+        {
+            string key = "Clear_" + ColorUtility.ToHtmlStringRGB(color) + "_" + Mathf.RoundToInt(alpha * 100f);
+            if (Materials.TryGetValue(key, out Material cached)) return cached;
+
+            string path = $"{MaterialFolder}/{key}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                if (shader == null) shader = Shader.Find("Standard");
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, path);
+            }
+            material.color = new Color(color.r, color.g, color.b, alpha);
+            material.SetFloat("_Surface", 1f); // transparent
+            material.SetFloat("_Blend", 0f);   // alpha blending
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_ZWrite", 0);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.85f);
             EditorUtility.SetDirty(material);
             Materials[key] = material;
             return material;

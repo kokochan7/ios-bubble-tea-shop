@@ -63,7 +63,7 @@ namespace BubbleTea.EditorTools
             public float StaffDoorFrom, StaffDoorTo;    // the gap in the glass wall beside the counter
             public float LaneWallX;                     // the east end of the expansion
             public Vector3 Counter, Seating, DriveThru, TrashCan, FloorCash, PlayerStart;
-            public Vector3 TeaBrewer, ToppingBar, TaroStation, FruitBar, UpgradeDesk, Cashier;
+            public Vector3 TeaBrewer, ToppingBar, TaroStation, FruitBar, ExtraBar, UpgradeDesk, Cashier;
             public Vector3 Expansion, MoreSeating, Cleaner, DriveThruCashier, SecondShopPad, TravelBack;
             public Vector3[] Baristas;
             public float[] Windows, Lamps, ExpansionWindows, ExpansionLamps; // x positions on the back wall
@@ -138,6 +138,7 @@ namespace BubbleTea.EditorTools
             ToppingBar = new(-4f, 0f, 7f),
             TaroStation = new(1f, 0f, 7f),
             FruitBar = new(6f, 0f, 7f),
+            ExtraBar = new(-13.2f, 0f, 7f),     // the Yuzu Bar, in the west corner of the kitchen
             UpgradeDesk = new(12.5f, 0f, 9f),
             Cashier = new(0f, 0f, 2.8f),
             Expansion = new(8f, 0f, 11.5f),
@@ -200,9 +201,15 @@ namespace BubbleTea.EditorTools
             {
                 ShopName = "Matcha House",
                 Prefix = "Shop2",
-                Accent = new Color(0.42f, 0.66f, 0.42f),
+                Accent = new Color(0.30f, 0.48f, 0.26f),  // deep matcha green
                 Accent2 = new Color(0.98f, 0.86f, 0.62f),
                 Grass = new Color(0.42f, 0.58f, 0.30f),
+                // A Japanese tea room: white paper lanterns, a matcha-green noren, matcha tins, cream lettering.
+                Lantern = new Color(0.98f, 0.95f, 0.86f),
+                LanternGlow = new Color(1f, 0.85f, 0.55f),
+                Noren = new Color(0.32f, 0.47f, 0.24f),
+                TeaTin = new Color(0.40f, 0.58f, 0.30f),
+                SignText = new Color(0.99f, 0.97f, 0.90f),
             },
             Music = MusicMaker.Track.MatchaHouse,
             Layout = Large,
@@ -404,7 +411,9 @@ namespace BubbleTea.EditorTools
                 wallMat, expansionArea);
             CreateMusic(plan.Music);
 
-            GameObject player = CreatePlayer(playerMat, out Wallet wallet);
+            // The Matcha House dresses the player in its green uniform (if the Art Set has it).
+            string playerSlot = plan.Number > 1 && ArtLibrary.Load().Get("MatchaPlayer") != null ? "MatchaPlayer" : "Player";
+            GameObject player = CreatePlayer(playerMat, playerSlot, out Wallet wallet);
             Camera camera = CreateCamera(player.transform);
             VirtualJoystick joystick = CreateHud(wallet, out Transform hud);
             CreateEventSystem();
@@ -446,6 +455,7 @@ namespace BubbleTea.EditorTools
             CreateClock(hud);
             CreatePricePanel(hud, content.Menu);
             CreateRatingView(hud, rating);
+            CreatePriceyAlert(hud);
             CreateWelcomeBackPopup(hud, offlineEarnings);
             CreateGameOverPopup(hud, rating, saveManager);
 
@@ -606,7 +616,7 @@ namespace BubbleTea.EditorTools
             return wall;
         }
 
-        private static GameObject CreatePlayer(Material material, out Wallet wallet)
+        private static GameObject CreatePlayer(Material material, string artSlot, out Wallet wallet)
         {
             GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             player.name = "Player";
@@ -630,7 +640,7 @@ namespace BubbleTea.EditorTools
             nose.GetComponent<Renderer>().sharedMaterial = material;
 
             // A character model, if the Art Set has one. The capsule stays as the collider.
-            GameObject model = ArtLibrary.Attach("Player", player.transform, new Vector3(0.8f, 1.8f, 0.8f),
+            GameObject model = ArtLibrary.Attach(artSlot, player.transform, new Vector3(0.8f, 1.8f, 0.8f),
                 ArtLibrary.Fit.Height, new Vector3(0f, -1f, 0f));
             if (model != null)
             {
@@ -846,8 +856,14 @@ namespace BubbleTea.EditorTools
             SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
             SetObjectList(expansionPad, "hideWhenUnlocked", eastWall);
             // The bars stand in a row behind the counter, turned so you serve them from the counter side.
-            UnlockPad fruitPad = CreatePad(content.FruitBar, Layout.FruitBar, billPrefab, wallet, padMat,
-                expansionPad);
+            // A shop with a fifth bar (the Matcha House's Yuzu Bar) unlocks it after the fruit bar.
+            UnlockPad extraPad = content.ExtraBar != null
+                ? CreatePad(content.ExtraBar, Layout.ExtraBar, billPrefab, wallet, padMat)
+                : null;
+            if (extraPad != null) Turn(extraPad, 180f);
+            UnlockPad fruitPad = extraPad != null
+                ? CreatePad(content.FruitBar, Layout.FruitBar, billPrefab, wallet, padMat, expansionPad, extraPad)
+                : CreatePad(content.FruitBar, Layout.FruitBar, billPrefab, wallet, padMat, expansionPad);
             Turn(fruitPad, 180f);
             UnlockPad taroPad = CreatePad(content.TaroStation, Layout.TaroStation, billPrefab, wallet, padMat, fruitPad);
             Turn(taroPad, 180f);
@@ -900,6 +916,11 @@ namespace BubbleTea.EditorTools
                 expansionPad, driveThruPad, seatingPad, cashierPad, cleanerPad, moreSeatingPad, driveThruCashierPad,
             };
             all.AddRange(baristaPads);
+            if (extraPad != null)
+            {
+                extraPad.gameObject.SetActive(false);
+                all.Add(extraPad);
+            }
             if (secondShopPad != null)
             {
                 var reveal = new GameObject("Level 2 Unlock").AddComponent<RevealWhenAllUnlocked>();
@@ -1583,6 +1604,35 @@ namespace BubbleTea.EditorTools
 
         // A panel along the bottom of the screen with one row per upgrade. It's created
         // after the joystick so its buttons sit on top and get taps first.
+        // A red banner under the money when a customer walks out over a price.
+        private static void CreatePriceyAlert(Transform hud)
+        {
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform root = CreateUiObject("PriceyAlert", hud);
+            Stretch(root);
+            var alert = root.gameObject.AddComponent<BubbleTea.UI.PriceyAlert>();
+
+            RectTransform banner = CreateUiObject("Banner", root);
+            banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 1f);
+            banner.pivot = new Vector2(0.5f, 1f);
+            banner.anchoredPosition = new Vector2(0f, -HudMargin - 120f * HudScale - 20f);
+            banner.sizeDelta = new Vector2(760f, 130f);
+            var image = banner.gameObject.AddComponent<Image>();
+            image.sprite = rounded;
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.82f, 0.26f, 0.24f, 0.92f);
+            image.raycastTarget = false;
+
+            Text text = CreateHudText("Text", banner, font, 36, TextAnchor.MiddleCenter);
+            Stretch(text.rectTransform);
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.raycastTarget = false;
+            text.text = "A customer left: too pricey!\nConsider lowering your prices.";
+            SetReference(alert, "banner", banner.gameObject);
+        }
+
         private static void CreateUpgradePanel(Transform hud, UpgradeManager manager, UpgradeDefinition[] upgrades)
         {
             Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
@@ -1608,6 +1658,15 @@ namespace BubbleTea.EditorTools
             Text title = CreateHudText("Title", panel, font, 56, TextAnchor.MiddleCenter);
             SetTopRow(title.rectTransform, 0f, titleHeight, 0f, 0f);
             title.text = "UPGRADES";
+
+            // The game is paused while the menu is open; this closes it and carries on.
+            Button close = CreateMenuButton("Close", panel, "X", rounded, font, new Color(0.85f, 0.35f, 0.35f), out _);
+            var closeRect = (RectTransform)close.transform;
+            closeRect.anchorMin = closeRect.anchorMax = new Vector2(1f, 1f);
+            closeRect.pivot = new Vector2(1f, 1f);
+            closeRect.anchoredPosition = new Vector2(-20f, -15f);
+            closeRect.sizeDelta = new Vector2(90f, 80f);
+            SetReference(panelSwitch, "closeButton", close);
 
             for (int i = 0; i < upgrades.Length; i++)
             {

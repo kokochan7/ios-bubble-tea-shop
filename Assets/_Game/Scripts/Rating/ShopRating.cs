@@ -31,6 +31,9 @@ namespace BubbleTea.Rating
         [SerializeField, Tooltip("Stars lost each time a customer walks out.")]
         private float starsPerWalkout = 1f;
 
+        [SerializeField, Tooltip("Stars lost each time a customer leaves because a price is too high.")]
+        private float starsPerPriceyWalkout = 0.1f;
+
         [SerializeField, Tooltip("Lost stars earned back with each customer served.")]
         private float starsBackPerServe = 0.1f;
 
@@ -74,7 +77,7 @@ namespace BubbleTea.Rating
         {
             GameEvents.CustomerServed += OnServed;
             GameEvents.CustomerLeftUpset += OnWalkout;
-            GameEvents.CustomerRefusedPrice += OnWalkout;
+            GameEvents.CustomerRefusedPrice += OnPriceyWalkout;
             GameEvents.MessChanged += OnMessChanged;
             foreach (RatedPad entry in pads)
             {
@@ -86,7 +89,7 @@ namespace BubbleTea.Rating
         {
             GameEvents.CustomerServed -= OnServed;
             GameEvents.CustomerLeftUpset -= OnWalkout;
-            GameEvents.CustomerRefusedPrice -= OnWalkout;
+            GameEvents.CustomerRefusedPrice -= OnPriceyWalkout;
             GameEvents.MessChanged -= OnMessChanged;
             foreach (RatedPad entry in pads)
             {
@@ -114,6 +117,12 @@ namespace BubbleTea.Rating
         private void OnWalkout(Vector3 _)
         {
             lost += starsPerWalkout;
+            Recalculate();
+        }
+
+        private void OnPriceyWalkout(Vector3 _)
+        {
+            lost += starsPerPriceyWalkout;
             Recalculate();
         }
 

@@ -25,6 +25,16 @@ namespace BubbleTea.EditorTools
         private static string DataFolder = "Assets/_Game/Data";
         private static string PrefabFolder = "Assets/_Game/Prefabs";
         private static int costScale = 1;
+        private static string staffSlotPrefix = ""; // "Matcha" in the Matcha House: green uniforms
+
+        /// <summary>
+        /// The art slot for a staff member (or the player) in the shop being built: the Matcha
+        /// House has its own green-uniformed versions, when the Art Set has them.
+        /// </summary>
+        internal static string StaffSlot(string slotName) =>
+            staffSlotPrefix.Length > 0 && ArtLibrary.Load().Get(staffSlotPrefix + slotName) != null
+                ? staffSlotPrefix + slotName
+                : slotName;
 
         internal struct Content
         {
@@ -33,6 +43,8 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition ToppingBar;
             public BuildableDefinition TaroStation;
             public BuildableDefinition FruitBar;
+            /// <summary>A fifth bar (the Matcha House's Yuzu Bar). Null in shops without one.</summary>
+            public BuildableDefinition ExtraBar;
             public BuildableDefinition Expansion;
             public BuildableDefinition DriveThru;
             public Customer CarPrefab;
@@ -67,6 +79,9 @@ namespace BubbleTea.EditorTools
             public GameObject ToppingBar;
             public GameObject TaroStation;
             public GameObject FruitBar;
+            public GameObject ExtraBar; // optional fifth bar
+            public string ToppingName;
+            public string ExtraName;
             public string BrewerName;
             public string TaroName;
             public string FruitName;
@@ -95,6 +110,7 @@ namespace BubbleTea.EditorTools
             EnsureFolder(PrefabFolder, "Stations");
             EnsureFolder(PrefabFolder, "Decor");
 
+            staffSlotPrefix = shop > 1 ? "Matcha" : "";
             MenuSet set = shop > 1 ? BuildMatchaMenu() : BuildClassicMenu();
             DrinkRecipe[] menu = set.Menu;
             GameObject counter = BuildCounterPrefab("Counter", new Color(0.62f, 0.42f, 0.28f), menu, billPrefab,
@@ -105,19 +121,19 @@ namespace BubbleTea.EditorTools
                 // counter's customer side, instead of straight out from it.
                 queueOffset: new Vector3(0f, 0f, -3.5f), queueYaw: -90f);
 
-            // Values per level start at level 0; costs start at the price of level 1.
+            // Values per level start at level 0; costs start at the price of level 1. Shop 2's
+            // upgrades go one level further (Lv 5/5).
+            bool fiveLevels = shop > 1;
             UpgradeDefinition[] upgrades =
             {
                 GetOrCreateUpgrade("Walk Speed", StatId.MoveSpeed,
-                    new[] { 1f, 1.15f, 1.3f, 1.45f, 1.6f }, Scaled(40, 90, 180, 350)),
+                    Levels(fiveLevels, 1f, 1.15f, 1.3f, 1.45f, 1.6f, 1.75f), Costs(fiveLevels, 40, 90, 180, 350, 650)),
                 GetOrCreateUpgrade("Carry More", StatId.CarryBonus,
-                    new[] { 0f, 1f, 2f, 3f, 4f }, Scaled(50, 120, 250, 500)), // +1 item per level (see ItemCarrier)
+                    Levels(fiveLevels, 0f, 1f, 2f, 3f, 4f, 5f), Costs(fiveLevels, 50, 120, 250, 500, 900)), // +1 item per level (see ItemCarrier)
                 GetOrCreateUpgrade("Brew Speed", StatId.BrewSpeed,
-                    new[] { 1f, 1.25f, 1.5f, 1.75f, 2f }, Scaled(60, 140, 280, 550)),
-                GetOrCreateUpgrade("Drink Price", StatId.DrinkPrice,
-                    new[] { 1f, 1.2f, 1.4f, 1.6f, 1.8f }, Scaled(80, 180, 360, 700)),
+                    Levels(fiveLevels, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.25f), Costs(fiveLevels, 60, 140, 280, 550, 1000)),
                 GetOrCreateUpgrade("Bigger Bars", StatId.StationCapacity,
-                    new[] { 0f, 1f, 2f, 3f, 4f }, Scaled(70, 150, 300, 600)), // +1 finished drink per bar (see Station)
+                    Levels(fiveLevels, 0f, 1f, 2f, 3f, 4f, 5f), Costs(fiveLevels, 70, 150, 300, 600, 1100)), // +1 finished drink per bar (see Station)
             };
             GameObject upgradeDesk = BuildUpgradeDeskPrefab();
             GameObject barista = BuildBaristaPrefab();
@@ -126,9 +142,10 @@ namespace BubbleTea.EditorTools
             {
                 Counter = GetOrCreateBuildable("Counter", 30, counter),
                 TeaBrewer = GetOrCreateBuildable(set.BrewerName, 80, set.Brewer),
-                ToppingBar = GetOrCreateBuildable("Topping Bar", 150, set.ToppingBar),
+                ToppingBar = GetOrCreateBuildable(set.ToppingName ?? "Topping Bar", 150, set.ToppingBar),
                 TaroStation = GetOrCreateBuildable(set.TaroName, 250, set.TaroStation),
                 FruitBar = GetOrCreateBuildable(set.FruitName, 400, set.FruitBar),
+                ExtraBar = set.ExtraBar != null ? GetOrCreateBuildable(set.ExtraName, 700, set.ExtraBar) : null,
                 // The expansion builds nothing itself; its pad opens the wall and shows the new floor.
                 Expansion = GetOrCreateBuildable("Expand Shop", 1000, null),
                 DriveThru = GetOrCreateBuildable("Drive Thru", 600, driveThru),
@@ -139,14 +156,21 @@ namespace BubbleTea.EditorTools
                 Menu = menu,
                 Seating = GetOrCreateBuildable("Seating Area", 500, BuildSeatingPrefab(billPrefab)),
                 MoreSeating = GetOrCreateBuildable("More Seating", 1200, BuildSeatingPrefab(billPrefab)),
-                Baristas = new[]
-                {
-                    GetOrCreateBuildable("Hire Barista", 150, barista, keepPriceUpToDate: true),
-                    GetOrCreateBuildable("Hire Barista 2", 500, barista, keepPriceUpToDate: true),
-                    GetOrCreateBuildable("Hire Barista 3", 900, barista),
-                    GetOrCreateBuildable("Hire Barista 4", 1300, barista),
-                    GetOrCreateBuildable("Hire Barista 5", 1800, barista),
-                },
+                // 3 baristas in the Boba Shop, 4 in the Matcha House.
+                Baristas = shop > 1
+                    ? new[]
+                    {
+                        GetOrCreateBuildable("Hire Barista", 150, barista, keepPriceUpToDate: true),
+                        GetOrCreateBuildable("Hire Barista 2", 500, barista, keepPriceUpToDate: true),
+                        GetOrCreateBuildable("Hire Barista 3", 900, barista),
+                        GetOrCreateBuildable("Hire Barista 4", 1300, barista),
+                    }
+                    : new[]
+                    {
+                        GetOrCreateBuildable("Hire Barista", 150, barista, keepPriceUpToDate: true),
+                        GetOrCreateBuildable("Hire Barista 2", 500, barista, keepPriceUpToDate: true),
+                        GetOrCreateBuildable("Hire Barista 3", 900, barista),
+                    },
                 Cleaner = GetOrCreateBuildable("Hire Cleaner", 400, BuildCleanerPrefab()),
                 Cashier = GetOrCreateBuildable("Hire Cashier", 150, BuildCashierPrefab("Cashier", "Main")),
                 DriveThruCashier = GetOrCreateBuildable("Hire Drive-Thru Cashier", 400,
@@ -207,46 +231,62 @@ namespace BubbleTea.EditorTools
             };
         }
 
-        // Shop 2, the Matcha House: matcha, brown sugar and strawberry drinks at about double the price.
-        // The stations borrow shop 1's art slots (TeaBrewer, TaroStation, FruitBar) until they get their own.
+        // Shop 2, the Matcha House: a Japanese-style matcha café with its own five bars, modeled on
+        // real matcha shops. Lattes are whisked at the Whisk Bar or roasted at the Hojicha Bar, then
+        // the Foam Bar tops them with sweet cream foam, the Strawberry Bar pours matcha over
+        // strawberry milk, and the Yuzu Bar makes a sparkling yuzu matcha.
         private static MenuSet BuildMatchaMenu()
         {
-            Color pearls = new(0.12f, 0.08f, 0.06f);
-            ItemDefinition matcha = GetOrCreateItem("Matcha Latte", new Color(0.55f, 0.75f, 0.38f), null);
-            ItemDefinition matchaBoba = GetOrCreateItem("Matcha Boba", new Color(0.62f, 0.80f, 0.45f), pearls);
-            ItemDefinition brownSugar = GetOrCreateItem("Brown Sugar Milk", new Color(0.78f, 0.56f, 0.36f), null);
-            ItemDefinition brownSugarBoba = GetOrCreateItem("Brown Sugar Boba", new Color(0.72f, 0.48f, 0.28f), pearls);
-            ItemDefinition strawberry = GetOrCreateItem("Strawberry Milk", new Color(0.98f, 0.62f, 0.72f), null);
+            Color cream = new(0.98f, 0.95f, 0.86f);
+            Color matchaGreen = new(0.55f, 0.72f, 0.33f);
+            ItemDefinition matcha = GetOrCreateItem("Matcha Latte", new Color(0.62f, 0.78f, 0.42f), null);
+            ItemDefinition hojicha = GetOrCreateItem("Hojicha Latte", new Color(0.70f, 0.52f, 0.36f), null);
+            ItemDefinition matchaCloud = GetOrCreateItem("Matcha Cream Top", new Color(0.62f, 0.78f, 0.42f), null, cream);
+            ItemDefinition hojichaCloud = GetOrCreateItem("Hojicha Cream Top", new Color(0.70f, 0.52f, 0.36f), null, cream);
+            ItemDefinition strawberryMatcha = GetOrCreateItem("Strawberry Matcha", new Color(0.97f, 0.62f, 0.70f), null, matchaGreen);
+            ItemDefinition yuzuFizz = GetOrCreateItem("Yuzu Matcha Fizz", new Color(0.93f, 0.86f, 0.38f), null, matchaGreen);
 
-            RecipeStep whisk = GetOrCreateStep("Whisk Matcha", null, matcha, 2f);
-            RecipeStep addBoba = GetOrCreateStep("Add Boba To Matcha", matcha, matchaBoba, 1.5f);
-            RecipeStep makeBrownSugar = GetOrCreateStep("Make Brown Sugar Milk", null, brownSugar, 2.5f);
-            RecipeStep addBobaToBrownSugar = GetOrCreateStep("Add Boba To Brown Sugar", brownSugar, brownSugarBoba, 1.5f);
-            RecipeStep makeStrawberry = GetOrCreateStep("Make Strawberry Milk", null, strawberry, 2f);
+            RecipeStep whisk = GetOrCreateStep("Whisk Matcha Latte", null, matcha, 2f);
+            RecipeStep roast = GetOrCreateStep("Roast Hojicha Latte", null, hojicha, 2.5f);
+            RecipeStep foamMatcha = GetOrCreateStep("Top Matcha With Cream", matcha, matchaCloud, 1.5f);
+            RecipeStep foamHojicha = GetOrCreateStep("Top Hojicha With Cream", hojicha, hojichaCloud, 1.5f);
+            RecipeStep pourStrawberry = GetOrCreateStep("Pour Matcha On Strawberry Milk", matcha, strawberryMatcha, 1.8f);
+            RecipeStep mixYuzu = GetOrCreateStep("Mix Yuzu Matcha Fizz", null, yuzuFizz, 2.2f);
 
             return new MenuSet
             {
                 Menu = new[]
                 {
                     GetOrCreateDrink("Matcha Latte", matcha, 19),
-                    GetOrCreateDrink("Matcha Boba", matchaBoba, 33),
-                    GetOrCreateDrink("Brown Sugar Milk", brownSugar, 26),
-                    GetOrCreateDrink("Brown Sugar Boba", brownSugarBoba, 42),
-                    GetOrCreateDrink("Strawberry Milk", strawberry, 30),
+                    GetOrCreateDrink("Hojicha Latte", hojicha, 22),
+                    GetOrCreateDrink("Matcha Cream Top", matchaCloud, 30),
+                    GetOrCreateDrink("Hojicha Cream Top", hojichaCloud, 34),
+                    GetOrCreateDrink("Strawberry Matcha", strawberryMatcha, 36),
+                    GetOrCreateDrink("Yuzu Matcha Fizz", yuzuFizz, 32),
                 },
-                Brewer = BuildStationPrefab("MatchaBar", new Color(0.36f, 0.52f, 0.32f), new Vector3(1.4f, 1f, 1f) * BarScale,
-                    new Color(0.55f, 0.75f, 0.38f), new[] { whisk }, inputCapacity: 0, artSlot: "TeaBrewer"),
-                ToppingBar = BuildStationPrefab("ToppingBar", new Color(0.95f, 0.78f, 0.55f), new Vector3(2f, 1f, 1f) * BarScale,
-                    new Color(0.15f, 0.10f, 0.08f), new[] { addBoba, addBobaToBrownSugar }, inputCapacity: 4),
-                TaroStation = BuildStationPrefab("BrownSugarBar", new Color(0.50f, 0.33f, 0.20f), new Vector3(1.4f, 1f, 1f) * BarScale,
-                    new Color(0.78f, 0.56f, 0.36f), new[] { makeBrownSugar }, inputCapacity: 0, artSlot: "TaroStation"),
-                FruitBar = BuildStationPrefab("StrawberryBar", new Color(0.92f, 0.45f, 0.55f), new Vector3(1.4f, 1f, 1f) * BarScale,
-                    new Color(0.98f, 0.62f, 0.72f), new[] { makeStrawberry }, inputCapacity: 0, artSlot: "FruitBar"),
-                BrewerName = "Matcha Bar",
-                TaroName = "Brown Sugar Bar",
+                Brewer = BuildStationPrefab("WhiskBar", new Color(0.36f, 0.52f, 0.32f), new Vector3(1.4f, 1f, 1f) * BarScale,
+                    new Color(0.55f, 0.75f, 0.38f), new[] { whisk }, inputCapacity: 0, artSlot: "WhiskBar"),
+                ToppingBar = BuildStationPrefab("FoamBar", new Color(0.96f, 0.93f, 0.85f), new Vector3(2f, 1f, 1f) * BarScale,
+                    new Color(0.98f, 0.95f, 0.86f), new[] { foamMatcha, foamHojicha }, inputCapacity: 4, artSlot: "FoamBar"),
+                TaroStation = BuildStationPrefab("HojichaBar", new Color(0.55f, 0.38f, 0.25f), new Vector3(1.4f, 1f, 1f) * BarScale,
+                    new Color(0.70f, 0.52f, 0.36f), new[] { roast }, inputCapacity: 0, artSlot: "HojichaBar"),
+                FruitBar = BuildStationPrefab("StrawberryBar", new Color(0.92f, 0.45f, 0.55f), new Vector3(2f, 1f, 1f) * BarScale,
+                    new Color(0.98f, 0.62f, 0.72f), new[] { pourStrawberry }, inputCapacity: 4, artSlot: "StrawberryBar"),
+                ExtraBar = BuildStationPrefab("YuzuBar", new Color(0.95f, 0.85f, 0.30f), new Vector3(1.4f, 1f, 1f) * BarScale,
+                    new Color(0.97f, 0.86f, 0.30f), new[] { mixYuzu }, inputCapacity: 0, artSlot: "YuzuBar"),
+                BrewerName = "Whisk Bar",
+                ToppingName = "Foam Bar",
+                TaroName = "Hojicha Bar",
                 FruitName = "Strawberry Bar",
+                ExtraName = "Yuzu Bar",
             };
         }
+
+        // The first five values (levels 0 to 4), or all six when the shop has a fifth level.
+        private static float[] Levels(bool fiveLevels, params float[] values) =>
+            fiveLevels ? values : System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(values, 5));
+
+        private static int[] Costs(bool fiveLevels, params int[] costs) => Scaled(fiveLevels ? costs : System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(costs, 4)));
 
         private static int[] Scaled(params int[] costs)
         {
@@ -257,13 +297,13 @@ namespace BubbleTea.EditorTools
 
         // ---------- Data assets ----------
 
-        private static ItemDefinition GetOrCreateItem(string displayName, Color cupColor, Color? pearlColor)
+        private static ItemDefinition GetOrCreateItem(string displayName, Color cupColor, Color? pearlColor, Color? foamColor = null)
         {
             var item = GetOrCreateAsset<ItemDefinition>($"{DataFolder}/Items/{FileName(displayName)}.asset",
                 serialized => serialized.FindProperty("displayName").stringValue = displayName);
 
             // The model is rebuilt every time, then linked both ways.
-            GameObject prefab = BuildItemPrefab(FileName(displayName), item, cupColor, pearlColor);
+            GameObject prefab = BuildItemPrefab(FileName(displayName), item, cupColor, pearlColor, foamColor);
             var serializedItem = new SerializedObject(item);
             serializedItem.FindProperty("prefab").objectReferenceValue = prefab;
             serializedItem.ApplyModifiedPropertiesWithoutUndo();
@@ -293,21 +333,24 @@ namespace BubbleTea.EditorTools
             return recipe;
         }
 
+        // Values and costs are kept up to date on every build.
         private static UpgradeDefinition GetOrCreateUpgrade(string displayName, StatId stat, float[] values, int[] costs)
         {
-            return GetOrCreateAsset<UpgradeDefinition>($"{DataFolder}/Upgrades/{FileName(displayName)}.asset", serialized =>
+            UpgradeDefinition upgrade = GetOrCreateAsset<UpgradeDefinition>($"{DataFolder}/Upgrades/{FileName(displayName)}.asset", serialized =>
             {
                 serialized.FindProperty("displayName").stringValue = displayName;
                 serialized.FindProperty("stat").enumValueIndex = (int)stat;
-
-                SerializedProperty valueList = serialized.FindProperty("values");
-                valueList.arraySize = values.Length;
-                for (int i = 0; i < values.Length; i++) valueList.GetArrayElementAtIndex(i).floatValue = values[i];
-
-                SerializedProperty costList = serialized.FindProperty("costs");
-                costList.arraySize = costs.Length;
-                for (int i = 0; i < costs.Length; i++) costList.GetArrayElementAtIndex(i).intValue = costs[i];
             });
+            var serialized = new SerializedObject(upgrade);
+            SerializedProperty valueList = serialized.FindProperty("values");
+            valueList.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++) valueList.GetArrayElementAtIndex(i).floatValue = values[i];
+
+            SerializedProperty costList = serialized.FindProperty("costs");
+            costList.arraySize = costs.Length;
+            for (int i = 0; i < costs.Length; i++) costList.GetArrayElementAtIndex(i).intValue = costs[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return upgrade;
         }
 
         // keepPriceUpToDate: also reset the price of an existing asset (for a price change that
@@ -346,7 +389,8 @@ namespace BubbleTea.EditorTools
         // ---------- Prefabs ----------
 
         // A cup: a short cylinder, plus a dark layer of pearls at the bottom for boba drinks.
-        private static GameObject BuildItemPrefab(string name, ItemDefinition definition, Color cupColor, Color? pearlColor)
+        private static GameObject BuildItemPrefab(string name, ItemDefinition definition, Color cupColor, Color? pearlColor,
+            Color? foamColor)
         {
             var root = new GameObject(name);
 
@@ -376,7 +420,20 @@ namespace BubbleTea.EditorTools
                     if (artPearls != null)
                     {
                         if (pearlColor.HasValue) ArtLibrary.Recolor(artPearls, GetOrCreateMaterial("Pearls", pearlColor.Value));
-                        else artPearls.gameObject.SetActive(false);
+                        else
+                        {
+                            // No pearls: the drink fills the cup right to the bottom.
+                            artPearls.gameObject.SetActive(false);
+                            drink.localPosition = new Vector3(drink.localPosition.x, 0.005f, drink.localPosition.z);
+                            drink.localScale = new Vector3(drink.localScale.x, drink.localScale.y * 1.33f, drink.localScale.z);
+                        }
+                    }
+                    // A layer on top: cream foam, or matcha poured over strawberry milk.
+                    Transform foam = ArtLibrary.FindChild(cupArt.transform, "Foam");
+                    if (foam != null)
+                    {
+                        if (foamColor.HasValue) ArtLibrary.Recolor(foam, GetOrCreateMaterial(name + "Foam", foamColor.Value));
+                        else foam.gameObject.SetActive(false);
                     }
                 }
                 else
@@ -642,7 +699,7 @@ namespace BubbleTea.EditorTools
                 new Vector3(0.7f, 0.8f, 0.7f), GetOrCreateMaterial("Cashier", new Color(0.95f, 0.78f, 0.35f)));
             AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
                 new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
-            AddCharacterArt("Cashier", root, body);
+            AddCharacterArt(StaffSlot("Cashier"), root, body);
             Transform hands = AddAnchor(root.transform, "Hands", new Vector3(0f, 0.9f, 0.4f));
             var cashier = root.AddComponent<Cashier>();
             SetReference(cashier, "hands", hands);
@@ -661,7 +718,7 @@ namespace BubbleTea.EditorTools
                 new Vector3(0.7f, 0.8f, 0.7f), GetOrCreateMaterial("Barista", new Color(0.66f, 0.56f, 0.86f)));
             AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
                 new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
-            AddCharacterArt("Barista", root, body);
+            AddCharacterArt(StaffSlot("Barista"), root, body);
 
             Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.62f));
             var carrier = root.AddComponent<ItemCarrier>();
@@ -686,7 +743,7 @@ namespace BubbleTea.EditorTools
                 new Vector3(0.7f, 0.8f, 0.7f), GetOrCreateMaterial("Cleaner", new Color(0.45f, 0.75f, 0.85f)));
             AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
                 new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
-            AddCharacterArt("Cleaner", root, body);
+            AddCharacterArt(StaffSlot("Cleaner"), root, body);
             Transform hands = AddAnchor(root.transform, "Hands", new Vector3(0f, 0.9f, 0.4f));
             var cleaner = root.AddComponent<Cleaner>();
             SetReference(cleaner, "hands", hands);

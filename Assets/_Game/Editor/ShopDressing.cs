@@ -26,11 +26,21 @@ namespace BubbleTea.EditorTools
             public Color Accent;      // sign, bunting, rug
             public Color Accent2;     // second accent color
             public Color Grass;
+            // Theme: the Boba Shop is a red-and-gold Taiwanese tea house; the Matcha House is a
+            // calm Japanese tea room with white paper lanterns, a green noren and matcha tins.
+            public Color Lantern = new(0.86f, 0.18f, 0.14f);
+            public Color LanternGlow = new(0.9f, 0.22f, 0.10f);
+            public Color Noren = new(0.20f, 0.26f, 0.45f);
+            public Color TeaTin = new(0.76f, 0.20f, 0.17f);
+            public Color SignText = new(1f, 0.90f, 0.62f);
             public string Prefix;     // material name prefix, so shops don't share colors
         }
 
+        private static Style current;
+
         public static void Dress(Style style, Material floor, Material expansionFloor, Material wall, GameObject expansionArea)
         {
+            current = style;
             PrototypeSceneBuilder.ShopLayout layout = PrototypeSceneBuilder.Layout;
             float w = layout.HalfWidth, d = layout.HalfDepth;
 
@@ -147,7 +157,7 @@ namespace BubbleTea.EditorTools
             {
                 Mat("MugTeal", new Color(0.62f, 0.80f, 0.70f), 0.7f),  // celadon tea cups
                 Mat("MugCream", new Color(0.98f, 0.94f, 0.86f), 0.6f),
-                Mat("JarGlass", new Color(0.76f, 0.20f, 0.17f), 0.5f), // red tea tins
+                Mat(current.Prefix + "TeaTin", current.TeaTin, 0.5f), // tea tins in the shop's color
             };
             foreach (float x in xs)
             {
@@ -244,7 +254,7 @@ namespace BubbleTea.EditorTools
             label.characterSize = 0.07f;
             label.anchor = TextAnchor.MiddleCenter;
             label.alignment = TextAlignment.Center;
-            label.color = new Color(1f, 0.90f, 0.62f); // gold lettering
+            label.color = style.SignText;
         }
 
         // A string of red paper lanterns along the top of the back wall (the sign stays clear).
@@ -271,7 +281,7 @@ namespace BubbleTea.EditorTools
         // One red paper lantern with gold caps and a tassel, hanging with its top at position + 0.3 m.
         private static void Lantern(Transform parent, Vector3 position, float size)
         {
-            Material red = Mat("LanternRed", new Color(0.86f, 0.18f, 0.14f), 0.4f, new Color(0.9f, 0.22f, 0.10f) * 0.6f);
+            Material red = Mat(current.Prefix + "Lantern", current.Lantern, 0.4f, current.LanternGlow * 0.6f);
             Material gold = Mat("LanternGold", new Color(0.95f, 0.75f, 0.32f), 0.7f);
             Material cord = Mat("Cord", new Color(0.30f, 0.20f, 0.16f), 0.2f);
             Transform lantern = new GameObject("Lantern").transform;
@@ -424,7 +434,7 @@ namespace BubbleTea.EditorTools
             Material rod = Mat("WindowFrameWood", new Color(0.42f, 0.27f, 0.21f), 0.35f);
             Material[] cloth =
             {
-                Mat("NorenIndigo", new Color(0.20f, 0.26f, 0.45f), 0.1f),
+                Mat(style.Prefix + "Noren", style.Noren, 0.1f),
                 Mat(style.Prefix + "Accent", style.Accent, 0.4f),
             };
             Part(root, PrimitiveType.Cube, "Noren Rod", new Vector3((from + to) / 2f, 2.42f, z), new Vector3(to - from, 0.05f, 0.05f), rod);

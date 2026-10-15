@@ -214,3 +214,11 @@ Orders pass:
 - An order board over each counter shows what the customer at the front still wants; drinks vanish from it as they're handed over (`Customers/OrderBoard`).
 - Drink prices are 15% higher (rounded up). Hire Barista costs $150, Hire Barista 2 $500.
 - Bars and counters are 1.25x bigger, and drinks on them are 2x size.
+
+Matcha House pass:
+
+- The Matcha House is a Japanese-style matcha café with its own bars and menu: Whisk Bar (Matcha Latte), Hojicha Bar (Hojicha Latte), Foam Bar (Matcha / Hojicha Cream Top), Strawberry Bar (Strawberry Matcha, poured over strawberry milk) and a new fifth bar, the Yuzu Bar (Yuzu Matcha Fizz). White paper lanterns, a green noren, matcha tins, and staff (and the player) in green uniforms.
+- Its upgrades go to Lv 5/5. The Drink Price upgrade is gone. 3 barista pads in the Boba Shop, 4 in the Matcha House.
+- Too-pricey walkouts cost 0.1 star and show a 5-second banner suggesting lower prices; customers accept prices up to 1.4x to 2.6x the normal price.
+- The Upgrades menu pauses the game; its X closes it until you step off the desk and back on.
+- Art: boba pearls sit inside a clear cup; the Tea Brewer is one large stainless steel urn.
