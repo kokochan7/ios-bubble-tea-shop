@@ -7,7 +7,7 @@ using UnityEngine;
 namespace BubbleTea.Staff
 {
     /// <summary>
-    /// Pays the hired workers. At the end of every shop hour each barista, cashier and cleaner
+    /// Pays the hired workers. At the end of every shop hour each barista, cashier, cleaner and stocker
     /// takes their hourly wage out of the player's money. A worker who can't be paid (not enough
     /// money) keeps working, slower, with a yellow light over their head; after 6 unpaid hours
     /// they stop with a red light (see <see cref="PayStatus"/>). Once their back pay is paid
@@ -25,6 +25,9 @@ namespace BubbleTea.Staff
         [SerializeField, Min(0), Tooltip("Dollars each cleaner is paid per shop hour.")]
         private int cleanerWage = 6;
 
+        [SerializeField, Min(0), Tooltip("Dollars each stocker (Matcha House) is paid per shop hour.")]
+        private int stockerWage = 6;
+
         [SerializeField, Min(1f), Tooltip("Real seconds between paydays when the shop has no clock.")]
         private float secondsPerHourWithoutClock = 6f;
 
@@ -37,13 +40,15 @@ namespace BubbleTea.Staff
         public int BaristaWage => baristaWage;
         public int CashierWage => cashierWage;
         public int CleanerWage => cleanerWage;
+        public int StockerWage => stockerWage;
 
         public int Baristas { get; private set; }
         public int Cashiers { get; private set; }
         public int Cleaners { get; private set; }
+        public int Stockers { get; private set; }
 
         /// <summary>Wages for everyone hired right now, per shop hour.</summary>
-        public int WagesPerHour => Baristas * baristaWage + Cashiers * cashierWage + Cleaners * cleanerWage;
+        public int WagesPerHour => Baristas * baristaWage + Cashiers * cashierWage + Cleaners * cleanerWage + Stockers * stockerWage;
 
         private Wallet wallet;
         private int lastHour = -1;
@@ -104,6 +109,7 @@ namespace BubbleTea.Staff
             Pay(FindAll<Barista>(), baristaWage, late, stopped, ref paidOut);
             Pay(FindAll<Cashier>(), cashierWage, late, stopped, ref paidOut);
             Pay(FindAll<Cleaner>(), cleanerWage, late, stopped, ref paidOut);
+            Pay(FindAll<Stocker>(), stockerWage, late, stopped, ref paidOut);
             Record(paidOut);
             if (stopped.Count > 0)
                 WorkersUnpaid?.Invoke($"{Describe(stopped)} stopped working: unpaid for {PayStatus.GraceHours} hours!\nThey'll start again once you can pay them.");
@@ -151,6 +157,7 @@ namespace BubbleTea.Staff
         {
             if (status.GetComponent<Barista>() != null) return baristaWage;
             if (status.GetComponent<Cashier>() != null) return cashierWage;
+            if (status.GetComponent<Stocker>() != null) return stockerWage;
             return cleanerWage;
         }
 
@@ -166,6 +173,7 @@ namespace BubbleTea.Staff
             {
                 Barista => "A barista",
                 Cashier => "A cashier",
+                Stocker => "A stocker",
                 _ => "A cleaner",
             };
         }
@@ -185,10 +193,12 @@ namespace BubbleTea.Staff
             Baristas = FindObjectsByType<Barista>(FindObjectsSortMode.None).Length;
             Cashiers = FindObjectsByType<Cashier>(FindObjectsSortMode.None).Length;
             Cleaners = FindObjectsByType<Cleaner>(FindObjectsSortMode.None).Length;
+            Stockers = FindObjectsByType<Stocker>(FindObjectsSortMode.None).Length;
 #else
             Baristas = FindObjectsOfType<Barista>().Length;
             Cashiers = FindObjectsOfType<Cashier>().Length;
             Cleaners = FindObjectsOfType<Cleaner>().Length;
+            Stockers = FindObjectsOfType<Stocker>().Length;
 #endif
         }
 

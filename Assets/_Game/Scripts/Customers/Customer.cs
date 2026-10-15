@@ -12,9 +12,15 @@ namespace BubbleTea.Customers
     /// Customers lose patience while they wait: a light by their order turns from green to
     /// yellow to red. Quick service earns a tip; a customer who runs out of patience leaves
     /// without buying.
+    /// Some visitors are special (the Matcha House has them): tourists off a tour bus wear a sun
+    /// hat, order less and wait longer; a tea critic wears a gold crown, always orders the most,
+    /// tips double, and moves the rating by a whole star either way.
     /// </summary>
     public class Customer : MonoBehaviour
     {
+        /// <summary>What kind of customer this is.</summary>
+        public enum Visit { Regular, Tourist, Critic }
+
         [SerializeField, Tooltip("Walking speed in meters per second.")]
         private float speed = 3f;
 
@@ -69,9 +75,23 @@ namespace BubbleTea.Customers
         [SerializeField, Tooltip("A light next to the order that shows the customer's mood. Optional.")]
         private Renderer moodLight;
 
+        [SerializeField, Min(0.1f), Tooltip("Tourists wait this many times longer than other customers.")]
+        private float touristPatience = 2.5f;
+
+        [SerializeField, Min(1), Tooltip("The most drinks a tourist orders.")]
+        private int touristMaxDrinks = 2;
+
+        [SerializeField, Min(0.1f), Tooltip("A tea critic waits this many times longer than other customers (they order a lot).")]
+        private float criticPatience = 1.5f;
+
+        [SerializeField, Tooltip("Stars a tea critic adds when served, and takes away (on top of the usual half star) when they walk out.")]
+        private float criticStars = 1f;
+
         private static readonly Color Happy = new(0.35f, 0.85f, 0.4f);
         private static readonly Color Unsure = new(1f, 0.82f, 0.25f);
         private static readonly Color Upset = new(0.95f, 0.3f, 0.3f);
+        private static readonly Color CrownGold = new(1f, 0.8f, 0.2f);
+        private static readonly Color SunHat = new(0.45f, 0.8f, 0.95f);
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
@@ -94,6 +114,13 @@ namespace BubbleTea.Customers
         private readonly List<CarriedItem> held = new();
         private readonly List<GameObject> icons = new();
         private float patience;
+        private Visit visit;
+
+        /// <summary>Regular customer, tourist or tea critic.</summary>
+        public Visit Kind => visit;
+
+        /// <summary>True once they've been handed every drink they ordered.</summary>
+        public bool WasServed { get; private set; }
 
         /// <summary>True while this customer is first in line and standing at the counter, ready to be served.</summary>
         public bool IsAtCounter => state == State.Queueing && atCounter;
@@ -107,17 +134,24 @@ namespace BubbleTea.Customers
         /// <summary>1 = just arrived and happy, 0 = out of patience.</summary>
         public float Mood => patience <= 0f ? 1f : Mathf.Clamp01(1f - waited / patience);
 
-        public void Init(ServingCounter servingCounter, Vector3 exitPoint, Action<Customer> gone)
+        public void Init(ServingCounter servingCounter, Vector3 exitPoint, Action<Customer> gone, Visit kind = Visit.Regular)
         {
             counter = servingCounter;
             exit = exitPoint;
             onGone = gone;
+            visit = kind;
+            WasServed = false;
             state = State.Queueing;
             waited = 0f;
             tolerance = UnityEngine.Random.Range(priceTolerance.x, priceTolerance.y);
             checkedPrice = false;
-            counter.PickOrders(orders);
+            if (kind == Visit.Tourist) counter.PickOrders(orders, maxCount: touristMaxDrinks);
+            else if (kind == Visit.Critic) counter.PickOrders(orders, exactCount: counter.MaxDrinks);
+            else counter.PickOrders(orders);
             patience = patienceSeconds * (1f + patiencePerExtraDrink * Mathf.Max(0, orders.Count - 1));
+            if (kind == Visit.Tourist) patience *= touristPatience;
+            else if (kind == Visit.Critic) patience *= criticPatience;
+            if (kind != Visit.Regular) AddHat(kind == Visit.Critic);
             ShowOrder();
             counter.JoinQueue(this);
             if (orders.Count == 0) StopWaiting(); // nothing on the menu can be made yet
@@ -263,6 +297,12 @@ namespace BubbleTea.Customers
             if (orders.Count > 0) return;
 
             GameEvents.RaiseCustomerServed(transform.position, Mood);
+            WasServed = true;
+            if (visit == Visit.Critic)
+            {
+                GameEvents.RaiseStarsAwarded(criticStars);
+                GameEvents.RaiseAnnouncement($"The tea critic loved it! +{criticStars:0.#} star", CrownGold);
+            }
             StopWaiting();
             if (canSit && UnityEngine.Random.value < sitChance && SeatingTable.TryReserve(this, out table, out seat)) state = State.ToSeat;
         }
@@ -271,9 +311,9 @@ namespace BubbleTea.Customers
         private float TipShare()
         {
             float used = 1f - Mood;
-            if (used <= fastServiceShare) return bigTip;
-            if (used <= okServiceShare) return smallTip;
-            return 0f;
+            float share = used <= fastServiceShare ? bigTip : used <= okServiceShare ? smallTip : 0f;
+            // A tea critic always tips, and twice as much.
+            return visit == Visit.Critic ? Mathf.Max(share, smallTip) * 2f : share;
         }
 
         private bool TooExpensive(DrinkRecipe order) => counter.PriceOf(order) > counter.FairPriceOf(order) * tolerance + 0.01f;
@@ -282,6 +322,7 @@ namespace BubbleTea.Customers
         private void RefusePrice()
         {
             GameEvents.RaiseCustomerRefusedPrice(transform.position);
+            CriticWalkedOut();
             StopWaiting();
         }
 
@@ -289,7 +330,33 @@ namespace BubbleTea.Customers
         private void GiveUp()
         {
             GameEvents.RaiseCustomerLeftUpset(transform.position);
+            CriticWalkedOut();
             StopWaiting();
+        }
+
+        // A critic who walks out costs a whole star more than other customers.
+        private void CriticWalkedOut()
+        {
+            if (visit != Visit.Critic) return;
+            GameEvents.RaiseStarsAwarded(-criticStars);
+            GameEvents.RaiseAnnouncement($"The tea critic walked out! -{criticStars + 0.5f:0.#} stars", Upset);
+        }
+
+        // A gold crown for a tea critic, a wide sun hat for a tourist.
+        private void AddHat(bool crown)
+        {
+            GameObject hat = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            hat.name = crown ? "Crown" : "Sun Hat";
+            Destroy(hat.GetComponent<Collider>());
+            hat.transform.SetParent(transform, false);
+            hat.transform.localPosition = new Vector3(0f, crown ? 1.72f : 1.64f, 0f);
+            hat.transform.localScale = crown ? new Vector3(0.42f, 0.13f, 0.42f) : new Vector3(0.85f, 0.025f, 0.85f);
+            var hatRenderer = hat.GetComponent<Renderer>();
+            if (moodLight != null) hatRenderer.sharedMaterial = moodLight.sharedMaterial;
+            var block = new MaterialPropertyBlock();
+            block.SetColor(BaseColorId, crown ? CrownGold : SunHat);
+            block.SetColor(ColorId, crown ? CrownGold : SunHat);
+            hatRenderer.SetPropertyBlock(block);
         }
 
         private void StopWaiting()

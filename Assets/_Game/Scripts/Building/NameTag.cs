@@ -36,7 +36,7 @@ namespace BubbleTea.Building
 
         // Things that get no label (they're easy to tell apart, and labels cluttered the shop).
         private static readonly string[] Unlabeled =
-            { "Counter", "Barista", "Cashier", "Cleaner", "Seating Area", "More Seating", "Drive Thru", "Drive-Thru Cashier" };
+            { "Counter", "Barista", "Cashier", "Cleaner", "Seating Area", "More Seating", "Drive Thru", "Drive-Thru Cashier", "Stocker" };
 
         /// <summary>
         /// The name shown for a pad's buildable: "Hire Barista 3" shows as "Barista", "Upgrades" as

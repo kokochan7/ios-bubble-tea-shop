@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BubbleTea.Core;
+using BubbleTea.Player;
 using UnityEngine;
 
 namespace BubbleTea.Cooking
@@ -9,6 +10,9 @@ namespace BubbleTea.Cooking
     /// input wait for the player to drop that item off, steps without one run on their
     /// own. Finished items pile up on the output stack for the player to pick up.
     /// A tea brewer and a topping bar are both this component with different steps.
+    /// In the Matcha House some bars use supplies: each drink uses one scoop of matcha, and an
+    /// empty bar stops until someone brings a crate from the supply dock. The Whisk Bar is
+    /// whisked by hand: it only works while the player stands at it, until Whisk Master is bought.
     /// </summary>
     public class Station : MonoBehaviour
     {
@@ -30,6 +34,30 @@ namespace BubbleTea.Cooking
         [SerializeField, Min(0f), Tooltip("Extra speed per barista working here (1 = a barista doubles the speed).")]
         private float baristaSpeedBonus = 1f;
 
+        [SerializeField, Tooltip("Whisked by hand: only works while the player stands in its zone, until the Whisk Master upgrade.")]
+        private bool needsPlayer;
+
+        [SerializeField, Tooltip("The crate that restocks this bar. Empty = it never runs out.")]
+        private ItemDefinition supplyItem;
+
+        [SerializeField, Tooltip("What the supply is called on the bar's label.")]
+        private string supplyName = "MATCHA";
+
+        [SerializeField, Min(1), Tooltip("Drinks one crate makes.")]
+        private int suppliesPerCrate = 10;
+
+        [SerializeField, Min(1), Tooltip("Most drinks' worth of supplies the bar holds (a full bar to start).")]
+        private int maxSupplies = 20;
+
+        private static readonly Color LabelWhite = new(1f, 0.97f, 0.88f);
+        private static readonly Color LabelOrange = new(1f, 0.65f, 0.25f);
+        private static readonly Color LabelRed = new(1f, 0.38f, 0.32f);
+        private static readonly Color LabelGreen = new(0.6f, 1f, 0.5f);
+
+        private int supplies;
+        private FloatingText supplyLabel;
+        private FloatingText handLabel;
+
         private int baristas;
 
         private RecipeStep current;
@@ -37,6 +65,50 @@ namespace BubbleTea.Cooking
 
         /// <summary>0 to 1 progress on the current item (for a future progress bar).</summary>
         public float Progress => current != null ? Mathf.Clamp01(workTimer / current.Seconds) : 0f;
+
+        /// <summary>True if this bar uses up supplies (and takes crates).</summary>
+        public bool UsesSupplies => supplyItem != null;
+
+        /// <summary>The crate this bar takes, or null.</summary>
+        public ItemDefinition SupplyItem => supplyItem;
+
+        /// <summary>Drinks' worth of supplies left. Saved with the game.</summary>
+        public int Supplies => supplies;
+
+        /// <summary>True if a crate fits right now (the bar has room for a whole crate).</summary>
+        public bool WantsCrate => UsesSupplies && supplies + suppliesPerCrate <= maxSupplies;
+
+        /// <summary>True if any bar in the shop uses supplies.</summary>
+        public static bool AnyUsesSupplies
+        {
+            get
+            {
+                foreach (Station station in active)
+                {
+                    if (station.UsesSupplies) return true;
+                }
+                return false;
+            }
+        }
+
+        /// <summary>Puts back the saved supplies (called when a game loads).</summary>
+        public void RestoreSupplies(int amount) => supplies = Mathf.Clamp(amount, 0, maxSupplies);
+
+        // Hand-whisked and Whisk Master not bought yet.
+        private bool NeedsHands => needsPlayer && Stats.Get(StatId.AutoWhisk, 0f) < 0.5f;
+
+        private bool PlayerHere => PlayerMovement.Current != null && zone.Contains(transform, PlayerMovement.Current.position);
+
+        private void Awake() => supplies = maxSupplies;
+
+        private void Start()
+        {
+            // Labels: supplies just above the front of the bar, the whisking hint over the spot to stand on.
+            Vector3 front = ZoneCenter - transform.position;
+            front.y = 0f;
+            if (UsesSupplies) supplyLabel = FloatingText.Create(transform, Vector3.up * 1.7f + front.normalized * 0.35f);
+            if (needsPlayer) handLabel = FloatingText.Create(transform, front + Vector3.up * 1.1f, 0.05f);
+        }
 
         private void OnEnable()
         {
@@ -164,12 +236,18 @@ namespace BubbleTea.Cooking
         {
             Work();
             zone.Tick(transform, Handoff);
+            UpdateLabels();
         }
 
         private void Work()
         {
-            if (current == null && !output.IsFull) current = StartNextStep();
+            if (current == null && !output.IsFull && (!UsesSupplies || supplies > 0))
+            {
+                current = StartNextStep();
+                if (current != null && UsesSupplies) supplies--; // one scoop per drink
+            }
             if (current == null) return;
+            if (NeedsHands && !PlayerHere) return; // waits for the player to whisk
 
             workTimer += Time.deltaTime * Stats.Get(StatId.BrewSpeed, 1f) * (1f + baristaSpeedBonus * baristas);
             if (workTimer < current.Seconds) return;
@@ -205,9 +283,31 @@ namespace BubbleTea.Cooking
             return null;
         }
 
-        // Drop off anything this station uses first; otherwise pick up a finished item.
+        private void UpdateLabels()
+        {
+            if (supplyLabel != null)
+            {
+                if (supplies <= 0) supplyLabel.Show($"OUT OF {supplyName}!\nBring a crate", LabelRed);
+                else supplyLabel.Show($"{supplyName} {supplies}/{maxSupplies}", supplies <= suppliesPerCrate / 2 ? LabelOrange : LabelWhite);
+            }
+            if (handLabel != null)
+            {
+                if (!NeedsHands || current == null) handLabel.Hide();
+                else if (PlayerHere) handLabel.Show($"WHISKING {Mathf.RoundToInt(Progress * 100f)}%", LabelGreen);
+                else handLabel.Show("STAND HERE\nTO WHISK!", LabelOrange);
+            }
+        }
+
+        // A crate restocks the bar first; then drop off anything this station uses; otherwise pick up a finished item.
         private bool Handoff(ItemCarrier carrier)
         {
+            if (WantsCrate && carrier.WillGiveTo(this) && carrier.Stack.TryTake(i => i == supplyItem, out CarriedItem crate))
+            {
+                supplies += suppliesPerCrate;
+                crate.MoveTo(transform, Vector3.up * 1.2f, 0.5f);
+                Destroy(crate.gameObject, 0.25f); // after its hop onto the bar
+                return true;
+            }
             if (!input.IsFull && carrier.WillGiveTo(this) && carrier.Stack.TryTake(IsInput, out CarriedItem dropped))
             {
                 input.Push(dropped);

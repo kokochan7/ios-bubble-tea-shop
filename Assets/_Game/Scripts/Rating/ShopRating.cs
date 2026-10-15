@@ -9,7 +9,9 @@ namespace BubbleTea.Rating
     /// The shop's star rating, from 0 to 5. Half comes from service (happy customers raise it)
     /// and half from how built-up the shop is. Messy café tables take stars away until they're
     /// cleaned. Every customer who walks out (too slow, or too expensive) costs half a star (too slow or too pricey), earned back a little with each
-    /// customer served. At 0 stars the shop closes and the game starts over.
+    /// customer served. Special events add or take whole stars: a happy tour group or tea critic
+    /// can lift the rating up to one star above what it would be. At 0 stars the shop closes and
+    /// the game starts over.
     /// More stars bring customers more often and let more of them line up.
     /// </summary>
     public class ShopRating : MonoBehaviour
@@ -37,6 +39,9 @@ namespace BubbleTea.Rating
         [SerializeField, Tooltip("Lost stars earned back with each customer served.")]
         private float starsBackPerServe = 0.1f;
 
+        [SerializeField, Tooltip("Most bonus stars special events (tour groups, critics) can add on top.")]
+        private float maxBonusStars = 1f;
+
         [SerializeField, Tooltip("Stars lost for each messy café seat.")]
         private float starsPerMess = 0.25f;
 
@@ -61,7 +66,7 @@ namespace BubbleTea.Rating
         /// <summary>0 to 1: how happy recent customers were. Saved with the game.</summary>
         public float Service => service;
 
-        /// <summary>Stars lost to walkouts and not yet earned back. Saved with the game.</summary>
+        /// <summary>Stars lost to walkouts and not yet earned back (below 0 = bonus stars from events). Saved with the game.</summary>
         public float Lost => lost;
 
         /// <summary>True once the rating has hit 0 stars.</summary>
@@ -79,6 +84,7 @@ namespace BubbleTea.Rating
             GameEvents.CustomerLeftUpset += OnWalkout;
             GameEvents.CustomerRefusedPrice += OnPriceyWalkout;
             GameEvents.MessChanged += OnMessChanged;
+            GameEvents.StarsAwarded += OnStarsAwarded;
             foreach (RatedPad entry in pads)
             {
                 if (entry.pad != null) entry.pad.Unlocked += OnUnlocked;
@@ -91,6 +97,7 @@ namespace BubbleTea.Rating
             GameEvents.CustomerLeftUpset -= OnWalkout;
             GameEvents.CustomerRefusedPrice -= OnPriceyWalkout;
             GameEvents.MessChanged -= OnMessChanged;
+            GameEvents.StarsAwarded -= OnStarsAwarded;
             foreach (RatedPad entry in pads)
             {
                 if (entry.pad != null) entry.pad.Unlocked -= OnUnlocked;
@@ -103,14 +110,14 @@ namespace BubbleTea.Rating
         public void Restore(float savedService, float savedLost)
         {
             service = Mathf.Clamp01(savedService);
-            lost = Mathf.Max(0f, savedLost);
+            lost = Mathf.Max(-maxBonusStars, savedLost);
             Recalculate();
         }
 
         private void OnServed(Vector3 _, float mood)
         {
             service = Mathf.Lerp(service, Mathf.Clamp01(mood), serveWeight);
-            lost = Mathf.Max(0f, lost - starsBackPerServe);
+            if (lost > 0f) lost = Mathf.Max(0f, lost - starsBackPerServe); // bonus stars (below 0) stay
             Recalculate();
         }
 
@@ -123,6 +130,13 @@ namespace BubbleTea.Rating
         private void OnPriceyWalkout(Vector3 _)
         {
             lost += starsPerPriceyWalkout;
+            Recalculate();
+        }
+
+        // A tour group or critic: whole stars up or down. Bonus stars stop at maxBonusStars.
+        private void OnStarsAwarded(float delta)
+        {
+            lost = Mathf.Max(-maxBonusStars, lost - delta);
             Recalculate();
         }
 

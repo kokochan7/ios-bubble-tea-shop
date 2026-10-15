@@ -24,6 +24,13 @@ namespace BubbleTea.Cooking
         /// <summary>Middle of the zone in world space, where a worker should stand.</summary>
         public Vector3 Center(Transform owner) => owner.TransformPoint(offset);
 
+        /// <summary>True if <paramref name="point"/> is inside the zone (seen from above).</summary>
+        public bool Contains(Transform owner, Vector3 point)
+        {
+            Vector3 delta = point - owner.TransformPoint(offset);
+            return Mathf.Abs(delta.x) <= halfSize && Mathf.Abs(delta.z) <= halfSize;
+        }
+
         /// <summary>Calls <paramref name="handoff"/> for the first carrier in the zone when it's time.</summary>
         public void Tick(Transform owner, Func<ItemCarrier, bool> handoff)
         {

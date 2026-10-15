@@ -46,9 +46,13 @@ namespace BubbleTea.Customers
 
         private readonly List<Customer> queue = new();
         private readonly List<DrinkRecipe> orderChoices = new();
+        private readonly List<DrinkRecipe> weightedChoices = new();
         private readonly Dictionary<ItemDefinition, int> reserved = new();
 
         public string Lane => lane;
+
+        /// <summary>The most drinks one customer orders here.</summary>
+        public int MaxDrinks => Mathf.Max(1, maxDrinksPerCustomer);
 
         /// <summary>Where customers' payments pile up (a cashier collects from here).</summary>
         public CashPile CashPile => cashPile;
@@ -178,9 +182,12 @@ namespace BubbleTea.Customers
         /// <summary>
         /// Picks the drinks a new customer wants, into <paramref name="into"/>: only drinks the shop
         /// can make right now (see <see cref="Station.AnyCanMake"/>), up to the counter's limit
-        /// (several of the same drink is fine). Smaller orders are a little more common.
+        /// (several of the same drink is fine). Smaller orders are a little more common, and today's
+        /// special (see <see cref="DailySpecial"/>) is ordered more often.
+        /// <paramref name="maxCount"/> caps the order size (tourists order less); <paramref name="exactCount"/>
+        /// sets it (a tea critic always orders the most). 0 = the counter's usual limit.
         /// </summary>
-        public void PickOrders(List<DrinkRecipe> into)
+        public void PickOrders(List<DrinkRecipe> into, int maxCount = 0, int exactCount = 0)
         {
             into.Clear();
             orderChoices.Clear();
@@ -190,9 +197,17 @@ namespace BubbleTea.Customers
             }
             if (orderChoices.Count == 0) return;
 
-            int most = Mathf.Max(1, maxDrinksPerCustomer);
-            int count = Mathf.Min(most, 1 + Mathf.FloorToInt(Mathf.Pow(Random.value, 1.3f) * most));
-            while (into.Count < count) into.Add(orderChoices[Random.Range(0, orderChoices.Count)]);
+            weightedChoices.Clear();
+            foreach (DrinkRecipe recipe in orderChoices)
+            {
+                for (int i = DailySpecial.WeightFor(recipe.Drink); i > 0; i--) weightedChoices.Add(recipe);
+            }
+
+            int most = Mathf.Max(1, maxCount > 0 ? Mathf.Min(maxCount, maxDrinksPerCustomer) : maxDrinksPerCustomer);
+            int count = exactCount > 0
+                ? exactCount
+                : Mathf.Min(most, 1 + Mathf.FloorToInt(Mathf.Pow(Random.value, 1.3f) * most));
+            while (into.Count < count) into.Add(weightedChoices[Random.Range(0, weightedChoices.Count)]);
             // Same drinks together, so the order reads like "2x Milk Tea, 1x Taro Boba".
             into.Sort((a, b) => orderChoices.IndexOf(a).CompareTo(orderChoices.IndexOf(b)));
         }
@@ -202,9 +217,9 @@ namespace BubbleTea.Customers
         public int PriceOf(DrinkRecipe order) =>
             order == null ? 0 : Mathf.Max(1, Mathf.RoundToInt(FairPriceOf(order) * PriceBook.Factor(order.Drink)));
 
-        /// <summary>The normal price, which customers expect to pay.</summary>
+        /// <summary>The normal price, which customers expect to pay (today's special is advertised at double).</summary>
         public float FairPriceOf(DrinkRecipe order) =>
-            order == null ? 0f : order.Price * priceMultiplier * Stats.Get(StatId.DrinkPrice, 1f);
+            order == null ? 0f : order.Price * priceMultiplier * Stats.Get(StatId.DrinkPrice, 1f) * DailySpecial.PriceFactorFor(order.Drink);
 
         /// <summary>Banks the payment (and tip) for a drink handed straight to a customer.</summary>
         public void Bank(DrinkRecipe order, float tipShare)

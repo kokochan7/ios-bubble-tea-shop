@@ -26,9 +26,19 @@ namespace BubbleTea.Player
         private CharacterController controller;
         private float verticalVelocity;
 
+        /// <summary>The player in the open shop (bars that need the player's hands look for them).</summary>
+        public static Transform Current { get; private set; }
+
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
+        }
+
+        private void OnEnable() => Current = transform;
+
+        private void OnDisable()
+        {
+            if (Current == transform) Current = null;
         }
 
         private void Update()

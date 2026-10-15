@@ -26,5 +26,8 @@ namespace BubbleTea.Core
 
         /// <summary>Extra finished drinks each station can hold (0 = none).</summary>
         StationCapacity,
+
+        /// <summary>1 once Whisk Master is bought: hand-whisked bars run without the player (0 = the player must whisk).</summary>
+        AutoWhisk,
     }
 }

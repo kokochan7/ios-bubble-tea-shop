@@ -49,6 +49,12 @@ namespace BubbleTea.Core
         /// <summary>The player collected a bonus, such as money earned while away.</summary>
         public static event Action BonusCollected;
 
+        /// <summary>Stars added to the rating (or taken away, when negative) by a special event: a tour group or a tea critic.</summary>
+        public static event Action<float> StarsAwarded;
+
+        /// <summary>A message for the player's banner, with its color: a tour bus is coming, today's special...</summary>
+        public static event Action<string, Color> Announced;
+
         public static void RaiseCashCollected(Vector3 position) => CashCollected?.Invoke(position);
         public static void RaisePadPaid(Vector3 position) => PadPaid?.Invoke(position);
         public static void RaiseUnlocked(Vector3 position) => Unlocked?.Invoke(position);
@@ -62,6 +68,8 @@ namespace BubbleTea.Core
         public static void RaiseTableCleaned(Vector3 position) => TableCleaned?.Invoke(position);
         public static void RaiseUpgradeBought() => UpgradeBought?.Invoke();
         public static void RaiseBonusCollected() => BonusCollected?.Invoke();
+        public static void RaiseStarsAwarded(float stars) => StarsAwarded?.Invoke(stars);
+        public static void RaiseAnnouncement(string message, Color color) => Announced?.Invoke(message, color);
 
         // Domain reload is off, so clear listeners left over from the last Play session.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -80,6 +88,8 @@ namespace BubbleTea.Core
             CustomerRefusedPrice = null;
             UpgradeBought = null;
             BonusCollected = null;
+            StarsAwarded = null;
+            Announced = null;
         }
     }
 }

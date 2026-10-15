@@ -66,6 +66,7 @@ namespace BubbleTea.EditorTools
             public Vector3 Counter, Seating, DriveThru, TrashCan, FloorCash, PlayerStart;
             public Vector3 TeaBrewer, ToppingBar, TaroStation, FruitBar, ExtraBar, UpgradeDesk, Cashier;
             public Vector3 Expansion, MoreSeating, Cleaner, DriveThruCashier, SecondShopPad, TravelBack;
+            public Vector3 Stocker, SupplyDock, Chalkboard;      // Matcha House only
             public Vector3[] Baristas;
             public float[] Windows, Lamps, ExpansionWindows, ExpansionLamps; // x positions on the back wall
             public Vector3[] Trees;
@@ -103,7 +104,7 @@ namespace BubbleTea.EditorTools
             DriveThru = new(14f, 0f, 3.5f),
             TrashCan = new(-8.3f, 0f, 0.8f),   // front-west corner of the kitchen, away from the bars
             FloorCash = new(-4.6f, 0f, 0.9f),  // in the kitchen, just left of the counter
-            PlayerStart = new(-4.4f, 1f, 3f),
+            PlayerStart = new(-4.4f, 1f, 1.9f), // clear of the Matcha House's stocker pad
             TeaBrewer = bars[0],
             ToppingBar = bars[1],
             TaroStation = bars[2],
@@ -117,6 +118,11 @@ namespace BubbleTea.EditorTools
             DriveThruCashier = new(11f, 0f, 6f),
             SecondShopPad = new(-6.4f, 0f, -1.6f), // both bus stops stand on the left of the dining room
             TravelBack = new(-6.4f, 0f, -1.6f),
+            // Matcha House: the supply dock against the west wall (its spot faces into the kitchen), the
+            // stocker's pad between it and the counter, and the specials chalkboard by the front door.
+            SupplyDock = new(-8.25f, 0f, 3.4f),
+            Stocker = new(-4.6f, 0f, 3.4f),
+            Chalkboard = new(-4.2f, 0f, -3.4f),
             Baristas = new Vector3[] { new(3f, 0f, 2.6f), new(5.4f, 0f, 2.6f), new(7.8f, 0f, 2.6f), new(7.6f, 0f, 6.2f) },
             Windows = new[] { -6.2f, 6.2f },
             Lamps = new[] { -4.4f, 4.4f },
@@ -471,9 +477,19 @@ namespace BubbleTea.EditorTools
             }
             // Customers come in off the sidewalk through the front door and leave the same way.
             float street = Layout.SidewalkZ;
-            CreateCustomerSpawner("CustomerSpawner", "Main", content.CustomerPrefab,
+            CustomerSpawner mainSpawner = CreateCustomerSpawner("CustomerSpawner", "Main", content.CustomerPrefab,
                 new Vector3(Layout.Counter.x, 0f, street), new Vector3((Layout.DoorFrom + Layout.DoorTo) / 2f, 0f, street),
                 secondsBetween: 3f, max: 4);
+            // The Matcha House's own events: tea critics, tour buses, the daily special and supply deliveries.
+            if (plan.Number > 1)
+            {
+                var criticSettings = new SerializedObject(mainSpawner);
+                criticSettings.FindProperty("criticChance").floatValue = 0.08f;
+                criticSettings.ApplyModifiedPropertiesWithoutUndo();
+                CreateTourBus(mainSpawner);
+                CreateDailySpecialBoard();
+            }
+            if (content.Crate != null) CreateSupplyDelivery(content.Crate, padMat);
             // Cars turn in from the road, drive up the lane past the window and out the far end.
             CreateCustomerSpawner("CarSpawner", "DriveThru", content.CarPrefab,
                 new Vector3(Layout.LaneX, 0f, street - 4f), new Vector3(Layout.LaneX, 0f, Layout.HalfDepth + 9f),
@@ -498,6 +514,7 @@ namespace BubbleTea.EditorTools
             CreateRatingView(hud, rating);
             CreatePriceyAlert(hud);
             CreateStaffUnpaidAlert(hud);
+            CreateAnnouncementBanner(hud);
             CreateWelcomeBackPopup(hud, offlineEarnings);
             CreateGameOverPopup(hud, rating, saveManager);
 
@@ -944,6 +961,10 @@ namespace BubbleTea.EditorTools
             Turn(toppingPad, 180f);
             // Baristas in the row of staff pads in front of the bars, each pad revealing the next. Hiring
             // the first one also brings out the topping bar.
+            // Matcha House: hiring the first barista also brings out the stocker's pad.
+            UnlockPad stockerPad = content.Stocker != null
+                ? CreatePad(content.Stocker, Layout.Stocker, billPrefab, wallet, padMat)
+                : null;
             Vector3[] baristaSpots = Layout.Baristas;
             var baristaPads = new UnlockPad[content.Baristas.Length];
             for (int i = baristaPads.Length - 1; i >= 0; i--)
@@ -951,6 +972,7 @@ namespace BubbleTea.EditorTools
                 var reveals = new System.Collections.Generic.List<UnlockPad>();
                 if (i + 1 < baristaPads.Length) reveals.Add(baristaPads[i + 1]);
                 if (i == 0) reveals.Add(toppingPad);
+                if (i == 0 && stockerPad != null) reveals.Add(stockerPad);
                 baristaPads[i] = CreatePad(content.Baristas[i], baristaSpots[i], billPrefab, wallet, padMat, reveals.ToArray());
             }
             UnlockPad upgradePad = CreatePad(content.UpgradeDesk, Layout.UpgradeDesk, billPrefab, wallet, padMat);
@@ -984,6 +1006,11 @@ namespace BubbleTea.EditorTools
             {
                 extraPad.gameObject.SetActive(false);
                 all.Add(extraPad);
+            }
+            if (stockerPad != null)
+            {
+                stockerPad.gameObject.SetActive(false);
+                all.Add(stockerPad);
             }
             if (secondShopPad != null)
             {
@@ -1522,6 +1549,237 @@ namespace BubbleTea.EditorTools
             SetReference(popup, "saveManager", saveManager);
         }
 
+        // ---------- Matcha House events ----------
+
+        // A blue tour bus that drives along the road out front, stops by the door and lets a group of
+        // tourists off (see TourBus).
+        private static void CreateTourBus(CustomerSpawner spawner)
+        {
+            float roadZ = Layout.SidewalkZ - 5.5f;
+            var go = new GameObject("TourBus");
+            var tour = go.AddComponent<TourBus>();
+
+            Transform bus = new GameObject("Bus").transform;
+            bus.SetParent(go.transform, false);
+            Material paint = GetOrCreateMaterial("TourBusPaint", new Color(0.33f, 0.62f, 0.9f));
+            Material white = GetOrCreateMaterial("TourBusRoof", new Color(0.97f, 0.97f, 0.95f));
+            Material glass = GetOrCreateMaterial("CarWindow", new Color(0.55f, 0.75f, 0.90f));
+            Material tire = GetOrCreateMaterial("Tire", new Color(0.12f, 0.12f, 0.13f));
+            Material stripe = GetOrCreateMaterial("TourBusStripe", new Color(1f, 0.8f, 0.25f));
+            // Built facing +z, the way it drives.
+            BusPart(bus, PrimitiveType.Cube, "Body", new Vector3(0f, 1.45f, 0f), new Vector3(2.4f, 2.1f, 7.2f), paint);
+            BusPart(bus, PrimitiveType.Cube, "Roof", new Vector3(0f, 2.55f, 0f), new Vector3(2.46f, 0.14f, 7.26f), white);
+            BusPart(bus, PrimitiveType.Cube, "Windows", new Vector3(0f, 1.95f, 0.2f), new Vector3(2.46f, 0.75f, 6.2f), glass);
+            BusPart(bus, PrimitiveType.Cube, "Stripe", new Vector3(0f, 1.05f, 0f), new Vector3(2.46f, 0.18f, 7.26f), stripe);
+            BusPart(bus, PrimitiveType.Cube, "Windshield", new Vector3(0f, 1.8f, 3.6f), new Vector3(2.1f, 1f, 0.06f), glass);
+            foreach (float x in new[] { -1.12f, 1.12f })
+            {
+                foreach (float z in new[] { -2.5f, 2.4f })
+                {
+                    GameObject wheel = BusPart(bus, PrimitiveType.Cylinder, "Wheel", new Vector3(x, 0.45f, z),
+                        new Vector3(0.9f, 0.14f, 0.9f), tire);
+                    wheel.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                }
+            }
+
+            SetReference(tour, "spawner", spawner);
+            SetReference(tour, "bus", bus);
+            var serialized = new SerializedObject(tour);
+            serialized.FindProperty("roadStart").vector3Value = new Vector3(-36f, 0f, roadZ);
+            serialized.FindProperty("stop").vector3Value = new Vector3(Layout.Counter.x, 0f, roadZ);
+            serialized.FindProperty("roadEnd").vector3Value = new Vector3(46f, 0f, roadZ);
+            serialized.FindProperty("doorOffset").vector3Value = new Vector3(0f, 0f, 1.8f);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            // Out of sight until the first bus comes.
+            bus.position = new Vector3(-36f, 0f, roadZ);
+            bus.gameObject.SetActive(false);
+        }
+
+        private static GameObject BusPart(Transform parent, PrimitiveType type, string name, Vector3 position, Vector3 scale,
+            Material material)
+        {
+            GameObject part = GameObject.CreatePrimitive(type);
+            part.name = name;
+            Object.DestroyImmediate(part.GetComponent<Collider>());
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = position;
+            part.transform.localScale = scale;
+            part.GetComponent<Renderer>().sharedMaterial = material;
+            return part;
+        }
+
+        // A chalkboard sign by the front door: "TODAY'S SPECIAL", a model of the drink, its name and price.
+        private static void CreateDailySpecialBoard()
+        {
+            var go = new GameObject("DailySpecial");
+            go.transform.position = Layout.Chalkboard;
+            Material wood = GetOrCreateMaterial("ChalkboardWood", new Color(0.55f, 0.38f, 0.24f));
+            Material chalk = GetOrCreateMaterial("Chalkboard", new Color(0.16f, 0.26f, 0.2f));
+            BusPart(go.transform, PrimitiveType.Cube, "Leg", new Vector3(-0.6f, 0.45f, 0.12f), new Vector3(0.08f, 0.9f, 0.08f), wood);
+            BusPart(go.transform, PrimitiveType.Cube, "Leg", new Vector3(0.6f, 0.45f, 0.12f), new Vector3(0.08f, 0.9f, 0.08f), wood);
+
+            // The board leans back a little, toward the shop, so it reads well from the camera.
+            Transform face = new GameObject("Face").transform;
+            face.SetParent(go.transform, false);
+            face.localPosition = new Vector3(0f, 0.35f, 0f);
+            face.localRotation = Quaternion.Euler(18f, 0f, 0f);
+            BusPart(face, PrimitiveType.Cube, "Frame", new Vector3(0f, 0.8f, 0.03f), new Vector3(1.62f, 1.62f, 0.05f), wood);
+            BusPart(face, PrimitiveType.Cube, "Board", new Vector3(0f, 0.8f, 0f), new Vector3(1.5f, 1.5f, 0.05f), chalk);
+            BusPart(face, PrimitiveType.Cube, "Ledge", new Vector3(0f, 0.62f, -0.17f), new Vector3(0.9f, 0.04f, 0.32f), wood);
+
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            TextMesh title = BoardText(face, font, "TODAY'S SPECIAL", new Vector3(0f, 1.38f, -0.04f), 0.024f, new Color(1f, 0.86f, 0.4f));
+            title.fontStyle = FontStyle.Bold;
+            TextMesh drink = BoardText(face, font, "", new Vector3(0f, 0.33f, -0.04f), 0.02f, new Color(0.97f, 0.97f, 0.95f));
+
+            Transform icon = new GameObject("Icon").transform;
+            icon.SetParent(face, false);
+            icon.localPosition = new Vector3(0f, 0.64f, -0.2f);
+
+            var special = go.AddComponent<DailySpecial>();
+            SetReference(special, "drinkLabel", drink);
+            SetReference(special, "iconSpot", icon);
+            var serialized = new SerializedObject(special);
+            serialized.FindProperty("iconScale").floatValue = 1.5f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static TextMesh BoardText(Transform parent, Font font, string text, Vector3 position, float size, Color color)
+        {
+            var labelGo = new GameObject("Text");
+            labelGo.transform.SetParent(parent, false);
+            labelGo.transform.localPosition = position;
+            var mesh = labelGo.AddComponent<TextMesh>();
+            mesh.font = font;
+            labelGo.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            mesh.text = text;
+            mesh.fontSize = 64;
+            mesh.characterSize = size;
+            mesh.anchor = TextAnchor.MiddleCenter;
+            mesh.alignment = TextAlignment.Center;
+            mesh.color = color;
+            return mesh;
+        }
+
+        // The supply dock against the kitchen's west wall, and the little truck that keeps it stocked
+        // with crates (it drives in along the road and up the west side of the shop).
+        private static void CreateSupplyDelivery(ItemDefinition crate, Material spotMaterial)
+        {
+            var go = new GameObject("SupplyDock");
+            go.transform.position = Layout.SupplyDock;
+            go.transform.rotation = Quaternion.Euler(0f, 90f, 0f); // its stand-here spot faces east, into the kitchen
+
+            GameObject pallet = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            pallet.name = "Pallet";
+            pallet.transform.SetParent(go.transform, false);
+            pallet.transform.localPosition = new Vector3(0f, 0.08f, 0f);
+            pallet.transform.localScale = new Vector3(1.5f, 0.16f, 1.4f);
+            pallet.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial("Pallet", new Color(0.72f, 0.55f, 0.36f));
+
+            Transform anchor = new GameObject("Crates").transform;
+            anchor.SetParent(go.transform, false);
+            anchor.localPosition = new Vector3(0f, 0.16f, 0f);
+
+            GameObject spot = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            spot.name = "Spot";
+            Object.DestroyImmediate(spot.GetComponent<BoxCollider>());
+            spot.transform.SetParent(go.transform, false);
+            spot.transform.localPosition = new Vector3(0f, 0.005f, 1.25f);
+            spot.transform.localScale = new Vector3(1.4f, 0.01f, 1.2f);
+            spot.GetComponent<Renderer>().sharedMaterial = spotMaterial;
+
+            var label = new GameObject("Label").AddComponent<TextMesh>();
+            label.transform.SetParent(go.transform, false);
+            label.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+            label.transform.rotation = Quaternion.Euler(45f, 0f, 0f); // faces the camera whichever way the dock turns
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.font = font;
+            label.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            label.text = "SUPPLIES";
+            label.characterSize = 0.04f;
+            label.fontSize = 64;
+            label.fontStyle = FontStyle.Bold;
+            label.anchor = TextAnchor.MiddleCenter;
+            label.color = Color.white;
+
+            var dock = go.AddComponent<SupplyDock>();
+            var serialized = new SerializedObject(dock);
+            serialized.FindProperty("crate").objectReferenceValue = crate;
+            serialized.FindProperty("crates.anchor").objectReferenceValue = anchor;
+            serialized.FindProperty("crates.capacity").intValue = 6;
+            serialized.FindProperty("crates.itemHeight").floatValue = 0.235f;
+            SetStackGrid(serialized, "crates", 2, 2, 0.62f, DrinkSize);
+            serialized.FindProperty("zone.offset").vector3Value = new Vector3(0f, 0f, 1.25f);
+            serialized.FindProperty("zone.halfSize").floatValue = 0.7f;
+            serialized.FindProperty("zone.secondsPerHandoff").floatValue = 0.25f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            // The truck: a white cab and a matcha-green box, built facing +z.
+            var truckGo = new GameObject("DeliveryTruck");
+            var delivery = truckGo.AddComponent<DeliveryTruck>();
+            Transform truck = new GameObject("Truck").transform;
+            truck.SetParent(truckGo.transform, false);
+            Material cab = GetOrCreateMaterial("TruckCab", new Color(0.97f, 0.97f, 0.95f));
+            Material box = GetOrCreateMaterial("TruckBox", new Color(0.42f, 0.62f, 0.32f));
+            Material glass = GetOrCreateMaterial("CarWindow", new Color(0.55f, 0.75f, 0.90f));
+            Material tire = GetOrCreateMaterial("Tire", new Color(0.12f, 0.12f, 0.13f));
+            BusPart(truck, PrimitiveType.Cube, "Cab", new Vector3(0f, 0.95f, 1.5f), new Vector3(1.7f, 1.3f, 1.2f), cab);
+            BusPart(truck, PrimitiveType.Cube, "Windshield", new Vector3(0f, 1.25f, 2.1f), new Vector3(1.5f, 0.5f, 0.05f), glass);
+            BusPart(truck, PrimitiveType.Cube, "Box", new Vector3(0f, 1.3f, -0.5f), new Vector3(1.8f, 1.9f, 2.7f), box);
+            foreach (float x in new[] { -0.8f, 0.8f })
+            {
+                foreach (float z in new[] { -1.2f, 1.4f })
+                {
+                    GameObject wheel = BusPart(truck, PrimitiveType.Cylinder, "Wheel", new Vector3(x, 0.38f, z),
+                        new Vector3(0.76f, 0.12f, 0.76f), tire);
+                    wheel.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                }
+            }
+
+            float roadZ = Layout.SidewalkZ - 5.5f;
+            float sideX = -Layout.HalfWidth - 1.3f; // just outside the west wall
+            SetReference(delivery, "dock", dock);
+            SetReference(delivery, "truck", truck);
+            var truckSettings = new SerializedObject(delivery);
+            SerializedProperty route = truckSettings.FindProperty("route");
+            Vector3[] points = { new(-36f, 0f, roadZ), new(sideX, 0f, roadZ), new(sideX, 0f, Layout.SupplyDock.z) };
+            route.arraySize = points.Length;
+            for (int i = 0; i < points.Length; i++) route.GetArrayElementAtIndex(i).vector3Value = points[i];
+            truckSettings.ApplyModifiedPropertiesWithoutUndo();
+            truck.position = points[0];
+            truck.gameObject.SetActive(false);
+        }
+
+        // A banner for shop events (tour bus, critic, today's special), below the other alerts.
+        private static void CreateAnnouncementBanner(Transform hud)
+        {
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform root = CreateUiObject("AnnouncementBanner", hud);
+            Stretch(root);
+            var announcer = root.gameObject.AddComponent<AnnouncementBanner>();
+
+            RectTransform banner = CreateUiObject("Banner", root);
+            banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 1f);
+            banner.pivot = new Vector2(0.5f, 1f);
+            banner.anchoredPosition = new Vector2(0f, -HudMargin - 120f * HudScale - 320f); // under the staff alert
+            banner.sizeDelta = new Vector2(860f, 140f);
+            var image = banner.gameObject.AddComponent<Image>();
+            image.sprite = rounded;
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.2f, 0.45f, 0.8f, 0.92f);
+            image.raycastTarget = false;
+
+            Text text = CreateHudText("Text", banner, font, 36, TextAnchor.MiddleCenter);
+            Stretch(text.rectTransform);
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.raycastTarget = false;
+            SetReference(announcer, "banner", banner.gameObject);
+            SetReference(announcer, "background", image);
+            SetReference(announcer, "label", text);
+        }
+
         // A bin beside the counter. Stand next to it to throw away what you're carrying.
         private static void CreateTrashCan(Material spotMaterial)
         {
@@ -1888,7 +2146,7 @@ namespace BubbleTea.EditorTools
 
         // Main customers walk in from the bottom-left, queue behind the counter, and leave to
         // the left. Cars drive up from the bottom of the expansion and leave to the east.
-        private static void CreateCustomerSpawner(string name, string lane, Customer prefab, Vector3 position,
+        private static CustomerSpawner CreateCustomerSpawner(string name, string lane, Customer prefab, Vector3 position,
             Vector3 exitPosition, float secondsBetween, int max)
         {
             var exit = new GameObject(name + " Exit");
@@ -1905,6 +2163,7 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("secondsBetweenCustomers").floatValue = secondsBetween;
             serialized.FindProperty("maxCustomers").intValue = max;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            return spawner;
         }
 
         private static UnlockPad CreatePad(BuildableDefinition definition, Vector3 position, CashBill billPrefab,

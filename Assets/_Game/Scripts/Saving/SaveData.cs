@@ -12,7 +12,7 @@ namespace BubbleTea.Saving
     public class SaveData
     {
         /// <summary>Bumped when the layout changes, so old saves can be upgraded instead of lost.</summary>
-        public int version = 9;
+        public int version = 10;
 
         public int money;
         public List<PadSave> pads = new();
@@ -49,6 +49,17 @@ namespace BubbleTea.Saving
         public int clockDay = 1;
         /// <summary>Added in version 9: lifetime totals for the Stats panel and the milestone goals.</summary>
         public ShopRecordsSave records = new();
+
+        /// <summary>Added in version 10: supplies left in each bar that uses them (Matcha House). Missing = full.</summary>
+        public List<SupplySave> supplies = new();
+    }
+
+    /// <summary>One bar's supplies, by the bar's name.</summary>
+    [Serializable]
+    public class SupplySave
+    {
+        public string station;
+        public int amount;
     }
 
     /// <summary>One unlock pad's progress.</summary>

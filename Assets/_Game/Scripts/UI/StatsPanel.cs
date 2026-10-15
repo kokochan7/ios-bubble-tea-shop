@@ -97,6 +97,7 @@ namespace BubbleTea.UI
                 StaffLine("Baristas", payroll.Baristas, payroll.BaristaWage);
                 StaffLine("Cashiers", payroll.Cashiers, payroll.CashierWage);
                 StaffLine("Cleaners", payroll.Cleaners, payroll.CleanerWage);
+                if (payroll.Stockers > 0 || Station.AnyUsesSupplies) StaffLine("Stockers", payroll.Stockers, payroll.StockerWage);
                 Line("Total", $"${payroll.WagesPerHour:N0}/hr");
             }
 

@@ -64,6 +64,12 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition Cashier;
             public BuildableDefinition DriveThruCashier;
 
+            /// <summary>Matcha House only: the stocker who carries crates to the bars. Null in other shops.</summary>
+            public BuildableDefinition Stocker;
+
+            /// <summary>Matcha House only: the crate of supplies the delivery truck brings. Null in other shops.</summary>
+            public ItemDefinition Crate;
+
             /// <summary>Shop 1 only: the pad that opens the second shop. Null in other shops.</summary>
             public BuildableDefinition SecondShop;
 
@@ -81,6 +87,7 @@ namespace BubbleTea.EditorTools
             public GameObject TaroStation;
             public GameObject FruitBar;
             public GameObject ExtraBar; // optional fifth bar
+            public ItemDefinition Supply; // optional crate some bars use up
             public string ToppingName;
             public string ExtraName;
             public string BrewerName;
@@ -141,6 +148,12 @@ namespace BubbleTea.EditorTools
                     Levels(fiveLevels, 0f, 1f, 2f, 3f, 4f, 5f), Costs(fiveLevels, 70, 150, 300, 600, 1100), // +1 finished drink per bar (see Station)
                     shownName: "Drink Shelf Space"),
             };
+            // The Matcha House's Whisk Bar is whisked by hand until Whisk Master lets it run on its own.
+            if (shop > 1)
+            {
+                upgrades = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Append(upgrades,
+                    GetOrCreateUpgrade("Whisk Master", StatId.AutoWhisk, new[] { 0f, 1f }, Scaled(400))));
+            }
             GameObject upgradeDesk = BuildUpgradeDeskPrefab();
             GameObject barista = BuildBaristaPrefab();
 
@@ -196,6 +209,8 @@ namespace BubbleTea.EditorTools
                 TravelBack = shop > 1
                     ? BuildTravelPrefab("ToBobaShop", "Prototype", "Boba Shop", new Color(0.95f, 0.62f, 0.55f))
                     : null,
+                Stocker = set.Supply != null ? GetOrCreateBuildable("Hire Stocker", 200, BuildStockerPrefab()) : null,
+                Crate = set.Supply,
             };
         }
 
@@ -263,6 +278,8 @@ namespace BubbleTea.EditorTools
             RecipeStep foamHojicha = GetOrCreateStep("Top Hojicha With Cream", hojicha, hojichaCloud, 1.5f);
             RecipeStep pourStrawberry = GetOrCreateStep("Pour Matcha On Strawberry Milk", matcha, strawberryMatcha, 1.8f);
             RecipeStep mixYuzu = GetOrCreateStep("Mix Yuzu Matcha Fizz", null, yuzuFizz, 2.2f);
+            // The Whisk Bar and the Yuzu Bar use up matcha powder, brought in crates by the delivery truck.
+            ItemDefinition matchaPowder = GetOrCreateCrate("Matcha Powder", matchaGreen);
 
             return new MenuSet
             {
@@ -276,7 +293,8 @@ namespace BubbleTea.EditorTools
                     GetOrCreateDrink("Yuzu Matcha Fizz", yuzuFizz, 32),
                 },
                 Brewer = BuildStationPrefab("WhiskBar", new Color(0.36f, 0.52f, 0.32f), new Vector3(1.4f, 1f, 1f) * BarScale,
-                    new Color(0.55f, 0.75f, 0.38f), new[] { whisk }, inputCapacity: 0, artSlot: "WhiskBar"),
+                    new Color(0.55f, 0.75f, 0.38f), new[] { whisk }, inputCapacity: 0, artSlot: "WhiskBar",
+                    supply: matchaPowder, handMade: true),
                 ToppingBar = BuildStationPrefab("FoamBar", new Color(0.96f, 0.93f, 0.85f), new Vector3(2f, 1f, 1f) * BarScale,
                     new Color(0.98f, 0.95f, 0.86f), new[] { foamMatcha, foamHojicha }, inputCapacity: 4, artSlot: "FoamBar"),
                 TaroStation = BuildStationPrefab("HojichaBar", new Color(0.55f, 0.38f, 0.25f), new Vector3(1.4f, 1f, 1f) * BarScale,
@@ -284,7 +302,9 @@ namespace BubbleTea.EditorTools
                 FruitBar = BuildStationPrefab("StrawberryBar", new Color(0.92f, 0.45f, 0.55f), new Vector3(2f, 1f, 1f) * BarScale,
                     new Color(0.98f, 0.62f, 0.72f), new[] { pourStrawberry }, inputCapacity: 4, artSlot: "StrawberryBar"),
                 ExtraBar = BuildStationPrefab("YuzuBar", new Color(0.95f, 0.85f, 0.30f), new Vector3(1.4f, 1f, 1f) * BarScale,
-                    new Color(0.97f, 0.86f, 0.30f), new[] { mixYuzu }, inputCapacity: 0, artSlot: "YuzuBar"),
+                    new Color(0.97f, 0.86f, 0.30f), new[] { mixYuzu }, inputCapacity: 0, artSlot: "YuzuBar",
+                    supply: matchaPowder),
+                Supply = matchaPowder,
                 BrewerName = "Whisk Bar",
                 ToppingName = "Foam Bar",
                 TaroName = "Hojicha Bar",
@@ -328,6 +348,28 @@ namespace BubbleTea.EditorTools
 
             // The model is rebuilt every time, then linked both ways.
             GameObject prefab = BuildItemPrefab(FileName(displayName), item, cupColor, pearlColor, foamColor);
+            var serializedItem = new SerializedObject(item);
+            serializedItem.FindProperty("prefab").objectReferenceValue = prefab;
+            serializedItem.ApplyModifiedPropertiesWithoutUndo();
+            return item;
+        }
+
+        // A cardboard crate of supplies (a box with a colored band and lid), carried like a drink.
+        private static ItemDefinition GetOrCreateCrate(string displayName, Color bandColor)
+        {
+            var item = GetOrCreateAsset<ItemDefinition>($"{DataFolder}/Items/{FileName(displayName)}.asset",
+                serialized => serialized.FindProperty("displayName").stringValue = displayName);
+
+            var root = new GameObject(FileName(displayName));
+            Material cardboard = GetOrCreateMaterial("Crate", new Color(0.82f, 0.64f, 0.42f));
+            Material band = GetOrCreateMaterial(FileName(displayName) + "Band", bandColor);
+            AddPart(root.transform, PrimitiveType.Cube, "Box", new Vector3(0f, 0.11f, 0f), new Vector3(0.28f, 0.22f, 0.28f), cardboard);
+            AddPart(root.transform, PrimitiveType.Cube, "Band", new Vector3(0f, 0.11f, 0f), new Vector3(0.29f, 0.07f, 0.29f), band);
+            AddPart(root.transform, PrimitiveType.Cube, "Lid", new Vector3(0f, 0.225f, 0f), new Vector3(0.3f, 0.02f, 0.3f), band);
+            var carried = root.AddComponent<CarriedItem>();
+            SetReference(carried, "definition", item);
+            GameObject prefab = SavePrefab(root, $"{PrefabFolder}/Items/{FileName(displayName)}.prefab");
+
             var serializedItem = new SerializedObject(item);
             serializedItem.FindProperty("prefab").objectReferenceValue = prefab;
             serializedItem.ApplyModifiedPropertiesWithoutUndo();
@@ -530,12 +572,15 @@ namespace BubbleTea.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        // supply: a crate the bar uses up (one scoop per drink). handMade: only works while the player stands at it.
         private static GameObject BuildStationPrefab(string name, Color bodyColor, Vector3 bodySize, Color topColor,
-            RecipeStep[] steps, int inputCapacity, string artSlot = null)
+            RecipeStep[] steps, int inputCapacity, string artSlot = null, ItemDefinition supply = null, bool handMade = false)
         {
             GameObject root = BuildStationBody(name, bodyColor, bodySize, topColor, artSlot);
             var station = root.AddComponent<Station>();
             var serialized = new SerializedObject(station);
+            serialized.FindProperty("supplyItem").objectReferenceValue = supply;
+            serialized.FindProperty("needsPlayer").boolValue = handMade;
 
             SerializedProperty stepList = serialized.FindProperty("steps");
             stepList.arraySize = steps.Length;
@@ -789,6 +834,30 @@ namespace BubbleTea.EditorTools
 
             AddPayLight(root, root.AddComponent<Barista>());
             return SavePrefab(root, $"{PrefabFolder}/Barista.prefab");
+        }
+
+        // A stocker (Matcha House) who carries crates of supplies from the dock to the bars, one at a time.
+        private static GameObject BuildStockerPrefab()
+        {
+            var root = new GameObject("Stocker");
+            GameObject body = AddPart(root.transform, PrimitiveType.Capsule, "Body", new Vector3(0f, 0.8f, 0f),
+                new Vector3(0.7f, 0.8f, 0.7f), GetOrCreateMaterial("Stocker", new Color(0.86f, 0.6f, 0.32f)));
+            AddPart(body.transform, PrimitiveType.Cube, "FacingMarker", new Vector3(0f, 0.4f, 0.5f),
+                new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
+            // Their own art slot if the Art Set has one, otherwise they look like the cleaner.
+            AddCharacterArt(ArtLibrary.Load().Get(StaffSlot("Stocker")) != null ? StaffSlot("Stocker") : StaffSlot("Cleaner"), root, body);
+
+            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.55f));
+            var carrier = root.AddComponent<ItemCarrier>();
+            var serialized = new SerializedObject(carrier);
+            serialized.FindProperty("stack.anchor").objectReferenceValue = hands;
+            serialized.FindProperty("stack.capacity").intValue = 1;
+            serialized.FindProperty("stack.itemScale").floatValue = TrayDrinkSize;
+            serialized.FindProperty("usesCarryUpgrade").boolValue = false;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            AddPayLight(root, root.AddComponent<Stocker>());
+            return SavePrefab(root, $"{PrefabFolder}/Stocker.prefab");
         }
 
         // A cleaner who clears cups off the tables and collects what seated customers left.

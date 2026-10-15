@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using BubbleTea.Building;
 using BubbleTea.Core;
+using BubbleTea.Cooking;
 using BubbleTea.Customers;
 using BubbleTea.Economy;
 using BubbleTea.Goals;
@@ -161,6 +162,10 @@ namespace BubbleTea.Saving
             };
             if (ShopRecords.Instance != null) data.records = ShopRecords.Instance.Snapshot();
             if (dailyGoals != null) data.goals.AddRange(dailyGoals.Goals);
+            foreach (Station station in Station.All)
+            {
+                if (station != null && station.UsesSupplies) data.supplies.Add(new SupplySave { station = station.name, amount = station.Supplies });
+            }
             foreach (UnlockPad pad in pads)
             {
                 if (pad == null) continue;
@@ -251,6 +256,19 @@ namespace BubbleTea.Saving
                     if (entry == null) continue;
                     UpgradeDefinition upgrade = upgradeManager.Find(entry.id);
                     if (upgrade != null) upgradeManager.SetLevel(upgrade, entry.level);
+                }
+            }
+
+            // Bars built by the pads above exist now, so their supplies can go back in.
+            if (data.supplies != null)
+            {
+                foreach (SupplySave entry in data.supplies)
+                {
+                    if (entry == null) continue;
+                    foreach (Station station in Station.All)
+                    {
+                        if (station != null && station.UsesSupplies && station.name == entry.station) station.RestoreSupplies(entry.amount);
+                    }
                 }
             }
 
