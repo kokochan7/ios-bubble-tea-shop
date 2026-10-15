@@ -245,4 +245,4 @@ Tap to open pass:
 - **Tappable objects:** tap the Counter (or drive-thru window) to set drink prices, and tap the Upgrade Desk to open the upgrade menu (`UI/PricePanel` and `UI/UpgradePanel` listen to `VirtualJoystick.Tapped`; the desk is found by its `UpgradeZone` marker). Standing next to the desk no longer opens it.
 - The red carpet is gone; the To Matcha House bus stop now stands on the left of the dining room, like level 2's To Boba Shop stop.
 - Cash Pile 1 (the starting floor money) sits in the kitchen just left of the counter, with a "$on the pile/$left to collect" label (like $30/$500) that disappears once all $500 is collected.
-- A sale plays a single cashier's bell "ding" instead of the ka-ching.
+- A sale makes no sound of its own anymore (the ka-ching and the ding were both removed); collecting money still ticks.

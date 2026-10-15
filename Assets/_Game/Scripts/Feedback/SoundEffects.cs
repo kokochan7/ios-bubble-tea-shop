@@ -20,9 +20,6 @@ namespace BubbleTea.Feedback
         [SerializeField, Tooltip("Played when a station appears. Leave empty for a generated chime.")]
         private AudioClip unlockClip;
 
-        [SerializeField, Tooltip("Played when a customer buys a drink. Leave empty for a generated cash register.")]
-        private AudioClip saleClip;
-
         [SerializeField, Tooltip("Played when a customer tips. Leave empty for a generated sparkle.")]
         private AudioClip tipClip;
 
@@ -52,7 +49,6 @@ namespace BubbleTea.Feedback
             if (cashClip == null) cashClip = Tone("Cash", new[] { 1320f }, 0.05f);
             if (payClip == null) payClip = Tone("Pay", new[] { 660f }, 0.04f);
             if (unlockClip == null) unlockClip = Tone("Unlock", new[] { 523f, 659f, 784f, 1047f }, 0.09f);
-            if (saleClip == null) saleClip = Register();
             if (tipClip == null) tipClip = Tone("Tip", new[] { 1568f, 2093f, 2637f }, 0.05f);
             if (upsetClip == null) upsetClip = Tone("Upset", new[] { 392f, 311f }, 0.14f);
             if (upgradeClip == null) upgradeClip = Tone("Upgrade", new[] { 659f, 988f }, 0.1f);
@@ -63,7 +59,6 @@ namespace BubbleTea.Feedback
             GameEvents.CashCollected += OnCash;
             GameEvents.PadPaid += OnPay;
             GameEvents.Unlocked += OnUnlock;
-            GameEvents.DrinkSold += OnSale;
             GameEvents.UpgradeBought += OnUpgrade;
             GameEvents.BonusCollected += OnBonus;
             GameEvents.Tipped += OnTip;
@@ -76,7 +71,6 @@ namespace BubbleTea.Feedback
             GameEvents.CashCollected -= OnCash;
             GameEvents.PadPaid -= OnPay;
             GameEvents.Unlocked -= OnUnlock;
-            GameEvents.DrinkSold -= OnSale;
             GameEvents.UpgradeBought -= OnUpgrade;
             GameEvents.BonusCollected -= OnBonus;
             GameEvents.Tipped -= OnTip;
@@ -103,8 +97,6 @@ namespace BubbleTea.Feedback
         }
 
         private void OnUnlock(Vector3 _) => Play(unlockClip, 1f, 1f);
-        // A single cashier's bell "ding" when a customer pays.
-        private void OnSale(Vector3 _, int amount) => Play(saleClip, 1f, 0.7f);
         private void OnUpgrade() => Play(upgradeClip, 1f, 1f);
         private void OnBonus() => Play(unlockClip, 1f, 1f);
         private void OnTip(Vector3 _, int amount) => Play(tipClip, 1f, 0.7f);
@@ -116,31 +108,6 @@ namespace BubbleTea.Feedback
             if (clip == null || !GameSettings.SoundOn) return;
             source.pitch = pitch;
             source.PlayOneShot(clip, volume * loudness);
-        }
-
-        // A single cashier's bell "ding" that rings out.
-        private static AudioClip Register()
-        {
-            const int sampleRate = 44100;
-            int length = Mathf.CeilToInt(0.6f * sampleRate);
-            var samples = new float[length];
-            for (int i = 0; i < length; i++)
-            {
-                float t = (float)i / sampleRate;
-                samples[i] = Mathf.Clamp(Bell(t, 2349f, 0.32f) * Mathf.Clamp01(t / 0.002f) * 0.8f, -1f, 1f);
-            }
-            AudioClip clip = AudioClip.Create("Ding", length, 1, sampleRate, false);
-            clip.SetData(samples, 0);
-            return clip;
-        }
-
-        private static float Bell(float t, float pitch, float decay)
-        {
-            if (t < 0f) return 0f;
-            float envelope = Mathf.Exp(-t / decay);
-            return (Mathf.Sin(2f * Mathf.PI * pitch * t)
-                    + 0.5f * Mathf.Sin(2f * Mathf.PI * pitch * 2.76f * t)
-                    + 0.25f * Mathf.Sin(2f * Mathf.PI * pitch * 5.4f * t)) * envelope * 0.4f;
         }
 
         // Builds a little clip: each note in turn, as a sine wave that fades out quickly.
