@@ -459,9 +459,9 @@ namespace BubbleTea.EditorTools
             SetReference(player.GetComponent<PlayerMovement>(), "joystick", joystick);
             SetReference(player.GetComponent<PlayerMovement>(), "cameraTransform", camera.transform);
 
-            CashPile[] piles = CreateCashPiles(billPrefab, padMat);
+            CashPile[] piles = CreateCashPiles(billPrefab, padMat, plan.Number);
             CreateTrashCan(padMat);
-            CashPileRefiller floorCash = CreateRefiller(piles);
+            CashPileRefiller floorCash = CreateRefiller(piles, plan.Number);
             ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab, plan.Number);
             UnlockPad[] pads = CreateUnlockPads(content, billPrefab, wallet, eastWall, expansionArea);
             if (content.TravelBack != null)
@@ -816,7 +816,7 @@ namespace BubbleTea.EditorTools
             go.AddComponent<InputSystemUIInputModule>();
         }
 
-        private static CashPile[] CreateCashPiles(CashBill billPrefab, Material padMaterial)
+        private static CashPile[] CreateCashPiles(CashBill billPrefab, Material padMaterial, int shopNumber)
         {
             Vector3[] spots = { Layout.FloorCash };
             var piles = new CashPile[spots.Length];
@@ -840,14 +840,15 @@ namespace BubbleTea.EditorTools
                 // toward its $500 limit.
                 var pileSettings = new SerializedObject(piles[i]);
                 pileSettings.FindProperty("startingBills").intValue = 0;
-                pileSettings.FindProperty("valuePerBill").intValue = 10; // bigger bills, fewer ticks
+                // Bigger bills, fewer ticks. The Matcha House floor pays $20 bills (5 per refill = $100).
+                pileSettings.FindProperty("valuePerBill").intValue = shopNumber > 1 ? 20 : 10;
                 pileSettings.ApplyModifiedPropertiesWithoutUndo();
             }
             return piles;
         }
 
         // Keeps the floor money topped up until it has handed out $500 in total.
-        private static CashPileRefiller CreateRefiller(CashPile[] piles)
+        private static CashPileRefiller CreateRefiller(CashPile[] piles, int shopNumber)
         {
             var go = new GameObject("FloorCash");
             var refiller = go.AddComponent<CashPileRefiller>();
@@ -859,7 +860,8 @@ namespace BubbleTea.EditorTools
             {
                 list.GetArrayElementAtIndex(i).objectReferenceValue = piles[i];
             }
-            serialized.FindProperty("billsPerRefill").intValue = 3;
+            // $30 a refill in the Boba Shop ($10 x 3), $100 in the Matcha House ($20 x 5).
+            serialized.FindProperty("billsPerRefill").intValue = shopNumber > 1 ? 5 : 3;
 
             // "$30/$500" floating over the first pile: money lying there now / money still to collect.
             if (piles.Length > 0)

@@ -28,7 +28,7 @@ namespace BubbleTea.Customers
         private float bubbleIconScale = 2f;
 
         [SerializeField, Min(0f), Tooltip("Seconds a customer will wait before leaving without buying. 0 = they wait forever.")]
-        private float patienceSeconds = 30f;
+        private float patienceSeconds = 20f;
 
         [SerializeField, Range(0f, 2f), Tooltip("Extra patience for each drink after the first, as a share of the patience above.")]
         private float patiencePerExtraDrink = 0.4f;

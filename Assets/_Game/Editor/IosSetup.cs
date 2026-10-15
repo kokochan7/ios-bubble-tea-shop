@@ -10,7 +10,7 @@ namespace BubbleTea.EditorTools
     /// </summary>
     public static class IosSetup
     {
-        private const string ProductName = "Bubble Tea Shop";
+        private const string ProductName = "BubbleTea House";
         private const string BundleId = "com.kokochan7.bubbleteashop";
         private const string MinimumIos = "15.0";
 
