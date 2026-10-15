@@ -10,7 +10,7 @@ namespace BubbleTea.Cooking
     /// standing in their zone and hand items over automatically. Each level of the Carry More
     /// upgrade adds room for one more item.
     /// </summary>
-    public class ItemCarrier : MonoBehaviour
+    public class ItemCarrier : MonoBehaviour, IHoldsItems
     {
         private static readonly List<ItemCarrier> active = new();
         public static IReadOnlyList<ItemCarrier> All => active;
@@ -25,6 +25,9 @@ namespace BubbleTea.Cooking
         private GameObject tray;
 
         public ItemStack Stack => stack;
+
+        /// <summary>True while carrying anything (the character's arms hold it up).</summary>
+        public bool IsHolding => stack.Count > 0;
 
         /// <summary>
         /// When set, this carrier only hands items to this station or counter. Staff use it

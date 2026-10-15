@@ -16,7 +16,7 @@ namespace BubbleTea.Customers
     /// hat, order less and wait longer; a tea critic wears a gold crown, always orders the most,
     /// tips double, and moves the rating by a whole star either way.
     /// </summary>
-    public class Customer : MonoBehaviour
+    public class Customer : MonoBehaviour, IHoldsItems
     {
         /// <summary>What kind of customer this is.</summary>
         public enum Visit { Regular, Tourist, Critic }
@@ -25,7 +25,7 @@ namespace BubbleTea.Customers
         private float speed = 3f;
 
         [SerializeField, Tooltip("Where the drink sits while the customer carries it.")]
-        private Vector3 drinkHoldPosition = new(0f, 0.3f, 0.6f);
+        private Vector3 drinkHoldPosition = new(0f, 0.62f, 0.48f);
 
         [SerializeField, Tooltip("The speech bubble above the head. A model of the ordered drink appears on it.")]
         private Transform orderBubble;
@@ -118,6 +118,9 @@ namespace BubbleTea.Customers
 
         /// <summary>Regular customer, tourist or tea critic.</summary>
         public Visit Kind => visit;
+
+        /// <summary>True while they carry drinks they bought (their arms hold them).</summary>
+        public bool IsHolding => held.Count > 0;
 
         /// <summary>True once they've been handed every drink they ordered.</summary>
         public bool WasServed { get; private set; }

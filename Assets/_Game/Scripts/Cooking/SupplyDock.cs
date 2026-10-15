@@ -25,8 +25,14 @@ namespace BubbleTea.Cooking
         [SerializeField, Min(1), Tooltip("Most crates one carrier takes.")]
         private int maxPerCarrier = 2;
 
+        [SerializeField, Tooltip("Where an idle stocker stands, relative to the dock (beside the pallet).")]
+        private Vector3 waitOffset = new(1.4f, 0f, 0f);
+
         public ItemDefinition Crate => crate;
         public Vector3 ZoneCenter => zone.Center(transform);
+
+        /// <summary>Where an idle stocker waits, out of the way beside the pallet.</summary>
+        public Vector3 WaitSpot => transform.TransformPoint(waitOffset);
         public int Count => crates.Count;
         public bool IsFull => crates.IsFull;
 

@@ -86,7 +86,7 @@ namespace BubbleTea.EditorTools
         // Both shops share one compact floor plan, 18 x 15 meters, so nobody walks far:
         //  - the kitchen (north of the counter): every bar in one row against the back wall, a row of
         //    staff pads in front of them (cashier beside the counter's cash, then the baristas), the
-        //    upgrade desk standing free in the west corner (tap it to open the upgrades), the floor cash
+        //    upgrade desk against the glass wall right of the counter (tap it to open the upgrades), the floor cash
         //    beside the counter, and the trash can in the front-west corner, well away from the bars;
         //  - the dining room (south): the queue runs from the front door up to the counter, the café
         //    tables sit east of it, and the staff door is at the far east end of the glass wall so
@@ -110,7 +110,7 @@ namespace BubbleTea.EditorTools
             TaroStation = bars[2],
             FruitBar = bars[3],
             ExtraBar = extraBar,
-            UpgradeDesk = new(-6.6f, 0f, 2f),
+            UpgradeDesk = new(3f, 0f, 0.55f),  // right of the counter, its back to the glass wall
             Cashier = new(0.6f, 0f, 1.8f),
             Expansion = new(7.6f, 0f, -5.8f),   // by the east wall it opens up
             MoreSeating = new(12f, 0f, -4.5f),
@@ -123,7 +123,8 @@ namespace BubbleTea.EditorTools
             SupplyDock = new(-8.25f, 0f, 3.4f),
             Stocker = new(-4.6f, 0f, 3.4f),
             Chalkboard = new(-4.2f, 0f, -3.4f),
-            Baristas = new Vector3[] { new(3f, 0f, 2.6f), new(5.4f, 0f, 2.6f), new(7.8f, 0f, 2.6f), new(7.6f, 0f, 6.2f) },
+            // A little back from the glass wall, so the first one clears the upgrade desk's pad.
+            Baristas = new Vector3[] { new(3f, 0f, 2.75f), new(5.4f, 0f, 2.75f), new(7.8f, 0f, 2.75f), new(7.6f, 0f, 6.2f) },
             Windows = new[] { -6.2f, 6.2f },
             Lamps = new[] { -4.4f, 4.4f },
             ExpansionWindows = new[] { 12f },
@@ -144,7 +145,7 @@ namespace BubbleTea.EditorTools
             new Vector3[] { new(-6.6f, 0f, BarRowZ), new(-3.6f, 0f, BarRowZ), new(-0.6f, 0f, BarRowZ), new(2.4f, 0f, BarRowZ) },
             Vector3.zero);
 
-        // Matcha House: the same room with a fifth bar (the Yuzu Bar) at the east end of the row.
+        // Matcha House: the same room with a fifth bar (the Tenju Bar) at the east end of the row.
         private static readonly ShopLayout Large = CompactLayout(
             new Vector3[] { new(-6.6f, 0f, BarRowZ), new(-3.7f, 0f, BarRowZ), new(-0.8f, 0f, BarRowZ), new(2.1f, 0f, BarRowZ) },
             new Vector3(5f, 0f, BarRowZ));
@@ -717,7 +718,7 @@ namespace BubbleTea.EditorTools
             // Items the player carries ride on a tray in front of them.
             var hands = new GameObject("HandStack").transform;
             hands.SetParent(player.transform, false);
-            hands.localPosition = new Vector3(0f, 0.1f, 0.78f);
+            hands.localPosition = new Vector3(0f, -0.22f, 0.55f); // the tray rests on the player's hands
             var carrier = player.AddComponent<ItemCarrier>();
             var serializedCarrier = new SerializedObject(carrier);
             serializedCarrier.FindProperty("stack.anchor").objectReferenceValue = hands;
@@ -937,7 +938,7 @@ namespace BubbleTea.EditorTools
             SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
             SetObjectList(expansionPad, "hideWhenUnlocked", eastWall);
             // The bars stand in a row behind the counter, turned so you serve them from the counter side.
-            // A shop with a fifth bar (the Matcha House's Yuzu Bar) unlocks it after the fruit bar.
+            // A shop with a fifth bar (the Matcha House's Tenju Bar) unlocks it after the fruit bar (the Sencha Bar).
             UnlockPad extraPad = content.ExtraBar != null
                 ? CreatePad(content.ExtraBar, Layout.ExtraBar, billPrefab, wallet, padMat)
                 : null;

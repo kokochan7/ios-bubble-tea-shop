@@ -33,6 +33,9 @@ namespace BubbleTea.EditorTools
             public static readonly Color MatchaGreen = Hex("5E8C3A");
             public static readonly Color Matcha = Hex("8DB255");
             public static readonly Color Hojicha = Hex("9A6A44");
+            public static readonly Color Sencha = Hex("5E9E3E");
+            public static readonly Color Tenju = Hex("1F3D1A");
+            public static readonly Color Stone = Hex("A7A39C");
             public static readonly Color Yuzu = Hex("F7D84A");
             public static readonly Color Ceramic = Hex("F4EFE4");
             public static readonly Color Bamboo = Hex("D9C48A");
@@ -122,6 +125,8 @@ namespace BubbleTea.EditorTools
                 { "HojichaBar", Save("HojichaBar", BuildHojichaBar()) },
                 { "StrawberryBar", Save("StrawberryBar", BuildStrawberryBar()) },
                 { "YuzuBar", Save("YuzuBar", BuildYuzuBar()) },
+                { "SenchaBar", Save("SenchaBar", BuildSenchaBar()) },
+                { "TenjuBar", Save("TenjuBar", BuildTenjuBar()) },
             };
             GameObject plant = Save("Plant", BuildPlant());
             models["Planter"] = plant;
@@ -347,6 +352,57 @@ namespace BubbleTea.EditorTools
             Box(root, "SodaTower", new Vector3(0.38f, top + 0.3f, -0.3f), new Vector3(0.16f, 0.6f, 0.14f), Palette.Steel);
             Box(root, "SodaTap", new Vector3(0.38f, top + 0.46f, -0.18f), new Vector3(0.05f, 0.05f, 0.12f), Palette.Charcoal);
             Box(root, "Label", new Vector3(0.38f, top + 0.35f, -0.225f), new Vector3(0.12f, 0.08f, 0.01f), Palette.Matcha);
+            return root.gameObject;
+        }
+
+        // Sencha: a round kyusu teapot with a side handle, tins of loose leaves, a tray of
+        // little yunomi cups of green tea and a pile of fresh tea leaves.
+        private static GameObject BuildSenchaBar()
+        {
+            Transform root = CounterBase("SenchaBar", 1.4f, 1f, Palette.Sencha, Palette.Cream);
+            float top = CounterHeight;
+            Sphere(root, "Kyusu", new Vector3(-0.3f, top + 0.12f, -0.22f), new Vector3(0.28f, 0.22f, 0.28f), Palette.Terracotta);
+            Cylinder(root, "KyusuLid", new Vector3(-0.3f, top + 0.23f, -0.22f), 0.08f, 0.03f, Palette.Terracotta);
+            Sphere(root, "LidKnob", new Vector3(-0.3f, top + 0.26f, -0.22f), Vector3.one * 0.04f, Palette.Terracotta);
+            Transform spout = Cylinder(root, "Spout", new Vector3(-0.13f, top + 0.14f, -0.22f), 0.025f, 0.12f, Palette.Terracotta);
+            spout.localRotation = Quaternion.Euler(0f, 0f, -60f);
+            Transform side = Cylinder(root, "SideHandle", new Vector3(-0.3f, top + 0.13f, -0.06f), 0.03f, 0.2f, Palette.Terracotta);
+            side.localRotation = Quaternion.Euler(80f, 0f, 0f);
+            Box(root, "CupTray", new Vector3(0.18f, top + 0.015f, -0.12f), new Vector3(0.4f, 0.03f, 0.2f), Palette.DarkWood);
+            for (int i = 0; i < 3; i++)
+            {
+                float x = 0.06f + i * 0.12f;
+                Cylinder(root, "Yunomi", new Vector3(x, top + 0.08f, -0.12f), 0.045f, 0.1f, Palette.Ceramic);
+                Cylinder(root, "Tea", new Vector3(x, top + 0.125f, -0.12f), 0.038f, 0.01f, Palette.Sencha);
+            }
+            for (int i = 0; i < 2; i++)
+            {
+                Cylinder(root, "LeafTin", new Vector3(0.22f + i * 0.2f, top + 0.12f, -0.36f), 0.07f, 0.24f, i == 0 ? Palette.Sencha : Palette.Jade);
+                Cylinder(root, "TinLid", new Vector3(0.22f + i * 0.2f, top + 0.25f, -0.36f), 0.075f, 0.03f, Palette.Gold);
+            }
+            Sphere(root, "Leaves", new Vector3(-0.45f, top + 0.03f, 0.05f), new Vector3(0.2f, 0.05f, 0.14f), Palette.Leaf);
+            return root.gameObject;
+        }
+
+        // Tenju, the finest matcha: a stone mill grinding the leaves, a dark tea bowl of thick
+        // koicha and a gold-lidded tin.
+        private static GameObject BuildTenjuBar()
+        {
+            Transform root = CounterBase("TenjuBar", 1.4f, 1f, Palette.Tenju, Palette.Gold);
+            float top = CounterHeight;
+            Cylinder(root, "MillBase", new Vector3(-0.3f, top + 0.04f, -0.22f), 0.2f, 0.08f, Palette.Stone);
+            Cylinder(root, "MillLower", new Vector3(-0.3f, top + 0.13f, -0.22f), 0.15f, 0.1f, Palette.Stone);
+            Cylinder(root, "MillUpper", new Vector3(-0.3f, top + 0.23f, -0.22f), 0.15f, 0.1f, Palette.Stone);
+            Cylinder(root, "Powder", new Vector3(-0.3f, top + 0.085f, -0.22f), 0.19f, 0.01f, Palette.Tenju);
+            Transform crank = Cylinder(root, "Crank", new Vector3(-0.12f, top + 0.33f, -0.22f), 0.015f, 0.14f, Palette.DarkWood);
+            crank.localRotation = Quaternion.Euler(0f, 0f, 0f);
+            Box(root, "CrankArm", new Vector3(-0.2f, top + 0.26f, -0.22f), new Vector3(0.18f, 0.02f, 0.03f), Palette.DarkWood);
+            Sphere(root, "Chawan", new Vector3(0.18f, top + 0.06f, -0.18f), new Vector3(0.28f, 0.15f, 0.28f), Palette.Charcoal);
+            Cylinder(root, "Koicha", new Vector3(0.18f, top + 0.115f, -0.18f), 0.11f, 0.01f, Palette.Tenju);
+            Cylinder(root, "GoldTin", new Vector3(0.45f, top + 0.12f, -0.3f), 0.08f, 0.24f, Palette.Tenju);
+            Cylinder(root, "TinLid", new Vector3(0.45f, top + 0.25f, -0.3f), 0.085f, 0.03f, Palette.Gold);
+            Transform scoop = Box(root, "Chashaku", new Vector3(0.18f, top + 0.015f, 0.05f), new Vector3(0.22f, 0.012f, 0.025f), Palette.Bamboo);
+            scoop.localRotation = Quaternion.Euler(0f, -20f, 0f);
             return root.gameObject;
         }
 
@@ -580,8 +636,15 @@ namespace BubbleTea.EditorTools
         {
             var root = new GameObject("Character").transform;
 
-            Sphere(root, "FootL", new Vector3(-0.11f, 0.05f, 0.03f), new Vector3(0.16f, 0.1f, 0.24f), Palette.Charcoal);
-            Sphere(root, "FootR", new Vector3(0.11f, 0.05f, 0.03f), new Vector3(0.16f, 0.1f, 0.24f), Palette.Charcoal);
+            // Legs and arms hang from pivots (hips and shoulders) so WalkBob can swing them: the feet
+            // step while walking, and the arms reach forward to hold drinks or a tray.
+            foreach (float side in new[] { -1f, 1f })
+            {
+                string s = side < 0f ? "L" : "R";
+                Transform leg = Pivot(root, "Leg" + s, new Vector3(side * 0.11f, 0.24f, 0f));
+                Capsule(leg, "Shin" + s, new Vector3(0f, -0.09f, 0f), new Vector3(0.13f, 0.1f, 0.13f), Palette.Charcoal);
+                Sphere(leg, "Foot" + s, new Vector3(0f, -0.19f, 0.03f), new Vector3(0.16f, 0.1f, 0.24f), Palette.Charcoal);
+            }
             Capsule(root, "Body", new Vector3(0f, 0.5f, 0f), new Vector3(0.5f, 0.4f, 0.44f), shirt);
             if (apron.HasValue)
             {
@@ -590,12 +653,14 @@ namespace BubbleTea.EditorTools
                 // The shop's logo: a little gold boba cup badge on the chest.
                 Sphere(root, "Badge", new Vector3(0f, 0.58f, 0.235f), new Vector3(0.09f, 0.09f, 0.02f), Palette.Gold);
             }
-            Transform armL = Capsule(root, "ArmL", new Vector3(-0.29f, 0.55f, 0.02f), new Vector3(0.14f, 0.2f, 0.14f), shirt);
-            armL.localRotation = Quaternion.Euler(0f, 0f, -14f);
-            Transform armR = Capsule(root, "ArmR", new Vector3(0.29f, 0.55f, 0.02f), new Vector3(0.14f, 0.2f, 0.14f), shirt);
-            armR.localRotation = Quaternion.Euler(0f, 0f, 14f);
-            Sphere(root, "HandL", new Vector3(-0.33f, 0.36f, 0.04f), Vector3.one * 0.11f, Palette.Skin);
-            Sphere(root, "HandR", new Vector3(0.33f, 0.36f, 0.04f), Vector3.one * 0.11f, Palette.Skin);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                string s = side < 0f ? "L" : "R";
+                Transform shoulder = Pivot(root, "Shoulder" + s, new Vector3(side * 0.27f, 0.72f, 0.02f));
+                Transform arm = Capsule(shoulder, "Arm" + s, new Vector3(side * 0.02f, -0.17f, 0f), new Vector3(0.14f, 0.2f, 0.14f), shirt);
+                arm.localRotation = Quaternion.Euler(0f, 0f, side * 14f);
+                Sphere(shoulder, "Hand" + s, new Vector3(side * 0.06f, -0.36f, 0.02f), Vector3.one * 0.11f, Palette.Skin);
+            }
 
             // A big round head with dot eyes and rosy cheeks.
             Sphere(root, "Head", new Vector3(0f, 1.14f, 0f), Vector3.one * 0.62f, Palette.Skin);
@@ -667,9 +732,9 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("male").objectReferenceValue = male.gameObject;
             // Staff keep their uniform color; only customers get a random shirt.
             if (style == CharacterStyle.Uniform) SetRenderers(serialized, "shirt", root);
-            else SetRenderers(serialized, "shirt", root, "Body", "ArmL", "ArmR");
+            else SetRenderers(serialized, "shirt", root, "Body", "ShoulderL/ArmL", "ShoulderR/ArmR");
             SetRenderers(serialized, "hair", root, "Hair", "Female/LongHair", "Male/Fringe");
-            SetRenderers(serialized, "skin", root, "Head", "HandL", "HandR");
+            SetRenderers(serialized, "skin", root, "Head", "ShoulderL/HandL", "ShoulderR/HandR");
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -971,6 +1036,15 @@ namespace BubbleTea.EditorTools
             Vector3 normal = Vector3.Cross(vertices[b] - vertices[a], vertices[c] - vertices[a]);
             if (Vector3.Dot(normal, outward) >= 0f) triangles.AddRange(new[] { a, b, c });
             else triangles.AddRange(new[] { a, c, b });
+        }
+
+        // An empty joint (hip or shoulder) that the parts below it turn around.
+        private static Transform Pivot(Transform parent, string name, Vector3 position)
+        {
+            var pivot = new GameObject(name).transform;
+            pivot.SetParent(parent, false);
+            pivot.localPosition = position;
+            return pivot;
         }
 
         private static Transform Sphere(Transform parent, string name, Vector3 position, Vector3 size, Color color) =>

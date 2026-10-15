@@ -94,7 +94,7 @@ namespace BubbleTea.EditorTools
             public string TaroName;
             public string FruitName;
             // New names for the pads and labels; the save files keep the names above.
-            public string ToppingShownName, TaroShownName, FruitShownName;
+            public string ToppingShownName, TaroShownName, FruitShownName, ExtraShownName;
         }
 
         internal static Content Build(CashBill billPrefab, int shop)
@@ -164,7 +164,7 @@ namespace BubbleTea.EditorTools
                 ToppingBar = GetOrCreateBuildable(set.ToppingName ?? "Topping Bar", 150, set.ToppingBar, shownName: set.ToppingShownName),
                 TaroStation = GetOrCreateBuildable(set.TaroName, 250, set.TaroStation, shownName: set.TaroShownName),
                 FruitBar = GetOrCreateBuildable(set.FruitName, 400, set.FruitBar, shownName: set.FruitShownName),
-                ExtraBar = set.ExtraBar != null ? GetOrCreateBuildable(set.ExtraName, 700, set.ExtraBar) : null,
+                ExtraBar = set.ExtraBar != null ? GetOrCreateBuildable(set.ExtraName, 700, set.ExtraBar, shownName: set.ExtraShownName) : null,
                 // The expansion builds nothing itself; its pad opens the wall and shows the new floor.
                 Expansion = GetOrCreateBuildable("Expand Shop", 1000, null),
                 DriveThru = GetOrCreateBuildable("Drive Thru", 600, driveThru),
@@ -257,29 +257,32 @@ namespace BubbleTea.EditorTools
             };
         }
 
-        // Shop 2, the Matcha House: a Japanese-style matcha café with its own five bars, modeled on
-        // real matcha shops. Lattes are whisked at the Whisk Bar or roasted at the Hojicha Bar, then
-        // the Foam Bar tops them with sweet cream foam, the Strawberry Bar pours matcha over
-        // strawberry milk, and the Yuzu Bar makes a sparkling yuzu matcha.
+        // Shop 2, the Matcha House: a Japanese-style matcha café with its own five bars, unlocked in
+        // this order: lattes are whisked at the Whisk Bar, the Foam Bar tops them with sweet cream
+        // foam, the Hojicha Bar roasts hojicha lattes, the Sencha Bar brews sencha green tea and the
+        // Tenju Bar grinds the finest matcha. Sencha and Tenju use up matcha powder (brought in crates
+        // by the delivery truck), so they sell for double.
         private static MenuSet BuildMatchaMenu()
         {
             Color cream = new(0.98f, 0.95f, 0.86f);
-            Color matchaGreen = new(0.55f, 0.72f, 0.33f);
-            ItemDefinition matcha = GetOrCreateItem("Matcha Latte", new Color(0.62f, 0.78f, 0.42f), null);
-            ItemDefinition hojicha = GetOrCreateItem("Hojicha Latte", new Color(0.70f, 0.52f, 0.36f), null);
-            ItemDefinition matchaCloud = GetOrCreateItem("Matcha Cream Top", new Color(0.62f, 0.78f, 0.42f), null, cream);
-            ItemDefinition hojichaCloud = GetOrCreateItem("Hojicha Cream Top", new Color(0.70f, 0.52f, 0.36f), null, cream);
-            ItemDefinition strawberryMatcha = GetOrCreateItem("Strawberry Matcha", new Color(0.97f, 0.62f, 0.70f), null, matchaGreen);
-            ItemDefinition yuzuFizz = GetOrCreateItem("Yuzu Matcha Fizz", new Color(0.93f, 0.86f, 0.38f), null, matchaGreen);
+            Color lightGreen = new(0.74f, 0.88f, 0.52f);   // matcha latte
+            Color darkBrown = new(0.40f, 0.25f, 0.14f);    // hojicha
+            Color senchaGreen = new(0.36f, 0.64f, 0.22f);
+            Color tenjuGreen = new(0.08f, 0.22f, 0.06f);   // super dark
+            ItemDefinition matcha = GetOrCreateItem("Matcha Latte", lightGreen, null);
+            ItemDefinition hojicha = GetOrCreateItem("Hojicha Latte", darkBrown, null);
+            ItemDefinition matchaCloud = GetOrCreateItem("Matcha Cream Top", lightGreen, null, cream);
+            ItemDefinition hojichaCloud = GetOrCreateItem("Hojicha Cream Top", darkBrown, null, cream);
+            ItemDefinition sencha = GetOrCreateItem("Sencha", senchaGreen, null);
+            ItemDefinition tenju = GetOrCreateItem("Tenju Matcha", tenjuGreen, null);
 
             RecipeStep whisk = GetOrCreateStep("Whisk Matcha Latte", null, matcha, 2f);
             RecipeStep roast = GetOrCreateStep("Roast Hojicha Latte", null, hojicha, 2.5f);
             RecipeStep foamMatcha = GetOrCreateStep("Top Matcha With Cream", matcha, matchaCloud, 1.5f);
             RecipeStep foamHojicha = GetOrCreateStep("Top Hojicha With Cream", hojicha, hojichaCloud, 1.5f);
-            RecipeStep pourStrawberry = GetOrCreateStep("Pour Matcha On Strawberry Milk", matcha, strawberryMatcha, 1.8f);
-            RecipeStep mixYuzu = GetOrCreateStep("Mix Yuzu Matcha Fizz", null, yuzuFizz, 2.2f);
-            // The Whisk Bar and the Yuzu Bar use up matcha powder, brought in crates by the delivery truck.
-            ItemDefinition matchaPowder = GetOrCreateCrate("Matcha Powder", matchaGreen);
+            RecipeStep brewSencha = GetOrCreateStep("Brew Sencha", null, sencha, 2.4f);
+            RecipeStep grindTenju = GetOrCreateStep("Grind Tenju Matcha", null, tenju, 3f);
+            ItemDefinition matchaPowder = GetOrCreateCrate("Matcha Powder", new Color(0.55f, 0.72f, 0.33f));
 
             return new MenuSet
             {
@@ -289,27 +292,30 @@ namespace BubbleTea.EditorTools
                     GetOrCreateDrink("Hojicha Latte", hojicha, 22),
                     GetOrCreateDrink("Matcha Cream Top", matchaCloud, 30),
                     GetOrCreateDrink("Hojicha Cream Top", hojichaCloud, 34),
-                    GetOrCreateDrink("Strawberry Matcha", strawberryMatcha, 36),
-                    GetOrCreateDrink("Yuzu Matcha Fizz", yuzuFizz, 32),
+                    // Double price: they're expensive to make.
+                    GetOrCreateDrink("Sencha", sencha, 64),
+                    GetOrCreateDrink("Tenju Matcha", tenju, 72),
                 },
                 Brewer = BuildStationPrefab("WhiskBar", new Color(0.36f, 0.52f, 0.32f), new Vector3(1.4f, 1f, 1f) * BarScale,
-                    new Color(0.55f, 0.75f, 0.38f), new[] { whisk }, inputCapacity: 0, artSlot: "WhiskBar",
-                    supply: matchaPowder, handMade: true),
+                    new Color(0.55f, 0.75f, 0.38f), new[] { whisk }, inputCapacity: 0, artSlot: "WhiskBar", handMade: true),
                 ToppingBar = BuildStationPrefab("FoamBar", new Color(0.96f, 0.93f, 0.85f), new Vector3(2f, 1f, 1f) * BarScale,
                     new Color(0.98f, 0.95f, 0.86f), new[] { foamMatcha, foamHojicha }, inputCapacity: 4, artSlot: "FoamBar"),
-                TaroStation = BuildStationPrefab("HojichaBar", new Color(0.55f, 0.38f, 0.25f), new Vector3(1.4f, 1f, 1f) * BarScale,
-                    new Color(0.70f, 0.52f, 0.36f), new[] { roast }, inputCapacity: 0, artSlot: "HojichaBar"),
-                FruitBar = BuildStationPrefab("StrawberryBar", new Color(0.92f, 0.45f, 0.55f), new Vector3(2f, 1f, 1f) * BarScale,
-                    new Color(0.98f, 0.62f, 0.72f), new[] { pourStrawberry }, inputCapacity: 4, artSlot: "StrawberryBar"),
-                ExtraBar = BuildStationPrefab("YuzuBar", new Color(0.95f, 0.85f, 0.30f), new Vector3(1.4f, 1f, 1f) * BarScale,
-                    new Color(0.97f, 0.86f, 0.30f), new[] { mixYuzu }, inputCapacity: 0, artSlot: "YuzuBar",
-                    supply: matchaPowder),
+                TaroStation = BuildStationPrefab("HojichaBar", new Color(0.40f, 0.26f, 0.16f), new Vector3(1.4f, 1f, 1f) * BarScale,
+                    darkBrown, new[] { roast }, inputCapacity: 0, artSlot: "HojichaBar"),
+                FruitBar = BuildStationPrefab("SenchaBar", new Color(0.36f, 0.6f, 0.26f), new Vector3(1.4f, 1f, 1f) * BarScale,
+                    senchaGreen, new[] { brewSencha }, inputCapacity: 0, artSlot: "SenchaBar", supply: matchaPowder),
+                ExtraBar = BuildStationPrefab("TenjuBar", new Color(0.14f, 0.26f, 0.12f), new Vector3(1.4f, 1f, 1f) * BarScale,
+                    tenjuGreen, new[] { grindTenju }, inputCapacity: 0, artSlot: "TenjuBar", supply: matchaPowder),
                 Supply = matchaPowder,
                 BrewerName = "Whisk Bar",
                 ToppingName = "Foam Bar",
                 TaroName = "Hojicha Bar",
+                // They replace the Strawberry and Yuzu bars: saves keep those names, so a bar already
+                // bought comes back as its replacement.
                 FruitName = "Strawberry Bar",
+                FruitShownName = "Sencha Bar",
                 ExtraName = "Yuzu Bar",
+                ExtraShownName = "Tenju Bar",
             };
         }
 
@@ -821,7 +827,7 @@ namespace BubbleTea.EditorTools
                 new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
             AddCharacterArt(StaffSlot("Barista"), root, body);
 
-            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.66f));
+            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.69f, 0.5f)); // the tray rests on their hands
             var carrier = root.AddComponent<ItemCarrier>();
             var serialized = new SerializedObject(carrier);
             serialized.FindProperty("stack.anchor").objectReferenceValue = hands;
@@ -847,7 +853,7 @@ namespace BubbleTea.EditorTools
             // Their own art slot if the Art Set has one, otherwise they look like the cleaner.
             AddCharacterArt(ArtLibrary.Load().Get(StaffSlot("Stocker")) != null ? StaffSlot("Stocker") : StaffSlot("Cleaner"), root, body);
 
-            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.55f));
+            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.69f, 0.48f)); // held in both hands
             var carrier = root.AddComponent<ItemCarrier>();
             var serialized = new SerializedObject(carrier);
             serialized.FindProperty("stack.anchor").objectReferenceValue = hands;
@@ -890,7 +896,7 @@ namespace BubbleTea.EditorTools
 
             var customer = root.AddComponent<Customer>();
             var serialized = new SerializedObject(customer);
-            serialized.FindProperty("drinkHoldPosition").vector3Value = new Vector3(0f, 0.9f, 0.55f);
+            serialized.FindProperty("drinkHoldPosition").vector3Value = new Vector3(0f, 0.62f, 0.48f); // in their hands
             serialized.FindProperty("orderBubble").objectReferenceValue = bubble;
             serialized.FindProperty("moodLight").objectReferenceValue = AddMoodLight(bubble);
             serialized.ApplyModifiedPropertiesWithoutUndo();

@@ -21,7 +21,7 @@ namespace BubbleTea.EditorTools
             "Planter", "MenuBoard", "Statue", "Table", "BusStop",
             // The Matcha House's own bars and green-uniformed staff.
             "MatchaPlayer", "MatchaBarista", "MatchaCashier", "MatchaCleaner",
-            "WhiskBar", "FoamBar", "HojichaBar", "StrawberryBar", "YuzuBar",
+            "WhiskBar", "FoamBar", "HojichaBar", "StrawberryBar", "YuzuBar", "SenchaBar", "TenjuBar",
         };
 
         [SerializeField, Tooltip("One entry per thing in the shop.")]

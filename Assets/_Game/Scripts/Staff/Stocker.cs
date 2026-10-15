@@ -7,7 +7,7 @@ namespace BubbleTea.Staff
     /// <summary>
     /// A hired stocker (Matcha House) who keeps the bars supplied: when a bar has room for a whole
     /// crate, they fetch one from the supply dock and carry it there, emptiest bar first. With
-    /// nothing to do they wait by the dock. The Walk Speed upgrade makes them faster.
+    /// nothing to do they stand still beside the dock. The Walk Speed upgrade makes them faster.
     /// </summary>
     [RequireComponent(typeof(ItemCarrier))]
     public class Stocker : MonoBehaviour
@@ -46,11 +46,15 @@ namespace BubbleTea.Staff
 
         private void Plan()
         {
+            SupplyDock dock = SupplyDock.First;
             timer += Time.deltaTime;
-            if (timer < secondsBetweenPlans) return;
+            if (timer < secondsBetweenPlans)
+            {
+                WaitByDock(dock);
+                return;
+            }
             timer = 0f;
 
-            SupplyDock dock = SupplyDock.First;
             Station neediest = Neediest();
             bool holding = dock != null && carrier.Stack.Contains(i => i == dock.Crate);
             if (holding && neediest != null)
@@ -67,8 +71,17 @@ namespace BubbleTea.Staff
                 job = Job.Fetch;
                 return;
             }
-            // Nothing to do: wait by the dock.
-            if (dock != null) WalkTo(dock.ZoneCenter + new Vector3(0f, 0f, -1.2f));
+            WaitByDock(dock);
+        }
+
+        // Nothing to do: walk to the spot beside the dock and stand still there, facing the kitchen.
+        private void WaitByDock(SupplyDock dock)
+        {
+            if (dock == null || !WalkTo(dock.WaitSpot)) return;
+            Vector3 toKitchen = dock.ZoneCenter - dock.transform.position;
+            toKitchen.y = 0f;
+            if (toKitchen.sqrMagnitude > 0.01f)
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(toKitchen), 360f * Time.deltaTime);
         }
 
         private void Fetch()
