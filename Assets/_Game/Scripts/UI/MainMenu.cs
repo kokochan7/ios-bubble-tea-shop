@@ -25,7 +25,14 @@ namespace BubbleTea.UI
         [SerializeField, Tooltip("Bobs gently up and down (the big cup).")]
         private RectTransform bobbing;
 
+        [SerializeField, Tooltip("Breathes gently in and out to draw the eye (the Play button).")]
+        private RectTransform pulsing;
+
+        [SerializeField, Tooltip("Background bubbles that drift slowly upward and wrap around.")]
+        private RectTransform[] floaters;
+
         private Vector2 bobStart;
+        private float[] floatSpeeds;
 
         /// <summary>True when the menu scene is in the build, so the game can go back to it.</summary>
         public static bool InBuild => Application.CanStreamedLevelBeLoaded(SceneName);
@@ -42,6 +49,11 @@ namespace BubbleTea.UI
         {
             if (playButton != null) playButton.onClick.AddListener(Play);
             if (bobbing != null) bobStart = bobbing.anchoredPosition;
+            if (floaters != null)
+            {
+                floatSpeeds = new float[floaters.Length];
+                for (int i = 0; i < floaters.Length; i++) floatSpeeds[i] = 0.012f + 0.02f * Mathf.Repeat(i * 0.618f, 1f);
+            }
         }
 
         private void Start()
@@ -53,6 +65,25 @@ namespace BubbleTea.UI
         private void Update()
         {
             if (bobbing != null) bobbing.anchoredPosition = bobStart + new Vector2(0f, Mathf.Sin(Time.time * 2f) * 18f);
+            if (pulsing != null) pulsing.localScale = Vector3.one * (1f + Mathf.Sin(Time.time * 3f) * 0.03f);
+            DriftBubbles();
+        }
+
+        // Each bubble rises slowly (as a fraction of the screen per second), sways a little and
+        // starts again at the bottom once it floats off the top.
+        private void DriftBubbles()
+        {
+            if (floaters == null || floatSpeeds == null) return;
+            for (int i = 0; i < floaters.Length; i++)
+            {
+                RectTransform bubble = floaters[i];
+                if (bubble == null) continue;
+                Vector2 anchor = bubble.anchorMin;
+                anchor.y += floatSpeeds[i] * Time.deltaTime;
+                if (anchor.y > 1.08f) anchor.y = -0.08f;
+                anchor.x += Mathf.Sin(Time.time * 0.8f + i) * 0.004f * Time.deltaTime;
+                bubble.anchorMin = bubble.anchorMax = anchor;
+            }
         }
 
         private static bool HasSave()

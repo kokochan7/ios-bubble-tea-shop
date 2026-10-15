@@ -86,7 +86,8 @@ namespace BubbleTea.EditorTools
             public string BrewerName;
             public string TaroName;
             public string FruitName;
-            public string FruitShownName; // a new name for the menu and label; the save keeps FruitName
+            // New names for the pads and labels; the save files keep the names above.
+            public string ToppingShownName, TaroShownName, FruitShownName;
         }
 
         internal static Content Build(CashBill billPrefab, int shop)
@@ -147,8 +148,8 @@ namespace BubbleTea.EditorTools
             {
                 Counter = GetOrCreateBuildable("Counter", 30, counter),
                 TeaBrewer = GetOrCreateBuildable(set.BrewerName, 80, set.Brewer),
-                ToppingBar = GetOrCreateBuildable(set.ToppingName ?? "Topping Bar", 150, set.ToppingBar),
-                TaroStation = GetOrCreateBuildable(set.TaroName, 250, set.TaroStation),
+                ToppingBar = GetOrCreateBuildable(set.ToppingName ?? "Topping Bar", 150, set.ToppingBar, shownName: set.ToppingShownName),
+                TaroStation = GetOrCreateBuildable(set.TaroName, 250, set.TaroStation, shownName: set.TaroShownName),
                 FruitBar = GetOrCreateBuildable(set.FruitName, 400, set.FruitBar, shownName: set.FruitShownName),
                 ExtraBar = set.ExtraBar != null ? GetOrCreateBuildable(set.ExtraName, 700, set.ExtraBar) : null,
                 // The expansion builds nothing itself; its pad opens the wall and shows the new floor.
@@ -232,9 +233,12 @@ namespace BubbleTea.EditorTools
                 FruitBar = BuildStationPrefab("FruitBar", new Color(0.95f, 0.55f, 0.20f), new Vector3(1.4f, 1f, 1f) * BarScale,
                     new Color(1f, 0.85f, 0.25f), new[] { makeMango }, inputCapacity: 0),
                 BrewerName = "Tea Brewer",
+                // Saved under their first names, shown under Kenny's newer ones.
+                ToppingShownName = "Tapioca Bar",
                 TaroName = "Taro Station",
-                FruitName = "Fruit Bar", // saved under this name; shown as "Mango Fruit Bar"
-                FruitShownName = "Mango Fruit Bar",
+                TaroShownName = "Taro Bar",
+                FruitName = "Fruit Bar",
+                FruitShownName = "Mango Bar",
             };
         }
 

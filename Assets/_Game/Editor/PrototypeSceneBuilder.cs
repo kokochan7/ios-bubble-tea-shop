@@ -205,7 +205,7 @@ namespace BubbleTea.EditorTools
         [MenuItem("Bubble Tea/Build Second Shop Scene")]
         public static void BuildSecondShop() => BuildShop(SecondShop);
 
-        /// <summary>Builds the title screen the game opens on: Play and Settings.</summary>
+        /// <summary>Builds the title screen the game opens on (BubbleTea House): Play and Settings.</summary>
         [MenuItem("Bubble Tea/Build Main Menu Scene")]
         public static void BuildMainMenu()
         {
@@ -235,47 +235,58 @@ namespace BubbleTea.EditorTools
             Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            // A soft pink background with tapioca pearls scattered around it.
+            // A modern sunset gradient, from deep plum at the top to warm peach at the bottom,
+            // with two big soft glows and bubbles drifting slowly upward.
             RectTransform background = CreateUiObject("Background", root);
             Stretch(background);
-            background.gameObject.AddComponent<Image>().color = new Color(0.99f, 0.86f, 0.88f);
-            var pearl = new Color(0.36f, 0.22f, 0.16f, 0.18f);
-            Vector2[] pearls =
+            var backgroundImage = background.gameObject.AddComponent<Image>();
+            backgroundImage.color = Color.white;
+            backgroundImage.raycastTarget = false;
+            background.gameObject.AddComponent<UIGradient>().Set(new Color(0.33f, 0.18f, 0.42f), new Color(0.98f, 0.6f, 0.52f));
+            MenuGlow("GlowTop", background, circle, new Vector2(0.95f, 0.88f), 900f, 0.1f);
+            MenuGlow("GlowBottom", background, circle, new Vector2(0.02f, 0.22f), 1000f, 0.08f);
+
+            var floaters = new RectTransform[16];
+            for (int i = 0; i < floaters.Length; i++)
             {
-                new(0.08f, 0.92f), new(0.9f, 0.86f), new(0.15f, 0.62f), new(0.88f, 0.55f), new(0.06f, 0.3f),
-                new(0.93f, 0.22f), new(0.25f, 0.08f), new(0.72f, 0.06f), new(0.5f, 0.97f), new(0.8f, 0.38f),
-            };
-            for (int i = 0; i < pearls.Length; i++)
-            {
-                RectTransform dot = CreateUiObject("Pearl", background);
-                dot.anchorMin = dot.anchorMax = pearls[i];
-                float size = 70f + 50f * Mathf.Repeat(i * 0.618f, 1f);
-                dot.sizeDelta = new Vector2(size, size);
-                var dotImage = dot.gameObject.AddComponent<Image>();
-                dotImage.sprite = circle;
-                dotImage.color = pearl;
-                dotImage.raycastTarget = false;
+                float t = Mathf.Repeat(i * 0.618f, 1f);
+                bool pearl = i % 4 == 0; // a few dark tapioca pearls among the bubbles
+                floaters[i] = MenuGlow(pearl ? "Pearl" : "Bubble", background, circle,
+                    new Vector2(Mathf.Repeat(i * 0.37f + 0.05f, 0.95f) + 0.025f, Mathf.Repeat(i * 0.29f, 1f)),
+                    28f + 80f * t, pearl ? 0.35f : 0.12f + 0.12f * t, pearl ? new Color(0.2f, 0.1f, 0.08f) : Color.white);
             }
 
-            // The title.
-            Text title = CreateHudText("Title", root, font, 130, TextAnchor.MiddleCenter);
-            SetTopRow(title.rectTransform, 220f, 300f, 40f, 40f);
-            title.horizontalOverflow = HorizontalWrapMode.Wrap;
-            title.text = "BUBBLE TEA\nSHOP";
-            title.color = new Color(0.91f, 0.42f, 0.53f);
-            var outline = title.gameObject.AddComponent<Outline>();
-            outline.effectColor = Color.white;
-            outline.effectDistance = new Vector2(5f, -5f);
-            title.gameObject.AddComponent<Shadow>().effectDistance = new Vector2(0f, -12f);
+            // The name: "BubbleTea" in big white letters, "HOUSE" spaced out in gold, and a tagline.
+            Text title = CreateHudText("Title", root, font, 150, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 200f, 190f, 20f, 20f);
+            title.text = "BubbleTea";
+            title.color = Color.white;
+            var titleShadow = title.gameObject.AddComponent<Shadow>();
+            titleShadow.effectColor = new Color(0.2f, 0.05f, 0.2f, 0.35f);
+            titleShadow.effectDistance = new Vector2(0f, -10f);
+            Text house = CreateHudText("House", root, font, 66, TextAnchor.MiddleCenter);
+            SetTopRow(house.rectTransform, 385f, 90f, 20f, 20f);
+            house.text = "H  O  U  S  E";
+            house.color = new Color(1f, 0.84f, 0.45f);
+            Text tagline = CreateHudText("Tagline", root, font, 38, TextAnchor.MiddleCenter);
+            SetTopRow(tagline.rectTransform, 480f, 60f, 20f, 20f);
+            tagline.fontStyle = FontStyle.Normal;
+            tagline.text = "Brew  \u00B7  Serve  \u00B7  Grow";
+            tagline.color = new Color(1f, 1f, 1f, 0.75f);
 
-            // A big cup of milk tea, drawn from rounded shapes, bobbing in the middle.
+            // A big cup of milk tea in a soft halo, bobbing in the middle, with a shadow under it.
+            MenuShape("Halo", root, circle, new Color(1f, 1f, 1f, 0.12f), new Vector2(680f, 680f), new Vector2(0f, 80f));
+            MenuShape("HaloInner", root, circle, new Color(1f, 1f, 1f, 0.12f), new Vector2(540f, 540f), new Vector2(0f, 80f));
+            MenuShape("CupShadow", root, circle, new Color(0.2f, 0.05f, 0.15f, 0.2f), new Vector2(320f, 50f), new Vector2(0f, -190f));
             RectTransform cup = CreateUiObject("Cup", root);
             cup.anchorMin = cup.anchorMax = new Vector2(0.5f, 0.5f);
-            cup.anchoredPosition = new Vector2(0f, 60f);
+            cup.anchoredPosition = new Vector2(0f, 80f);
             cup.sizeDelta = new Vector2(360f, 480f);
-            RectTransform straw = MenuShape("Straw", cup, rounded, new Color(0.95f, 0.45f, 0.55f), new Vector2(46f, 380f), new Vector2(60f, 250f));
+            cup.localScale = Vector3.one * 0.85f;
+            RectTransform straw = MenuShape("Straw", cup, rounded, new Color(0.98f, 0.5f, 0.58f), new Vector2(46f, 380f), new Vector2(60f, 250f));
             straw.localRotation = Quaternion.Euler(0f, 0f, -12f);
-            MenuShape("Body", cup, rounded, new Color(0.87f, 0.72f, 0.56f), new Vector2(340f, 440f), new Vector2(0f, -20f));
+            RectTransform body = MenuShape("Body", cup, rounded, Color.white, new Vector2(340f, 440f), new Vector2(0f, -20f));
+            body.gameObject.AddComponent<UIGradient>().Set(new Color(0.93f, 0.8f, 0.66f), new Color(0.8f, 0.6f, 0.44f));
             MenuShape("Shine", cup, rounded, new Color(1f, 1f, 1f, 0.35f), new Vector2(40f, 300f), new Vector2(-115f, 10f));
             for (int i = 0; i < 9; i++)
             {
@@ -285,24 +296,50 @@ namespace BubbleTea.EditorTools
             }
             MenuShape("Lid", cup, rounded, new Color(1f, 0.97f, 0.93f), new Vector2(390f, 60f), new Vector2(0f, 210f));
 
-            // Play and Settings.
-            Button play = CreateMenuButton("Play", root, "PLAY", rounded, font, new Color(0.35f, 0.78f, 0.38f), out Text playLabel);
+            // A frosted glass card holding the buttons.
+            RectTransform card = MenuShape("Card", root, rounded, new Color(1f, 1f, 1f, 0.16f), new Vector2(880f, 520f), Vector2.zero);
+            card.anchorMin = card.anchorMax = new Vector2(0.5f, 0f);
+            card.pivot = new Vector2(0.5f, 0f);
+            card.anchoredPosition = new Vector2(0f, 150f);
+            card.GetComponent<Image>().pixelsPerUnitMultiplier = 0.3f; // rounder corners
+
+            // Play: a glossy pink pill that gently breathes. Settings: a frosted pill under it.
+            Button play = CreateMenuButton("Play", root, "PLAY", rounded, font, Color.white, out Text playLabel);
             var playRect = (RectTransform)play.transform;
             playRect.anchorMin = playRect.anchorMax = new Vector2(0.5f, 0f);
-            playRect.anchoredPosition = new Vector2(0f, 520f);
-            playRect.sizeDelta = new Vector2(620f, 180f);
-            playLabel.fontSize = 80;
+            playRect.anchoredPosition = new Vector2(0f, 500f);
+            playRect.sizeDelta = new Vector2(700f, 170f);
+            var playImage = play.GetComponent<Image>();
+            playImage.pixelsPerUnitMultiplier = 0.12f; // fully rounded ends
+            play.gameObject.AddComponent<UIGradient>().Set(new Color(1f, 0.56f, 0.6f), new Color(0.93f, 0.33f, 0.5f));
+            var playShadow = play.gameObject.AddComponent<Shadow>();
+            playShadow.effectColor = new Color(0.35f, 0.05f, 0.2f, 0.3f);
+            playShadow.effectDistance = new Vector2(0f, -10f);
+            playLabel.fontSize = 76;
+
             Button settingsButton = CreateMenuButton("SettingsButton", root, "SETTINGS", rounded, font,
-                new Color(0.55f, 0.45f, 0.8f), out _);
+                new Color(1f, 1f, 1f, 0.22f), out Text settingsLabel);
             var settingsRect = (RectTransform)settingsButton.transform;
             settingsRect.anchorMin = settingsRect.anchorMax = new Vector2(0.5f, 0f);
             settingsRect.anchoredPosition = new Vector2(0f, 300f);
-            settingsRect.sizeDelta = new Vector2(620f, 150f);
+            settingsRect.sizeDelta = new Vector2(700f, 130f);
+            settingsButton.GetComponent<Image>().pixelsPerUnitMultiplier = 0.15f;
+            settingsLabel.fontSize = 46;
+
+            Text footer = CreateHudText("Footer", root, font, 30, TextAnchor.MiddleCenter);
+            footer.rectTransform.anchorMin = footer.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            footer.rectTransform.anchoredPosition = new Vector2(0f, 80f);
+            footer.rectTransform.sizeDelta = new Vector2(900f, 50f);
+            footer.fontStyle = FontStyle.Normal;
+            footer.text = "Made with boba \u2665";
+            footer.color = new Color(1f, 1f, 1f, 0.6f);
 
             var menu = canvasGo.AddComponent<MainMenu>();
             SetReference(menu, "playButton", play);
             SetReference(menu, "playLabel", playLabel);
             SetReference(menu, "bobbing", cup);
+            SetReference(menu, "pulsing", playRect);
+            SetReferences(menu, "floaters", floaters);
 
             // The settings panel: sound, music and vibration (reset and GM tools stay in the shop).
             RectTransform settingsRoot = CreateUiObject("Settings", root);
@@ -315,7 +352,9 @@ namespace BubbleTea.EditorTools
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
             panelImage.type = Image.Type.Sliced;
-            panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.95f);
+            panelImage.color = Color.white;
+            panelImage.pixelsPerUnitMultiplier = 0.3f;
+            panel.gameObject.AddComponent<UIGradient>().Set(new Color(0.38f, 0.22f, 0.48f, 0.97f), new Color(0.26f, 0.14f, 0.34f, 0.97f));
             Text settingsTitle = CreateHudText("Title", panel, font, 60, TextAnchor.MiddleCenter);
             SetTopRow(settingsTitle.rectTransform, 20f, 110f, 0f, 0f);
             settingsTitle.text = "SETTINGS";
@@ -344,7 +383,22 @@ namespace BubbleTea.EditorTools
             Debug.Log($"Bubble Tea: main menu built at {MenuScenePath}. It's first in the build, so the game opens on it.");
         }
 
-        // A rounded shape (or circle) on the main menu's cup.
+        // A soft round glow or bubble on the main menu background, placed by screen fraction.
+        private static RectTransform MenuGlow(string name, Transform parent, Sprite circle, Vector2 anchor, float size, float alpha,
+            Color? color = null)
+        {
+            RectTransform rect = CreateUiObject(name, parent);
+            rect.anchorMin = rect.anchorMax = anchor;
+            rect.sizeDelta = new Vector2(size, size);
+            var image = rect.gameObject.AddComponent<Image>();
+            image.sprite = circle;
+            Color tint = color ?? Color.white;
+            image.color = new Color(tint.r, tint.g, tint.b, alpha);
+            image.raycastTarget = false;
+            return rect;
+        }
+
+        // A rounded shape (or circle) on the main menu.
         private static RectTransform MenuShape(string name, Transform parent, Sprite sprite, Color color, Vector2 size, Vector2 position)
         {
             RectTransform rect = CreateUiObject(name, parent);
