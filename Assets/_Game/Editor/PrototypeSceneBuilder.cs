@@ -664,6 +664,11 @@ namespace BubbleTea.EditorTools
 
             var follow = go.AddComponent<CameraFollow>();
             SetReference(follow, "target", player);
+            // Phones only: fit almost the whole 18 m shop across the tall screen.
+            var followSettings = new SerializedObject(follow);
+            followSettings.FindProperty("viewWidth").floatValue = 16f;
+            followSettings.FindProperty("fieldOfView").floatValue = 55f;
+            followSettings.ApplyModifiedPropertiesWithoutUndo();
 
             // Place it now too, so the Scene and Game views look right before pressing Play.
             go.transform.position = player.position + new Vector3(0f, 13f, -9f);

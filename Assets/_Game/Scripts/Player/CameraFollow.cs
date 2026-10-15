@@ -20,10 +20,10 @@ namespace BubbleTea.Player
         private float smoothTime = 0.12f;
 
         [SerializeField, Tooltip("Phones only: meters of the shop that fit across the screen at the player. Bigger = more zoomed out.")]
-        private float viewWidth = 10f;
+        private float viewWidth = 16f;
 
         [SerializeField, Tooltip("Phones only: the camera's vertical field of view in degrees.")]
-        private float fieldOfView = 50f;
+        private float fieldOfView = 55f;
 
         private Vector3 velocity;
         private Camera view;
