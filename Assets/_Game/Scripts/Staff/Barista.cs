@@ -14,9 +14,11 @@ namespace BubbleTea.Staff
     /// <item>if it isn't ready anywhere, carry the ingredient it needs to the station that makes it
     /// (for example plain milk tea to the topping bar, to become boba), or</item>
     /// </list>
-    /// Each job is reserved at the counter, and drinks already being made count too, so two
-    /// baristas never work on the same drink. Anything they hold that no customer wants goes
-    /// straight in the nearest trash can.
+    /// They only work on the order of the customer at the front of the line (the only one the
+    /// counter serves), and pick up exactly as many drinks as that order still needs. Each job is
+    /// reserved at the counter, and drinks already being made count too, so two baristas never
+    /// work on the same drink. Anything they hold that the front customer doesn't need (or that
+    /// couldn't be handed over) goes in the nearest trash can.
     /// With nothing to carry, they stand behind the station customers need most and make it work
     /// faster (one barista per station). They swap items through the same floor zones the player
     /// uses. The Walk Speed and Carry More upgrades apply to baristas too: they walk faster and
@@ -51,6 +53,8 @@ namespace BubbleTea.Staff
         private int want = 1; // how many of the item to pick up this trip
         private ServingCounter reservedAt; // the counter this job holds a reservation on, if any
         private ItemDefinition reservedDrink;
+        private int reservedCount;
+        private bool throwOut; // the last delivery failed: trash what's held instead of trying again
         private Station pickupFrom;
         private Station deliverToStation;
         private ServingCounter deliverToCounter;
@@ -225,12 +229,13 @@ namespace BubbleTea.Staff
             }
             if (counter == null) return; // nobody waiting on anything: help at a station
 
-            // Is the drink ready somewhere? Fetch it for the counter.
+            // Is the drink ready somewhere? Fetch exactly as many as the front customer still needs.
             Station ready = Station.FindReady(needed);
             if (ready != null)
             {
-                StartFetch(needed, ready, null, counter, CarryLimit());
-                Reserve(counter, needed);
+                int count = Mathf.Clamp(counter.Uncovered(needed), 1, CarryLimit());
+                StartFetch(needed, ready, null, counter, count);
+                Reserve(counter, needed, count);
                 return;
             }
 
@@ -250,12 +255,13 @@ namespace BubbleTea.Staff
             // stock the counter with drinks nobody ordered; those would only be thrown away.)
         }
 
-        private void Reserve(ServingCounter counter, ItemDefinition drink)
+        private void Reserve(ServingCounter counter, ItemDefinition drink, int count = 1)
         {
             ReleaseReservation();
-            counter.Reserve(drink);
+            counter.Reserve(drink, count);
             reservedAt = counter;
             reservedDrink = drink;
+            reservedCount = count;
         }
 
         // Already holding something (a job was cut short): find somewhere it's useful.
@@ -264,21 +270,24 @@ namespace BubbleTea.Staff
             ItemDefinition held = null;
             carrier.Stack.Contains(i => { held = i; return true; });
 
-            foreach (ServingCounter counter in ServingCounter.All)
+            if (!throwOut)
             {
-                if (!counter.Needs(held)) continue;
-                StartDeliver(held, null, counter);
-                Reserve(counter, held);
-                return;
+                foreach (ServingCounter counter in ServingCounter.All)
+                {
+                    if (!counter.Needs(held)) continue;
+                    StartDeliver(held, null, counter);
+                    Reserve(counter, held, Mathf.Min(carrier.Stack.CountOf(i => i == held), Mathf.Max(1, counter.Wanted(held))));
+                    return;
+                }
+                // An ingredient for a drink the front customer is waiting on goes to the station that makes it.
+                foreach (Station station in Station.All)
+                {
+                    if (!station.Accepts(held) || !IsWanted(OutputOf(station, held))) continue;
+                    StartDeliver(held, station, null);
+                    return;
+                }
             }
-            // An ingredient for a drink someone is waiting on goes to the station that makes it.
-            foreach (Station station in Station.All)
-            {
-                if (!station.Accepts(held) || !IsWanted(OutputOf(station, held))) continue;
-                StartDeliver(held, station, null);
-                return;
-            }
-            // Nobody wants it: straight to the trash.
+            // Nobody wants it (or it couldn't be handed over): straight to the trash.
 
             holdingUselessTimer += secondsBetweenPlans;
             if (holdingUselessTimer < discardSeconds) return;
@@ -308,6 +317,12 @@ namespace BubbleTea.Staff
             if (!WalkTo(trash.ZoneCenter)) return;
             timer += Time.deltaTime;
             if (timer >= giveUpSeconds) Finish();
+        }
+
+        // Hands empty again: the next thing they hold gets a fresh chance to be delivered.
+        private void LateUpdate()
+        {
+            if (carrier.Stack.Count == 0) throwOut = false;
         }
 
         // ---------- Doing the job ----------
@@ -374,8 +389,13 @@ namespace BubbleTea.Staff
 
             Vector3 spot = deliverToStation != null ? deliverToStation.ZoneCenter : deliverToCounter.ZoneCenter;
             if (!WalkTo(spot)) return;
+            // Wait for the customer to step up to the counter before the clock starts.
+            if (deliverToCounter != null && (deliverToCounter.FrontCustomer == null || !deliverToCounter.FrontCustomer.IsAtCounter)) return;
             timer += Time.deltaTime;
-            if (timer >= giveUpSeconds) Finish();
+            if (timer < giveUpSeconds) return;
+            // Nobody took it: don't stand here holding it, throw it out and get on with the next order.
+            throwOut = true;
+            Finish();
         }
 
         private void Cancel() => Finish();
@@ -388,12 +408,13 @@ namespace BubbleTea.Staff
 
         private void ReleaseReservation()
         {
-            if (reservedAt != null) reservedAt.Release(reservedDrink);
+            if (reservedAt != null) reservedAt.Release(reservedDrink, reservedCount);
             reservedAt = null;
             reservedDrink = null;
+            reservedCount = 0;
         }
 
-        // True if a customer in line is still waiting for this drink.
+        // True if the customer at the front of a line is still waiting for this drink.
         private static bool IsWanted(ItemDefinition drink)
         {
             if (drink == null) return false;

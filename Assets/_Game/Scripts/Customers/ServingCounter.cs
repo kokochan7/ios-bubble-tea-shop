@@ -81,34 +81,41 @@ namespace BubbleTea.Customers
         public Vector3 ZoneCenter => zone.Center(transform);
 
         /// <summary>
-        /// The drink the line needs most: the first order (front of the line first) that isn't
-        /// already being brought or made by a worker. Null if nothing is needed.
+        /// The next drink the customer at the front of the line needs that isn't already being
+        /// brought or made by a worker. Null if nothing is needed. (Only the front customer is
+        /// served, so workers only work on their order.)
         /// </summary>
         public ItemDefinition NextNeeded()
         {
-            foreach (ItemDefinition drink in QueuedOrders())
+            Customer front = FrontCustomer;
+            if (front == null) return null;
+            foreach (DrinkRecipe order in front.Orders)
             {
-                if (drink == null) continue;
-                // Drinks on their way (reserved by a barista) or being made from a dropped-off
-                // ingredient are covered, so nobody does the same work twice.
-                if (Wanted(drink) - Reserved(drink) - Station.TotalPending(drink) > 0) return drink;
+                if (order != null && Uncovered(order.Drink) > 0) return order.Drink;
             }
             return null;
         }
 
-        /// <summary>A worker calls this when they set off to bring <paramref name="drink"/>, so others don't bring it too.</summary>
-        public void Reserve(ItemDefinition drink)
+        /// <summary>
+        /// How many more of this drink the front customer needs than workers are already bringing
+        /// (reserved) or making (dropped-off ingredients), so nobody does the same work twice.
+        /// </summary>
+        public int Uncovered(ItemDefinition drink) =>
+            drink == null ? 0 : Wanted(drink) - Reserved(drink) - Station.TotalPending(drink);
+
+        /// <summary>A worker calls this when they set off to bring <paramref name="count"/> of a drink, so others don't bring it too.</summary>
+        public void Reserve(ItemDefinition drink, int count = 1)
         {
-            if (drink != null) reserved[drink] = Reserved(drink) + 1;
+            if (drink != null && count > 0) reserved[drink] = Reserved(drink) + count;
         }
 
-        /// <summary>Undoes <see cref="Reserve"/> once the drink is delivered or the worker gives up.</summary>
-        public void Release(ItemDefinition drink)
+        /// <summary>Undoes <see cref="Reserve"/> once the drinks are delivered or the worker gives up.</summary>
+        public void Release(ItemDefinition drink, int count = 1)
         {
-            if (drink != null && Reserved(drink) > 0) reserved[drink] = Reserved(drink) - 1;
+            if (drink != null) reserved[drink] = Mathf.Max(0, Reserved(drink) - count);
         }
 
-        /// <summary>True if someone in line still needs this drink.</summary>
+        /// <summary>True if the customer at the front of the line still needs this drink.</summary>
         public bool Needs(ItemDefinition drink) => IsStillWanted(drink);
 
         /// <summary>True once some station in the shop can make a drink on this counter's menu.</summary>
@@ -142,15 +149,11 @@ namespace BubbleTea.Customers
             }
         }
 
-        /// <summary>How many of <paramref name="drink"/> the customers in line still want.</summary>
+        /// <summary>How many of <paramref name="drink"/> the customer at the front of the line still wants.</summary>
         public int Wanted(ItemDefinition drink)
         {
-            int wanted = 0;
-            foreach (Customer customer in queue)
-            {
-                if (customer != null) wanted += CountIn(customer.Orders, drink);
-            }
-            return wanted;
+            Customer front = FrontCustomer;
+            return front != null ? CountIn(front.Orders, drink) : 0;
         }
 
         private static int CountIn(IReadOnlyList<DrinkRecipe> orders, ItemDefinition drink)
