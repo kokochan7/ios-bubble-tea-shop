@@ -69,7 +69,7 @@ namespace BubbleTea.Customers
                 int longest = 0;
                 foreach (string line in lines) longest = Mathf.Max(longest, line.Length);
                 width = Mathf.Max(width, longest * lineHeight * 0.5f + 0.3f);
-                height = label.transform.localPosition.y + lines.Length * lineHeight + 0.15f + BackingBottom;
+                height = label.transform.localPosition.y + lines.Length * lineHeight + 0.08f + BackingBottom;
             }
             Vector3 position = backing.localPosition;
             backing.localScale = new Vector3(width, height, backing.localScale.z);

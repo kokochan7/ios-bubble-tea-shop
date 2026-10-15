@@ -468,10 +468,12 @@ namespace BubbleTea.EditorTools
         // Size of the drinks on the bars and the counter: the same as everywhere else.
         private const float DrinkSizeOnBars = DrinkSize;
 
-        // A sign over the counter showing what the customer at the front still wants.
+        // A small sign standing on the middle of the counter, showing what the customer at the
+        // front still wants. Low and small so it doesn't hide the kitchen behind it.
         private static void AddOrderBoard(GameObject root, ServingCounter counter, float counterTop)
         {
-            Transform board = AddAnchor(root.transform, "OrderBoard", new Vector3(0f, counterTop + 1.75f, 0f));
+            Transform board = AddAnchor(root.transform, "OrderBoard", new Vector3(0f, counterTop + 0.12f, 0f));
+            board.localScale = Vector3.one * 0.7f;
             GameObject backing = GameObject.CreatePrimitive(PrimitiveType.Cube);
             backing.name = "Backing";
             Object.DestroyImmediate(backing.GetComponent<Collider>());
@@ -484,7 +486,7 @@ namespace BubbleTea.EditorTools
             // The order in words above the pictures.
             var labelGo = new GameObject("OrderText");
             labelGo.transform.SetParent(board, false);
-            labelGo.transform.localPosition = new Vector3(0f, 0.95f, 0f);
+            labelGo.transform.localPosition = new Vector3(0f, 0.7f, 0f); // right on top of the pictures
             var label = labelGo.AddComponent<TextMesh>();
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             label.font = font;
@@ -728,7 +730,18 @@ namespace BubbleTea.EditorTools
             var serialized = new SerializedObject(cashier);
             serialized.FindProperty("lane").stringValue = lane;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            AddPayLight(root, cashier);
             return SavePrefab(root, $"{PrefabFolder}/{prefabName}.prefab");
+        }
+
+        // A round light above a worker's head: green while paid, red while their wages are owed.
+        private static void AddPayLight(GameObject root, Behaviour work)
+        {
+            GameObject light = AddPart(root.transform, PrimitiveType.Sphere, "PayLight", new Vector3(0f, 2.6f, 0f),
+                Vector3.one * 0.26f, GetOrCreateMaterial("MoodLight", Color.white));
+            var status = root.AddComponent<PayStatus>();
+            SetReference(status, "statusLight", light.GetComponent<Renderer>());
+            SetReference(status, "work", work);
         }
 
         // A barista: carries drinks and ingredients where they're needed, and helps at the
@@ -753,7 +766,7 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("usesCarryUpgrade").boolValue = true; // Carry More lets baristas carry more too
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
-            root.AddComponent<Barista>();
+            AddPayLight(root, root.AddComponent<Barista>());
             return SavePrefab(root, $"{PrefabFolder}/Barista.prefab");
         }
 
@@ -769,6 +782,7 @@ namespace BubbleTea.EditorTools
             Transform hands = AddAnchor(root.transform, "Hands", new Vector3(0f, 0.9f, 0.4f));
             var cleaner = root.AddComponent<Cleaner>();
             SetReference(cleaner, "hands", hands);
+            AddPayLight(root, cleaner);
             return SavePrefab(root, $"{PrefabFolder}/Cleaner.prefab");
         }
 

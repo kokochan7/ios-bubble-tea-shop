@@ -5,10 +5,10 @@ using UnityEngine.UI;
 namespace BubbleTea.UI
 {
     /// <summary>
-    /// A banner near the top of the screen that says workers quit because there wasn't enough
-    /// money to pay them, and that they can be hired again. Hides itself after a few seconds.
+    /// A banner near the top of the screen that says workers stopped because there wasn't enough
+    /// money to pay them; they get back to work once they're paid. Hides itself after a few seconds.
     /// </summary>
-    public class StaffQuitAlert : MonoBehaviour
+    public class StaffUnpaidAlert : MonoBehaviour
     {
         [SerializeField, Tooltip("The banner to show and hide (a child of this object).")]
         private GameObject banner;
@@ -26,13 +26,13 @@ namespace BubbleTea.UI
             if (banner != null) banner.SetActive(false);
         }
 
-        private void OnEnable() => Payroll.WorkersQuit += Show;
-        private void OnDisable() => Payroll.WorkersQuit -= Show;
+        private void OnEnable() => Payroll.WorkersUnpaid += Show;
+        private void OnDisable() => Payroll.WorkersUnpaid -= Show;
 
         private void Show(string who)
         {
             timer = seconds;
-            if (label != null) label.text = $"{who} quit: you couldn't pay their wages!\nHire them again at their pad.";
+            if (label != null) label.text = $"{who} stopped working: not enough money for wages!\nThey'll get back to work once you can pay them.";
             if (banner != null) banner.SetActive(true);
         }
 

@@ -443,7 +443,7 @@ namespace BubbleTea.EditorTools
             CreatePricePanel(hud, content.Menu);
             CreateRatingView(hud, rating);
             CreatePriceyAlert(hud);
-            CreateStaffQuitAlert(hud);
+            CreateStaffUnpaidAlert(hud);
             CreateWelcomeBackPopup(hud, offlineEarnings);
             CreateGameOverPopup(hud, rating, saveManager);
 
@@ -1697,15 +1697,15 @@ namespace BubbleTea.EditorTools
             SetReference(alert, "banner", banner.gameObject);
         }
 
-        // A red banner when workers quit because their wages couldn't be paid.
-        private static void CreateStaffQuitAlert(Transform hud)
+        // A banner when workers stop because their wages couldn't be paid.
+        private static void CreateStaffUnpaidAlert(Transform hud)
         {
             Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            RectTransform root = CreateUiObject("StaffQuitAlert", hud);
+            RectTransform root = CreateUiObject("StaffUnpaidAlert", hud);
             Stretch(root);
-            var alert = root.gameObject.AddComponent<StaffQuitAlert>();
+            var alert = root.gameObject.AddComponent<StaffUnpaidAlert>();
 
             RectTransform banner = CreateUiObject("Banner", root);
             banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 1f);

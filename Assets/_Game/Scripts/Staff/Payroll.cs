@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using BubbleTea.Building;
 using BubbleTea.Economy;
 using BubbleTea.Goals;
 using UnityEngine;
@@ -10,8 +9,9 @@ namespace BubbleTea.Staff
     /// <summary>
     /// Pays the hired workers. At the end of every shop hour each barista, cashier and cleaner
     /// takes their hourly wage out of the player's money. A worker who can't be paid (not enough
-    /// money) quits, and their hiring pad comes back so they have to be hired again. The Stats
-    /// panel shows what each kind of worker charges and how much has been paid in total.
+    /// money) stops and stands still with a red light over their head (see <see cref="PayStatus"/>)
+    /// until there's money to pay them, then gets back to work. The Stats panel shows what each
+    /// kind of worker charges and how much has been paid in total.
     /// </summary>
     public class Payroll : MonoBehaviour
     {
@@ -27,8 +27,8 @@ namespace BubbleTea.Staff
         [SerializeField, Min(1f), Tooltip("Real seconds between paydays when the shop has no clock.")]
         private float secondsPerHourWithoutClock = 6f;
 
-        /// <summary>Raised when workers quit because they weren't paid, with a description like "A barista".</summary>
-        public static event Action<string> WorkersQuit;
+        /// <summary>Raised when workers stop because they weren't paid, with a description like "A barista".</summary>
+        public static event Action<string> WorkersUnpaid;
 
         /// <summary>The payroll of the shop that's open, if any.</summary>
         public static Payroll Instance { get; private set; }
@@ -73,6 +73,7 @@ namespace BubbleTea.Staff
             {
                 countTimer = 1f;
                 CountStaff();
+                PayWhatsOwed();
             }
 
             if (Core.GameClock.Instance != null)
@@ -91,7 +92,7 @@ namespace BubbleTea.Staff
             PayWages();
         }
 
-        // Pays everyone in turn (baristas, then cashiers, then cleaners). Anyone left unpaid quits.
+        // Pays everyone in turn (baristas, then cashiers, then cleaners). Anyone who can't be paid stops.
         private void PayWages()
         {
             if (wallet == null) return;
@@ -100,34 +101,57 @@ namespace BubbleTea.Staff
             Pay(FindAll<Barista>(), baristaWage, unpaid, ref paidOut);
             Pay(FindAll<Cashier>(), cashierWage, unpaid, ref paidOut);
             Pay(FindAll<Cleaner>(), cleanerWage, unpaid, ref paidOut);
-            if (paidOut > 0 && ShopRecords.Instance != null) ShopRecords.Instance.AddWagesPaid(paidOut);
-
-            foreach (MonoBehaviour worker in unpaid) Quit(worker);
-            if (unpaid.Count > 0) WorkersQuit?.Invoke(Describe(unpaid));
-            CountStaff();
+            Record(paidOut);
+            if (unpaid.Count > 0) WorkersUnpaid?.Invoke(Describe(unpaid));
         }
 
         private void Pay<T>(T[] workers, int wage, List<MonoBehaviour> unpaid, ref int paidOut) where T : MonoBehaviour
         {
             foreach (T worker in workers)
             {
+                PayStatus status = worker.GetComponent<PayStatus>();
+                if (status != null && status.Unpaid) continue; // still owed from before; paid by PayWhatsOwed
                 if (wallet.TrySpend(wage)) paidOut += wage;
-                else unpaid.Add(worker);
+                else
+                {
+                    unpaid.Add(worker);
+                    if (status != null) status.SetUnpaid(true);
+                }
             }
         }
 
-        // The worker leaves; the pad that hired them comes back to hire them again.
-        private static void Quit(MonoBehaviour worker)
+        // Every second: workers who are owed their wage get paid as soon as there's enough money.
+        private void PayWhatsOwed()
         {
-            UnlockPad pad = UnlockPad.PadThatBuilt(worker.gameObject);
-            if (pad != null) pad.Relock();
-            else Destroy(worker.gameObject);
+            if (wallet == null) return;
+            int paidOut = 0;
+            foreach (PayStatus status in FindAll<PayStatus>())
+            {
+                if (!status.Unpaid) continue;
+                int wage = WageOf(status);
+                if (!wallet.TrySpend(wage)) continue;
+                paidOut += wage;
+                status.SetUnpaid(false);
+            }
+            Record(paidOut);
         }
 
-        private static string Describe(List<MonoBehaviour> quit)
+        private int WageOf(PayStatus status)
         {
-            if (quit.Count > 1) return $"{quit.Count} workers";
-            return quit[0] switch
+            if (status.GetComponent<Barista>() != null) return baristaWage;
+            if (status.GetComponent<Cashier>() != null) return cashierWage;
+            return cleanerWage;
+        }
+
+        private static void Record(int paidOut)
+        {
+            if (paidOut > 0 && ShopRecords.Instance != null) ShopRecords.Instance.AddWagesPaid(paidOut);
+        }
+
+        private static string Describe(List<MonoBehaviour> unpaid)
+        {
+            if (unpaid.Count > 1) return $"{unpaid.Count} workers";
+            return unpaid[0] switch
             {
                 Barista => "A barista",
                 Cashier => "A cashier",
@@ -161,7 +185,7 @@ namespace BubbleTea.Staff
         private static void ResetOnPlay()
         {
             Instance = null;
-            WorkersQuit = null;
+            WorkersUnpaid = null;
         }
     }
 }
