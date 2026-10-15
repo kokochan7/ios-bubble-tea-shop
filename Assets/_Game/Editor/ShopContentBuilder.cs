@@ -612,7 +612,6 @@ namespace BubbleTea.EditorTools
             return SavePrefab(root, $"{PrefabFolder}/{name}.prefab");
         }
 
-        // A purple desk. Standing in front of it opens the upgrade panel.
         // A decoration you can buy: it only makes the shop nicer (and raises the rating).
         // Solid, so the player walks around it; the art slot of the same name replaces the gray box.
         private static GameObject BuildDecorPrefab(string name, Color color, Vector3 size)
@@ -621,11 +620,16 @@ namespace BubbleTea.EditorTools
             return SavePrefab(root, $"{PrefabFolder}/Decor/{name}.prefab");
         }
 
+        // A purple desk. Standing next to it, on any side, opens the upgrade panel.
         private static GameObject BuildUpgradeDeskPrefab()
         {
             GameObject root = BuildStationBody("UpgradeDesk", new Color(0.58f, 0.44f, 0.86f), new Vector3(1.6f, 1f, 1f),
                 new Color(1f, 0.85f, 0.3f));
-            root.AddComponent<UpgradeZone>();
+            // The zone surrounds the whole desk, so you can walk up to it from any side.
+            var zone = new SerializedObject(root.AddComponent<UpgradeZone>());
+            zone.FindProperty("offset").vector3Value = Vector3.zero;
+            zone.FindProperty("halfSize").floatValue = 1.6f;
+            zone.ApplyModifiedPropertiesWithoutUndo();
             return SavePrefab(root, $"{PrefabFolder}/Stations/UpgradeDesk.prefab");
         }
 

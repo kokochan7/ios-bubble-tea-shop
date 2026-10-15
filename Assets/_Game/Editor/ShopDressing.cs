@@ -9,7 +9,8 @@ namespace BubbleTea.EditorTools
     /// The look of a shop beyond its gameplay pieces, styled like a Taiwanese tea house: wood
     /// floors and paneling, glass walls between the dining room and the kitchen, trim along the
     /// walls, lattice windows, a red and gold shop sign, red paper lanterns, bamboo plants, a
-    /// noren curtain over the front door, shelves of tea tins and celadon cups, wall lamps,
+    /// noren curtain over the front door, a gate with a tiled roof and couplet banners, a red runner,
+    /// lantern strings, plum trees in blossom, paper-cut window flowers, shelves of tea tins and celadon cups, wall lamps,
     /// swing doors on the staff entrance, the front door, the drive-thru lane, and a street with trees outside. Everything is
     /// built from primitives and textures drawn in code, so nothing needs downloading.
     /// Called by <see cref="PrototypeSceneBuilder"/> each time a shop scene is built.
@@ -33,6 +34,8 @@ namespace BubbleTea.EditorTools
             public Color Noren = new(0.20f, 0.26f, 0.45f);
             public Color TeaTin = new(0.76f, 0.20f, 0.17f);
             public Color SignText = new(1f, 0.90f, 0.62f);
+            public Color RoofTile = new(0.22f, 0.56f, 0.46f);  // jade-glazed roof tiles on the front gate
+            public Color Blossom = new(1f, 0.70f, 0.78f);      // plum blossoms
             public string Prefix;     // material name prefix, so shops don't share colors
         }
 
@@ -64,6 +67,7 @@ namespace BubbleTea.EditorTools
             CreateBamboo(root, new Vector3(-w + 0.7f, 0f, -d + 0.7f));
             CreateBamboo(root, new Vector3(layout.DoorFrom - 1f, 0f, -d + 0.7f));
             CreateBamboo(root, new Vector3(layout.DoorTo + 1f, 0f, -d + 0.7f));
+            CreateFestiveDecor(root, style, layout);
             CreateKitchenFloor(root, "KitchenFloor", -w, w, layout);
             float counterX = layout.Counter.x;
             CreatePartition(root, -w, counterX - 1.4f, layout); // the counter is 2.75 m wide
@@ -108,9 +112,11 @@ namespace BubbleTea.EditorTools
 
             Vector3[] trees = layout.Trees;
             Material trunk = Mat("TreeTrunk", new Color(0.55f, 0.38f, 0.26f), 0.1f);
-            Material leaves = Mat(style.Prefix + "TreeLeaves", Color.Lerp(style.Grass, new Color(0.2f, 0.55f, 0.3f), 0.6f), 0.1f);
+            Material green = Mat(style.Prefix + "TreeLeaves", Color.Lerp(style.Grass, new Color(0.3f, 0.65f, 0.35f), 0.5f), 0.1f);
+            Material blossom = Mat(style.Prefix + "BlossomTree", current.Blossom, 0.1f);
             for (int i = 0; i < trees.Length; i++)
             {
+                Material leaves = i % 2 == 0 ? blossom : green; // every other tree is a plum tree in bloom
                 Transform tree = new GameObject("Tree").transform;
                 tree.SetParent(root, false);
                 tree.localPosition = trees[i];
@@ -219,6 +225,20 @@ namespace BubbleTea.EditorTools
                     Part(window, PrimitiveType.Cube, "Lattice", new Vector3(x2, 0f, -0.02f), new Vector3(0.025f, height, 0.025f), frame);
                 }
                 Part(window, PrimitiveType.Cube, "Sill", new Vector3(0f, -height / 2f - 0.08f, -0.12f), new Vector3(width + 0.3f, 0.07f, 0.25f), sill);
+
+                // Red paper-cut flowers on each pane, as at Chinese New Year.
+                foreach (float side in new[] { -0.6f, 0.6f })
+                {
+                    GameObject cut = Part(window, PrimitiveType.Cylinder, "Paper Cut", new Vector3(side, 0.05f, -0.04f),
+                        new Vector3(0.5f, 0.004f, 0.5f), PaperRed());
+                    cut.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    GameObject petal = Part(window, PrimitiveType.Cube, "Paper Cut", new Vector3(side, 0.05f, -0.045f),
+                        new Vector3(0.36f, 0.36f, 0.004f), PaperRed());
+                    petal.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    GameObject heart = Part(window, PrimitiveType.Cylinder, "Paper Cut Center", new Vector3(side, 0.05f, -0.05f),
+                        new Vector3(0.16f, 0.004f, 0.16f), Gold());
+                    heart.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                }
 
                 // Little potted plants on the sill.
                 Material pot = Mat("Pot", new Color(0.90f, 0.60f, 0.45f), 0.2f);
@@ -336,6 +356,129 @@ namespace BubbleTea.EditorTools
                 Part(lamp, PrimitiveType.Cube, "Plate", Vector3.zero, new Vector3(0.18f, 0.3f, 0.04f), brass);
                 Part(lamp, PrimitiveType.Cube, "Arm", new Vector3(0f, 0f, -0.15f), new Vector3(0.05f, 0.05f, 0.3f), brass);
                 Part(lamp, PrimitiveType.Sphere, "Bulb", new Vector3(0f, 0.05f, -0.32f), new Vector3(0.26f, 0.26f, 0.26f), glow);
+            }
+        }
+
+        // ---------- Chinese decor ----------
+
+        private static Material PaperRed() => Mat("PaperRed", new Color(0.92f, 0.16f, 0.14f), 0.2f);
+        private static Material Gold() => Mat("LanternGold", new Color(0.95f, 0.75f, 0.32f), 0.7f);
+
+        // Bright festive touches: a gate with a tiled roof and red pillars over the front door,
+        // red couplet banners, a red runner up the queue, strings of lanterns across the dining
+        // room and a potted plum tree in blossom.
+        private static void CreateFestiveDecor(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
+        {
+            float w = layout.HalfWidth, d = layout.HalfDepth;
+            CreateGate(root, style, layout);
+            CreateRunner(root, style, layout);
+            // Lantern strings strung between tall red posts on the side walls.
+            CreateLanternString(root, -w - 0.25f, w + 0.25f, -d * 0.5f, 2.7f);
+            CreatePlumTree(root, new Vector3(layout.DoorFrom - 2.2f, 0f, -d + 0.8f));
+        }
+
+        // A paifang-style gate over the front door: two red pillars on stone bases, a red beam
+        // with a gold plaque, and a glazed roof with upturned eaves.
+        private static void CreateGate(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
+        {
+            float from = layout.DoorFrom - 0.5f, to = layout.DoorTo + 0.5f, z = -layout.HalfDepth - 1.1f;
+            float center = (from + to) / 2f, span = to - from;
+            Material red = Mat("GateRed", new Color(0.84f, 0.16f, 0.12f), 0.45f);
+            Material stone = Mat("GateStone", new Color(0.88f, 0.86f, 0.82f), 0.2f);
+            Material tile = Mat(style.Prefix + "RoofTile", style.RoofTile, 0.6f);
+            Material gold = Gold();
+            Transform gate = new GameObject("Front Gate").transform;
+            gate.SetParent(root, false);
+            foreach (float x in new[] { from, to })
+            {
+                Part(gate, PrimitiveType.Cube, "Pillar Base", new Vector3(x, 0.2f, z), new Vector3(0.6f, 0.4f, 0.6f), stone);
+                Part(gate, PrimitiveType.Cylinder, "Pillar", new Vector3(x, 1.6f, z), new Vector3(0.36f, 1.4f, 0.36f), red);
+                Part(gate, PrimitiveType.Cylinder, "Pillar Ring", new Vector3(x, 2.75f, z), new Vector3(0.42f, 0.04f, 0.42f), gold);
+                // Red couplet banners hanging on the street side of each pillar.
+                Part(gate, PrimitiveType.Cube, "Couplet Border", new Vector3(x, 1.75f, z - 0.21f), new Vector3(0.42f, 1.5f, 0.02f), gold);
+                Part(gate, PrimitiveType.Cube, "Couplet", new Vector3(x, 1.75f, z - 0.225f), new Vector3(0.34f, 1.42f, 0.02f), red);
+                for (int i = 0; i < 4; i++)
+                {
+                    GameObject mark = Part(gate, PrimitiveType.Cube, "Couplet Mark", new Vector3(x, 1.25f + i * 0.34f, z - 0.24f),
+                        new Vector3(0.12f, 0.12f, 0.01f), gold);
+                    mark.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                }
+            }
+            Part(gate, PrimitiveType.Cube, "Beam", new Vector3(center, 2.95f, z), new Vector3(span + 0.6f, 0.3f, 0.4f), red);
+            Part(gate, PrimitiveType.Cube, "Beam Trim", new Vector3(center, 2.78f, z), new Vector3(span + 0.4f, 0.05f, 0.42f), gold);
+            Part(gate, PrimitiveType.Cube, "Plaque", new Vector3(center, 2.95f, z - 0.22f), new Vector3(1.6f, 0.5f, 0.04f), gold);
+            Part(gate, PrimitiveType.Cube, "Plaque Face", new Vector3(center, 2.95f, z - 0.245f), new Vector3(1.4f, 0.36f, 0.02f), red);
+            Label(gate, style.ShopName.ToUpperInvariant(), new Vector3(center, 2.95f, z - 0.26f), 0.015f, style.SignText);
+
+            // Two layers of roof, the eaves curling up at each end.
+            Part(gate, PrimitiveType.Cube, "Roof", new Vector3(center, 3.22f, z), new Vector3(span + 1.4f, 0.16f, 1.1f), tile);
+            Part(gate, PrimitiveType.Cube, "Roof Ridge", new Vector3(center, 3.38f, z), new Vector3(span + 0.6f, 0.16f, 0.5f), tile);
+            Part(gate, PrimitiveType.Cube, "Ridge Trim", new Vector3(center, 3.48f, z), new Vector3(span + 0.4f, 0.04f, 0.2f), gold);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                float x = center + side * (span / 2f + 0.95f);
+                GameObject eave = Part(gate, PrimitiveType.Cube, "Upturned Eave", new Vector3(x, 3.32f, z), new Vector3(0.6f, 0.14f, 1.1f), tile);
+                eave.transform.localRotation = Quaternion.Euler(0f, 0f, side * 25f);
+                Part(gate, PrimitiveType.Sphere, "Eave Tip", new Vector3(x + side * 0.28f, 3.48f, z), new Vector3(0.14f, 0.14f, 0.14f), gold);
+            }
+        }
+
+        // A red runner with a gold border from the front door up to the counter, under the queue.
+        private static void CreateRunner(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
+        {
+            float x = layout.Counter.x, from = -layout.HalfDepth + 1.4f, to = layout.PartitionZ - 0.9f;
+            if (to - from < 1f) return;
+            float z = (from + to) / 2f, length = to - from;
+            Part(root, PrimitiveType.Cube, "Runner Border", new Vector3(x, 0.006f, z), new Vector3(1.8f, 0.004f, length), Gold());
+            Part(root, PrimitiveType.Cube, "Runner", new Vector3(x, 0.008f, z), new Vector3(1.6f, 0.004f, length - 0.2f),
+                Mat(style.Prefix + "Runner", Color.Lerp(style.Accent, new Color(0.85f, 0.15f, 0.12f), 0.5f), 0.1f));
+        }
+
+        // A sagging cord of lanterns across the room, hung from a red post at each end.
+        private static void CreateLanternString(Transform root, float fromX, float toX, float z, float height)
+        {
+            Transform lanterns = new GameObject("Lantern String").transform;
+            lanterns.SetParent(root, false);
+            Material red = Mat("GateRed", new Color(0.84f, 0.16f, 0.12f), 0.45f);
+            Material cord = Mat("Cord", new Color(0.30f, 0.20f, 0.16f), 0.2f);
+            foreach (float x in new[] { fromX, toX })
+            {
+                Part(lanterns, PrimitiveType.Cylinder, "Lantern Post", new Vector3(x, (height + 0.2f) / 2f, z), new Vector3(0.14f, (height + 0.2f) / 2f, 0.14f), red);
+                Part(lanterns, PrimitiveType.Sphere, "Post Knob", new Vector3(x, height + 0.25f, z), new Vector3(0.2f, 0.2f, 0.2f), Gold());
+            }
+            const int segments = 8;
+            const float sag = 0.45f;
+            for (int i = 0; i < segments; i++)
+            {
+                float t0 = i / (float)segments, t1 = (i + 1) / (float)segments;
+                Vector3 a = new(Mathf.Lerp(fromX, toX, t0), height - sag * 4f * t0 * (1f - t0), z);
+                Vector3 b = new(Mathf.Lerp(fromX, toX, t1), height - sag * 4f * t1 * (1f - t1), z);
+                GameObject piece = Part(lanterns, PrimitiveType.Cube, "Cord", (a + b) / 2f, new Vector3(Vector3.Distance(a, b), 0.03f, 0.03f), cord);
+                piece.transform.localRotation = Quaternion.FromToRotation(Vector3.right, b - a);
+                if (i > 0) Lantern(lanterns, a + new Vector3(0f, -0.45f, 0f), 0.8f);
+            }
+        }
+
+        // A plum tree in blossom in a glazed pot: dark twisting branches covered in pink flowers.
+        private static void CreatePlumTree(Transform root, Vector3 position)
+        {
+            Material pot = Mat("BambooPot", new Color(0.20f, 0.28f, 0.36f), 0.7f);
+            Material bark = Mat("PlumBark", new Color(0.30f, 0.20f, 0.17f), 0.2f);
+            Material flowers = Mat(current.Prefix + "BlossomTree", current.Blossom, 0.1f);
+            Transform tree = new GameObject("Plum Tree").transform;
+            tree.SetParent(root, false);
+            tree.localPosition = position;
+            Part(tree, PrimitiveType.Cylinder, "Pot", new Vector3(0f, 0.25f, 0f), new Vector3(0.7f, 0.25f, 0.7f), pot);
+            Part(tree, PrimitiveType.Cylinder, "Rim", new Vector3(0f, 0.5f, 0f), new Vector3(0.76f, 0.03f, 0.76f), Gold());
+            Part(tree, PrimitiveType.Cylinder, "Trunk", new Vector3(0f, 1f, 0f), new Vector3(0.12f, 0.5f, 0.12f), bark);
+            Vector3[] tips = { new(0.45f, 1.9f, 0.1f), new(-0.4f, 1.8f, -0.15f), new(0.05f, 2.1f, 0.35f), new(-0.1f, 2f, -0.4f) };
+            foreach (Vector3 tip in tips)
+            {
+                Vector3 start = new(0f, 1.4f, 0f);
+                GameObject branch = Part(tree, PrimitiveType.Cylinder, "Branch", (start + tip) / 2f,
+                    new Vector3(0.06f, Vector3.Distance(start, tip) / 2f, 0.06f), bark);
+                branch.transform.localRotation = Quaternion.FromToRotation(Vector3.up, tip - start);
+                Part(tree, PrimitiveType.Sphere, "Blossoms", tip, new Vector3(0.55f, 0.4f, 0.55f), flowers);
             }
         }
 

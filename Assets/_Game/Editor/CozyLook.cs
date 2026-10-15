@@ -40,10 +40,10 @@ namespace BubbleTea.EditorTools
             tonemapping.mode.Override(TonemappingMode.Neutral);
 
             var color = Add<ColorAdjustments>(profile);
-            color.postExposure.Override(0.15f);
+            color.postExposure.Override(0.35f); // bright and sunny
             color.contrast.Override(8f);
-            color.saturation.Override(12f);
-            color.colorFilter.Override(new Color(1f, 0.96f, 0.90f)); // a touch of warmth
+            color.saturation.Override(16f);
+            color.colorFilter.Override(new Color(1f, 0.98f, 0.94f)); // a touch of warmth
 
             var whiteBalance = Add<WhiteBalance>(profile);
             whiteBalance.temperature.Override(10f);
@@ -55,7 +55,7 @@ namespace BubbleTea.EditorTools
             bloom.tint.Override(new Color(1f, 0.85f, 0.65f));
 
             var vignette = Add<Vignette>(profile);
-            vignette.intensity.Override(0.22f);
+            vignette.intensity.Override(0.12f);
             vignette.smoothness.Override(0.5f);
             vignette.color.Override(new Color(0.18f, 0.10f, 0.08f));
 

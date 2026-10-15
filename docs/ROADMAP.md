@@ -231,3 +231,11 @@ Tighter shops pass:
 - Baristas reserve the drink they're working on (fetching it or feeding its ingredient), and drinks being made from dropped-off ingredients count too, so two never do the same job. They no longer stock the counter with unordered drinks, and anything no customer wants goes straight in the trash.
 - Both shops are more compact: the Boba Shop is 18 x 15 m (was 22 x 20), the Matcha House 24 x 22 m (was 30 x 30), with bars, desk and pads closer together.
 - New upbeat, catchy music for both shops (faster, with a repeating melody hook).
+
+Back wall and hip hop pass:
+
+- Both shops now share one 18 x 15 m floor plan (`PrototypeSceneBuilder.CompactLayout`). Every bar stands in a row against the back wall (the Matcha House's Yuzu Bar at the east end), with a row of staff pads (cashier, baristas) in front of them; no pads overlap.
+- The staff door moved to the east end of the glass wall and the café tables sit east of the queue, so nothing blocks the door. The Expand Shop pad is in the dining room's south-east corner.
+- The upgrade desk stands free in the kitchen's west corner, and its zone surrounds the whole desk, so you can use it from any side.
+- Music: laid-back hip hop beats for both shops (boom-bap drums, hi-hat rolls, 808 bass, electric-piano chords, a plucked pentatonic hook). New file names, so the tracks regenerate.
+- Brighter scenes (stronger sun and ambient light, lighter floors, walls and grass) and Chinese decor: a gate with a jade-tiled roof and red couplet banners over the front door, a red runner up the queue, a string of lanterns across the dining room, a potted plum tree, paper-cut flowers on the windows, and plum trees in blossom outside.

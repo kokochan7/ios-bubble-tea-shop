@@ -4,7 +4,7 @@ using UnityEngine;
 namespace BubbleTea.Upgrades
 {
     /// <summary>
-    /// A square in front of the upgrade desk. While the player stands in it, the upgrade
+    /// A square around the upgrade desk. While the player stands in it, the upgrade
     /// panel opens (the UI checks <see cref="AnyPlayerInside"/>).
     /// </summary>
     public class UpgradeZone : MonoBehaviour
@@ -12,10 +12,10 @@ namespace BubbleTea.Upgrades
         private static readonly List<UpgradeZone> active = new();
 
         [SerializeField, Tooltip("Center of the zone, relative to the desk.")]
-        private Vector3 offset = new(0f, 0f, 1.4f);
+        private Vector3 offset = Vector3.zero;
 
         [SerializeField, Tooltip("Half the zone's width in meters.")]
-        private float halfSize = 1f;
+        private float halfSize = 1.6f;
 
         private void OnEnable() => active.Add(this);
         private void OnDisable() => active.Remove(this);

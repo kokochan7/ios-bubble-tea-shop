@@ -54,7 +54,7 @@ namespace BubbleTea.EditorTools
         /// Where everything stands in a shop. The main room runs from -HalfWidth to +HalfWidth
         /// (west to east) and -HalfDepth to +HalfDepth (front door to back wall); Expand Shop adds
         /// the space from the east wall to the lane wall, with the drive-thru lane outside it.
-        /// The first shop is small and each later shop is bigger.
+        /// Every shop uses the same compact plan (see <see cref="CompactLayout"/>).
         /// </summary>
         internal sealed class ShopLayout
         {
@@ -74,42 +74,49 @@ namespace BubbleTea.EditorTools
             public float LaneOuterX => LaneWallX + 6f;   // far edge of the lane
             public float SidewalkZ => -HalfDepth - 3f;
 
-            // Plants (or whatever the Art Set lists as decorations) in the corners of the shop.
+            // Plants (or whatever the Art Set lists as decorations), tucked against the walls clear of the pads.
             public Vector3[] DecorationSpots => new Vector3[]
             {
-                new(-HalfWidth + 1f, 0f, HalfDepth - 1f), new(HalfWidth - 1f, 0f, HalfDepth - 1f),
-                new(-HalfWidth + 1f, 0f, -HalfDepth + 1f), new(HalfWidth - 0.8f, 0f, -HalfDepth + 0.8f),
-                new(-HalfWidth + 1f, 0f, -2f), new(HalfWidth - 1f, 0f, -2f),
+                new(-HalfWidth + 1f, 0f, HalfDepth - 0.9f), new(-HalfWidth + 0.8f, 0f, -2.6f), new(HalfWidth - 0.7f, 0f, -3.3f),
             };
         }
 
-        // Boba Shop: a small corner café, 18 x 15 meters, packed tight so nobody walks far.
-        private static readonly ShopLayout Small = new()
+        // Both shops share one compact floor plan, 18 x 15 meters, so nobody walks far:
+        //  - the kitchen (north of the counter): every bar in one row against the back wall, a row of
+        //    staff pads in front of them (cashier beside the counter's cash, then the baristas), the
+        //    upgrade desk standing free in the west corner so you can walk up to it from any side,
+        //    and the trash can by the west wall;
+        //  - the dining room (south): the queue runs from the front door up to the counter, the café
+        //    tables sit east of it, and the staff door is at the far east end of the glass wall so
+        //    nothing stands in front of it.
+        // Pads are 2.4 m squares and bars hand off 1.4 m in front of themselves, so the spacing below
+        // keeps every pad, hand-off spot and zone apart.
+        private static ShopLayout CompactLayout(Vector3[] bars, Vector3 extraBar) => new()
         {
             HalfWidth = 9f, HalfDepth = 7.5f,
             DoorFrom = -4.5f, DoorTo = 1.5f,
-            StaffDoorFrom = 2.5f, StaffDoorTo = 5f,
+            StaffDoorFrom = 6.2f, StaffDoorTo = 8.6f,
             LaneWallX = 15f,
             Counter = new(-2f, 0f, 0f),
-            Seating = new(4.5f, 0f, -4.5f),    // in line with More Seating
+            Seating = new(3f, 0f, -4.6f),      // east of the queue, clear of the staff door
             DriveThru = new(14f, 0f, 3.5f),
-            TrashCan = new(-8f, 0f, 1.4f),
-            FloorCash = new(6.5f, 0f, 1.6f),
-            PlayerStart = new(4f, 1f, 1.6f),
-            // The bars sit just far enough back that their hand-off spots don't overlap the counter's.
-            TeaBrewer = new(-6.8f, 0f, 4.9f),
-            ToppingBar = new(-3.2f, 0f, 4.9f),
-            TaroStation = new(0.4f, 0f, 4.9f),
-            FruitBar = new(3.4f, 0f, 4.9f),
-            UpgradeDesk = new(7f, 0f, 4.9f),
-            Cashier = new(1f, 0f, 1.8f),
-            Expansion = new(4.5f, 0f, 6.5f),
+            TrashCan = new(-8.3f, 0f, 4.6f),
+            FloorCash = new(7.6f, 0f, -1.4f),  // just through the staff door
+            PlayerStart = new(7.4f, 1f, -3f),
+            TeaBrewer = bars[0],
+            ToppingBar = bars[1],
+            TaroStation = bars[2],
+            FruitBar = bars[3],
+            ExtraBar = extraBar,
+            UpgradeDesk = new(-6.6f, 0f, 2f),
+            Cashier = new(0.6f, 0f, 1.8f),
+            Expansion = new(7.6f, 0f, -5.8f),   // by the east wall it opens up
             MoreSeating = new(12f, 0f, -4.5f),
-            Cleaner = new(1f, 0f, -4.5f),      // just west of the café tables
+            Cleaner = new(-6.4f, 0f, -4.6f),
             DriveThruCashier = new(11f, 0f, 6f),
             SecondShopPad = new(12.5f, 0f, -1.6f),
-            TravelBack = new(7f, 0f, -6f),
-            Baristas = new Vector3[] { new(-6f, 0f, 6.5f), new(-3f, 0f, 6.5f), new(0f, 0f, 6.5f), new(3f, 0f, 6.5f), new(6f, 0f, 6.5f) },
+            TravelBack = new(-6.4f, 0f, -1.6f),
+            Baristas = new Vector3[] { new(3f, 0f, 2.6f), new(5.4f, 0f, 2.6f), new(7.8f, 0f, 2.6f), new(7.6f, 0f, 6.2f) },
             Windows = new[] { -6.2f, 6.2f },
             Lamps = new[] { -4.4f, 4.4f },
             ExpansionWindows = new[] { 12f },
@@ -122,44 +129,18 @@ namespace BubbleTea.EditorTools
             },
         };
 
-        // Matcha House and later shops: a bigger café, 24 x 22 meters (kept compact so workers don't walk far).
-        private static readonly ShopLayout Large = new()
-        {
-            HalfWidth = 12f, HalfDepth = 11f,
-            DoorFrom = -4.5f, DoorTo = 4.5f,
-            StaffDoorFrom = 2f, StaffDoorTo = 4.5f,
-            LaneWallX = 21f,
-            Counter = new(-3f, 0f, 1f),
-            Seating = new(6f, 0f, -5.5f),
-            DriveThru = new(20f, 0f, 4f),
-            TrashCan = new(-9.5f, 0f, 2.4f),
-            FloorCash = new(7f, 0f, 2.8f),
-            PlayerStart = new(5f, 1f, 2.8f),
-            TeaBrewer = new(-8.2f, 0f, 5.8f),
-            ToppingBar = new(-4.2f, 0f, 5.8f),
-            TaroStation = new(-0.5f, 0f, 5.8f),
-            FruitBar = new(3.3f, 0f, 5.8f),
-            ExtraBar = new(-10.9f, 0f, 5.8f),   // the Yuzu Bar, in the west corner of the kitchen
-            UpgradeDesk = new(8f, 0f, 5.8f),
-            Cashier = new(0f, 0f, 2.8f),
-            Expansion = new(6f, 0f, 9f),
-            MoreSeating = new(16.5f, 0f, -5.5f),   // in line with the first seating
-            Cleaner = new(1.5f, 0f, -4.5f),
-            DriveThruCashier = new(17f, 0f, 6.5f),
-            SecondShopPad = new(16f, 0f, -1.5f),
-            TravelBack = new(10f, 0f, -9f),
-            Baristas = new Vector3[] { new(-9f, 0f, 9f), new(-6f, 0f, 9f), new(-3f, 0f, 9f), new(0f, 0f, 9f), new(3f, 0f, 9f) },
-            Windows = new[] { -9f, -5.2f, 5.2f, 9f },
-            Lamps = new[] { -7.1f, 7.1f },
-            ExpansionWindows = new[] { 16f },
-            ExpansionLamps = new[] { 19f },
-            Trees = new Vector3[]
-            {
-                new(-16f, 0f, -13f), new(-16f, 0f, -4f), new(-16f, 0f, 5f), new(-16f, 0f, 12f),
-                new(-9f, 0f, 14f), new(0f, 0f, 14.5f), new(9f, 0f, 14f), new(18f, 0f, 14.5f), new(25f, 0f, 14f),
-                new(30f, 0f, 9f), new(30f, 0f, 0f), new(30f, 0f, -9f), new(4f, 0f, -15f), new(14f, 0f, -15f),
-            },
-        };
+        // Bars sit with their backs 0.5 m off the back wall.
+        private const float BarRowZ = 6.4f;
+
+        // Boba Shop: four bars (the topping bar is the wide one).
+        private static readonly ShopLayout Small = CompactLayout(
+            new Vector3[] { new(-6.6f, 0f, BarRowZ), new(-3.6f, 0f, BarRowZ), new(-0.6f, 0f, BarRowZ), new(2.4f, 0f, BarRowZ) },
+            Vector3.zero);
+
+        // Matcha House: the same room with a fifth bar (the Yuzu Bar) at the east end of the row.
+        private static readonly ShopLayout Large = CompactLayout(
+            new Vector3[] { new(-6.6f, 0f, BarRowZ), new(-3.7f, 0f, BarRowZ), new(-0.8f, 0f, BarRowZ), new(2.1f, 0f, BarRowZ) },
+            new Vector3(5f, 0f, BarRowZ));
 
         /// <summary>The layout of the shop being built (read by <see cref="ShopDressing"/>).</summary>
         internal static ShopLayout Layout { get; private set; } = Large;
@@ -170,18 +151,18 @@ namespace BubbleTea.EditorTools
             ScenePath = ScenePath,
             SaveFile = "save.json",
             FloorMaterial = "Floor",
-            FloorColor = new Color(0.56f, 0.42f, 0.42f),          // dark plum-brown planks
+            FloorColor = new Color(0.86f, 0.66f, 0.50f),          // light honey planks
             WallMaterial = "Wall",
-            WallColor = new Color(0.86f, 0.58f, 0.40f),           // warm wood boards
+            WallColor = new Color(0.96f, 0.80f, 0.62f),           // pale warm wood boards
             ExpansionFloorMaterial = "ExpansionFloor",
-            ExpansionFloorColor = new Color(0.60f, 0.45f, 0.42f),
+            ExpansionFloorColor = new Color(0.84f, 0.64f, 0.50f),
             Look = new ShopDressing.Style
             {
                 ShopName = "Boba Shop",
                 Prefix = "Shop1",
                 Accent = new Color(0.78f, 0.24f, 0.20f),  // Taiwanese tea house red
                 Accent2 = new Color(0.95f, 0.75f, 0.32f), // and gold
-                Grass = new Color(0.36f, 0.55f, 0.28f),
+                Grass = new Color(0.46f, 0.70f, 0.34f),
             },
             Music = MusicMaker.Track.BobaShop,
             Layout = Small,
@@ -193,18 +174,18 @@ namespace BubbleTea.EditorTools
             ScenePath = Shop2ScenePath,
             SaveFile = "save-shop2.json",
             FloorMaterial = "Shop2Floor",
-            FloorColor = new Color(0.78f, 0.58f, 0.40f),          // honey oak planks
+            FloorColor = new Color(0.90f, 0.74f, 0.54f),          // light oak planks
             WallMaterial = "Shop2Wall",
-            WallColor = new Color(0.62f, 0.74f, 0.55f),           // sage green boards
+            WallColor = new Color(0.76f, 0.87f, 0.68f),           // pale sage boards
             ExpansionFloorMaterial = "Shop2ExpansionFloor",
-            ExpansionFloorColor = new Color(0.74f, 0.55f, 0.40f),
+            ExpansionFloorColor = new Color(0.88f, 0.71f, 0.52f),
             Look = new ShopDressing.Style
             {
                 ShopName = "Matcha House",
                 Prefix = "Shop2",
                 Accent = new Color(0.30f, 0.48f, 0.26f),  // deep matcha green
                 Accent2 = new Color(0.98f, 0.86f, 0.62f),
-                Grass = new Color(0.42f, 0.58f, 0.30f),
+                Grass = new Color(0.50f, 0.72f, 0.36f),
                 // A Japanese tea room: white paper lanterns, a matcha-green noren, matcha tins, cream lettering.
                 Lantern = new Color(0.98f, 0.95f, 0.86f),
                 LanternGlow = new Color(1f, 0.85f, 0.55f),
@@ -484,17 +465,17 @@ namespace BubbleTea.EditorTools
             var go = new GameObject("Sun");
             var light = go.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.intensity = 1.05f;
-            light.color = new Color(1f, 0.90f, 0.78f); // golden, cozy light
+            light.intensity = 1.3f;
+            light.color = new Color(1f, 0.95f, 0.86f); // bright, warm daylight
             light.shadows = LightShadows.Soft;
-            light.shadowStrength = 0.55f;
+            light.shadowStrength = 0.45f;
             go.transform.rotation = Quaternion.Euler(55f, -35f, 0f);
 
-            // Sky, horizon and ground colors light the shop from all sides, warm like lamplight.
+            // Sky, horizon and ground colors light the shop from all sides, bright and warm.
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.80f, 0.76f, 0.78f);
-            RenderSettings.ambientEquatorColor = new Color(0.74f, 0.62f, 0.54f);
-            RenderSettings.ambientGroundColor = new Color(0.50f, 0.40f, 0.36f);
+            RenderSettings.ambientSkyColor = new Color(0.96f, 0.93f, 0.92f);
+            RenderSettings.ambientEquatorColor = new Color(0.90f, 0.80f, 0.72f);
+            RenderSettings.ambientGroundColor = new Color(0.64f, 0.56f, 0.50f);
         }
 
         private static void CreateFloor(Material material)
@@ -677,7 +658,7 @@ namespace BubbleTea.EditorTools
             var camera = go.AddComponent<Camera>();
             camera.fieldOfView = 40f;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.36f, 0.50f, 0.30f); // grass, past the edge of the ground
+            camera.backgroundColor = new Color(0.48f, 0.70f, 0.36f); // grass, past the edge of the ground
             camera.allowMSAA = true;
             go.AddComponent<AudioListener>();
 
@@ -879,7 +860,7 @@ namespace BubbleTea.EditorTools
             UnlockPad toppingPad = CreatePad(content.ToppingBar, Layout.ToppingBar, billPrefab, wallet, padMat,
                 taroPad, seatingPad, cashierPad);
             Turn(toppingPad, 180f);
-            // Baristas along the back wall of the kitchen, each pad revealing the next. Hiring
+            // Baristas in the row of staff pads in front of the bars, each pad revealing the next. Hiring
             // the first one also brings out the topping bar.
             Vector3[] baristaSpots = Layout.Baristas;
             var baristaPads = new UnlockPad[content.Baristas.Length];
