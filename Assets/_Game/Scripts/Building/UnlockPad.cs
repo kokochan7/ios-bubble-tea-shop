@@ -55,8 +55,19 @@ namespace BubbleTea.Building
         /// <summary>Game master option: pads build the moment you step on them, for free.</summary>
         public static bool InstantBuild { get; set; }
 
+        // What each built pad put in the world, so a hire who quits can find their pad again.
+        private static readonly Dictionary<GameObject, UnlockPad> padOf = new();
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetOnPlay() => InstantBuild = false;
+        private static void ResetOnPlay()
+        {
+            InstantBuild = false;
+            padOf.Clear();
+        }
+
+        /// <summary>The pad that built this object (a hired worker, a station...), or null.</summary>
+        public static UnlockPad PadThatBuilt(GameObject built) =>
+            built != null && padOf.TryGetValue(built, out UnlockPad pad) ? pad : null;
 
         private readonly Stack<CashBill> spareBills = new();
         private int paid;
@@ -64,6 +75,7 @@ namespace BubbleTea.Building
         private float standTimer;
         private float paymentTimer;
         private bool completed;
+        private GameObject built;
 
         /// <summary>Raised with (remaining, cost) whenever a payment lands.</summary>
         public event Action<int, int> ProgressChanged;
@@ -104,8 +116,33 @@ namespace BubbleTea.Building
             Build(animate: true);
         }
 
+        /// <summary>
+        /// Takes back what this pad built (a worker who quit) and shows the pad again, empty,
+        /// so it has to be paid for once more.
+        /// </summary>
+        public void Relock()
+        {
+            if (!completed) return;
+            if (built != null)
+            {
+                padOf.Remove(built);
+                Destroy(built);
+            }
+            built = null;
+            completed = false;
+            paid = 0;
+            standTimer = 0f;
+            gameObject.SetActive(true);
+            ProgressChanged?.Invoke(Remaining, Cost); // also tells the save manager
+        }
+
         private void OnEnable() => active.Add(this);
         private void OnDisable() => active.Remove(this);
+
+        private void OnDestroy()
+        {
+            if (built != null) padOf.Remove(built);
+        }
 
         private void Update()
         {
@@ -184,6 +221,8 @@ namespace BubbleTea.Building
                 if (station.GetComponentInChildren<BubbleTea.Travel.ShopTravel>() == null)
                     NameTag.Add(station, NameTag.NameFor(definition.DisplayName));
                 if (animate) station.AddComponent<PopIn>();
+                built = station;
+                padOf[station] = this;
             }
             if (animate) GameEvents.RaiseUnlocked(transform.position);
 

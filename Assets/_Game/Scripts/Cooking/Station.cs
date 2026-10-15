@@ -56,7 +56,7 @@ namespace BubbleTea.Cooking
             if (stat == StatId.StationCapacity) ApplyCapacityBonus();
         }
 
-        // The Bigger Bars upgrade adds room for one more finished drink per level.
+        // The Drink Shelf Space upgrade adds room for one more finished drink per level.
         private void ApplyCapacityBonus() =>
             output.ExtraCapacity = Mathf.RoundToInt(Stats.Get(StatId.StationCapacity, 0f));
 

@@ -18,9 +18,6 @@ namespace BubbleTea.Customers
         [SerializeField, Tooltip("Walking speed in meters per second.")]
         private float speed = 3f;
 
-        [SerializeField, Tooltip("Seconds a customer waits at the front before taking a drink.")]
-        private float pauseBeforeBuying = 0.3f;
-
         [SerializeField, Tooltip("Where the drink sits while the customer carries it.")]
         private Vector3 drinkHoldPosition = new(0f, 0.3f, 0.6f);
 
@@ -84,7 +81,6 @@ namespace BubbleTea.Customers
         private Vector3 exit;
         private Action<Customer> onGone;
         private State state;
-        private float waitTimer;
         private float waited;
         private MaterialPropertyBlock moodBlock;
         private SeatingTable table;
@@ -208,11 +204,7 @@ namespace BubbleTea.Customers
                 return;
             }
 
-            if (!WalkTo(counter.QueuePosition(Mathf.Max(index, 0))) || index != 0)
-            {
-                waitTimer = 0f;
-                return;
-            }
+            if (!WalkTo(counter.QueuePosition(Mathf.Max(index, 0))) || index != 0) return;
 
             // At the front of the line they read the prices; too expensive and they leave.
             if (!checkedPrice)
@@ -226,21 +218,14 @@ namespace BubbleTea.Customers
                 }
             }
 
-            // Face the counter and buy once a drink is there.
+            // Face the counter and wait: drinks are handed over fresh (see ServingCounter).
             Vector3 toCounter = counter.transform.position - transform.position;
             toCounter.y = 0f;
             if (faceCounter && toCounter.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(toCounter);
-
-            // Take each ordered drink as soon as it's on the counter.
-            waitTimer += Time.deltaTime;
-            if (waitTimer < pauseBeforeBuying || !counter.TrySellAny(orders, out CarriedItem drink, out DrinkRecipe sold, TipShare())) return;
-            waitTimer = 0f;
-            TakeDrink(drink, sold);
         }
 
         /// <summary>
-        /// Handed their drink directly (the counter was full), wherever they are in line.
-        /// They pay at the counter as usual.
+        /// Handed one of their drinks, fresh, wherever they are in line. They pay at the counter as usual.
         /// </summary>
         public bool ServeNow(CarriedItem drink)
         {
@@ -287,7 +272,7 @@ namespace BubbleTea.Customers
 
         private bool TooExpensive(DrinkRecipe order) => counter.PriceOf(order) > counter.FairPriceOf(order) * tolerance + 0.01f;
 
-        // The price is more than this customer will pay: they leave without buying (lowers the rating a little).
+        // The price is more than this customer will pay: they leave without buying (costs half a star).
         private void RefusePrice()
         {
             GameEvents.RaiseCustomerRefusedPrice(transform.position);

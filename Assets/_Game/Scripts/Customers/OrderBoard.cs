@@ -1,11 +1,14 @@
 using System.Collections.Generic;
+using System.Text;
+using BubbleTea.Cooking;
 using UnityEngine;
 
 namespace BubbleTea.Customers
 {
     /// <summary>
     /// A sign over the counter showing the drinks the customer at the front of the line still
-    /// wants. Each drink disappears as it's handed over, and the sign hides when nobody is waiting.
+    /// wants, with the order written above the pictures (like "1x Milk Tea, 3x Taro Boba"). Each
+    /// drink disappears as it's handed over, and the sign hides when nobody is waiting.
     /// </summary>
     public class OrderBoard : MonoBehaviour
     {
@@ -20,6 +23,9 @@ namespace BubbleTea.Customers
 
         [SerializeField, Tooltip("The sign's background, stretched to fit the drinks. Optional.")]
         private Transform backing;
+
+        [SerializeField, Tooltip("Text above the pictures listing the order. Optional.")]
+        private TextMesh label;
 
         [SerializeField, Tooltip("Size of the drink models.")]
         private float iconScale = 2f;
@@ -44,14 +50,57 @@ namespace BubbleTea.Customers
                 if (count > 0) DrinkIcons.Show(iconRow, front.Orders, iconScale, iconSpacing, icons);
                 else DrinkIcons.Clear(icons);
                 board.gameObject.SetActive(count > 0);
-                if (backing != null && count > 0)
-                {
-                    Vector3 size = backing.localScale;
-                    backing.localScale = new Vector3(count * iconSpacing + 0.3f, size.y, size.z);
-                }
+                if (label != null) label.text = count > 0 ? Describe(front.Orders) : "";
+                if (backing != null && count > 0) FitBacking(count);
             }
 
             if (count > 0 && Camera.main != null) board.rotation = Camera.main.transform.rotation;
+        }
+
+        // Stretches the sign to fit the pictures and, above them, the lines of text.
+        private void FitBacking(int count)
+        {
+            float width = count * iconSpacing + 0.3f;
+            float height = 1.1f;
+            if (label != null && label.text.Length > 0)
+            {
+                string[] lines = label.text.Split('\n');
+                float lineHeight = label.fontSize * label.characterSize * 0.1f * label.lineSpacing;
+                int longest = 0;
+                foreach (string line in lines) longest = Mathf.Max(longest, line.Length);
+                width = Mathf.Max(width, longest * lineHeight * 0.5f + 0.3f);
+                height = label.transform.localPosition.y + lines.Length * lineHeight + 0.15f + BackingBottom;
+            }
+            Vector3 position = backing.localPosition;
+            backing.localScale = new Vector3(width, height, backing.localScale.z);
+            backing.localPosition = new Vector3(position.x, height * 0.5f - BackingBottom, position.z);
+        }
+
+        private const float BackingBottom = 0.13f; // how far the sign reaches below the pictures
+
+        // "1x Milk Tea" with each kind on its own line.
+        private static string Describe(IReadOnlyList<Cooking.DrinkRecipe> orders)
+        {
+            var kinds = new List<ItemDefinition>();
+            var counts = new List<int>();
+            foreach (Cooking.DrinkRecipe order in orders)
+            {
+                if (order == null || order.Drink == null) continue;
+                int at = kinds.IndexOf(order.Drink);
+                if (at >= 0) counts[at]++;
+                else
+                {
+                    kinds.Add(order.Drink);
+                    counts.Add(1);
+                }
+            }
+            var text = new StringBuilder();
+            for (int i = 0; i < kinds.Count; i++)
+            {
+                if (i > 0) text.Append('\n');
+                text.Append(counts[i]).Append("x ").Append(kinds[i].DisplayName);
+            }
+            return text.ToString();
         }
     }
 }

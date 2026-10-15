@@ -134,8 +134,10 @@ namespace BubbleTea.EditorTools
                     Levels(fiveLevels, 0f, 1f, 2f, 3f, 4f, 5f), Costs(fiveLevels, 50, 120, 250, 500, 900)), // +1 item per level (see ItemCarrier)
                 GetOrCreateUpgrade("Brew Speed", StatId.BrewSpeed,
                     Levels(fiveLevels, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.25f), Costs(fiveLevels, 60, 140, 280, 550, 1000)),
+                // Saved as "Bigger Bars" (the asset name), shown as "Drink Shelf Space".
                 GetOrCreateUpgrade("Bigger Bars", StatId.StationCapacity,
-                    Levels(fiveLevels, 0f, 1f, 2f, 3f, 4f, 5f), Costs(fiveLevels, 70, 150, 300, 600, 1100)), // +1 finished drink per bar (see Station)
+                    Levels(fiveLevels, 0f, 1f, 2f, 3f, 4f, 5f), Costs(fiveLevels, 70, 150, 300, 600, 1100), // +1 finished drink per bar (see Station)
+                    shownName: "Drink Shelf Space"),
             };
             GameObject upgradeDesk = BuildUpgradeDeskPrefab();
             GameObject barista = BuildBaristaPrefab();
@@ -185,8 +187,9 @@ namespace BubbleTea.EditorTools
                     BuildDecorPrefab("Statue", new Color(0.85f, 0.7f, 0.55f), new Vector3(1.2f, 1.8f, 1.2f))),
                 // Built once the first shop is finished; the stop it builds leads to the Matcha House.
                 SecondShop = shop == 1
-                    ? GetOrCreateBuildable("Open Matcha House", 2500,
-                        BuildTravelPrefab("ToMatchaHouse", "Shop2", "Matcha House", new Color(0.55f, 0.78f, 0.45f)))
+                    ? GetOrCreateBuildable("Open Matcha House", 10000,
+                        BuildTravelPrefab("ToMatchaHouse", "Shop2", "Matcha House", new Color(0.55f, 0.78f, 0.45f)),
+                        keepPriceUpToDate: true)
                     : null,
                 TravelBack = shop > 1
                     ? BuildTravelPrefab("ToBobaShop", "Prototype", "Boba Shop", new Color(0.95f, 0.62f, 0.55f))
@@ -336,7 +339,9 @@ namespace BubbleTea.EditorTools
         }
 
         // Values and costs are kept up to date on every build.
-        private static UpgradeDefinition GetOrCreateUpgrade(string displayName, StatId stat, float[] values, int[] costs)
+        // shownName renames an upgrade in the menu without changing its asset (which save files refer to).
+        private static UpgradeDefinition GetOrCreateUpgrade(string displayName, StatId stat, float[] values, int[] costs,
+            string shownName = null)
         {
             UpgradeDefinition upgrade = GetOrCreateAsset<UpgradeDefinition>($"{DataFolder}/Upgrades/{FileName(displayName)}.asset", serialized =>
             {
@@ -344,6 +349,7 @@ namespace BubbleTea.EditorTools
                 serialized.FindProperty("stat").enumValueIndex = (int)stat;
             });
             var serialized = new SerializedObject(upgrade);
+            if (shownName != null) serialized.FindProperty("displayName").stringValue = shownName;
             SerializedProperty valueList = serialized.FindProperty("values");
             valueList.arraySize = values.Length;
             for (int i = 0; i < values.Length; i++) valueList.GetArrayElementAtIndex(i).floatValue = values[i];
@@ -474,6 +480,21 @@ namespace BubbleTea.EditorTools
             backing.transform.localScale = new Vector3(1f, 1.1f, 0.04f);
             backing.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial("OrderBoard", new Color(1f, 0.95f, 0.84f));
             Transform icons = AddAnchor(board, "Icons", Vector3.zero);
+
+            // The order in words above the pictures.
+            var labelGo = new GameObject("OrderText");
+            labelGo.transform.SetParent(board, false);
+            labelGo.transform.localPosition = new Vector3(0f, 0.95f, 0f);
+            var label = labelGo.AddComponent<TextMesh>();
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.font = font;
+            labelGo.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            label.fontSize = 64;
+            label.characterSize = 0.035f;
+            label.fontStyle = FontStyle.Bold;
+            label.anchor = TextAnchor.LowerCenter;
+            label.alignment = TextAlignment.Center;
+            label.color = new Color(0.35f, 0.18f, 0.1f);
             board.gameObject.SetActive(false);
 
             var view = root.AddComponent<OrderBoard>();
@@ -482,6 +503,7 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("board").objectReferenceValue = board;
             serialized.FindProperty("iconRow").objectReferenceValue = icons;
             serialized.FindProperty("backing").objectReferenceValue = backing.transform;
+            serialized.FindProperty("label").objectReferenceValue = label;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -497,7 +519,7 @@ namespace BubbleTea.EditorTools
             for (int i = 0; i < steps.Length; i++) stepList.GetArrayElementAtIndex(i).objectReferenceValue = steps[i];
 
             // Finished drinks stand side by side along the front of the bar (the machines are at
-            // the back), big enough to read at a glance. 3 to start; Bigger Bars adds one per level.
+            // the back), big enough to read at a glance. 3 to start; Drink Shelf Space adds one per level.
             float halfWidth = bodySize.x * 0.5f;
             float outputX = inputCapacity > 0 ? halfWidth - 0.8f : 0f;
             serialized.FindProperty("output.anchor").objectReferenceValue =
@@ -545,11 +567,7 @@ namespace BubbleTea.EditorTools
             SerializedProperty menuList = serialized.FindProperty("menu");
             menuList.arraySize = menu.Length;
             for (int i = 0; i < menu.Length; i++) menuList.GetArrayElementAtIndex(i).objectReferenceValue = menu[i];
-            serialized.FindProperty("drinks.anchor").objectReferenceValue =
-                AddAnchor(root.transform, "DrinkStack", new Vector3(-0.62f, bodySize.y, 0f));
-            serialized.FindProperty("drinks.capacity").intValue = 8;
             serialized.FindProperty("maxDrinksPerCustomer").intValue = shopNumber > 1 ? 4 : 3;
-            SetStackGrid(serialized, "drinks", 4, 2, 0.4f, DrinkSizeOnBars); // side by side, nearly as big as the order bubbles
             serialized.FindProperty("cashPile").objectReferenceValue = cashPile;
             serialized.FindProperty("queueStart").objectReferenceValue = queueStart;
             serialized.FindProperty("lane").stringValue = lane;
@@ -724,13 +742,13 @@ namespace BubbleTea.EditorTools
                 new Vector3(0.4f, 0.2f, 0.2f), GetOrCreateMaterial("RunnerApron", new Color(0.98f, 0.95f, 0.85f)));
             AddCharacterArt(StaffSlot("Barista"), root, body);
 
-            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.82f));
+            Transform hands = AddAnchor(root.transform, "HandStack", new Vector3(0f, 0.9f, 0.66f));
             var carrier = root.AddComponent<ItemCarrier>();
             var serialized = new SerializedObject(carrier);
             serialized.FindProperty("stack.anchor").objectReferenceValue = hands;
             serialized.FindProperty("stack.capacity").intValue = 1;
             // Drinks ride side by side on a tray.
-            SetStackGrid(serialized, "stack", 3, 2, TraySpacing, DrinkSize);
+            SetStackGrid(serialized, "stack", 3, 2, TraySpacing, TrayDrinkSize);
             serialized.FindProperty("tray").objectReferenceValue = AddTray(hands, shopNumber > 1);
             serialized.FindProperty("usesCarryUpgrade").boolValue = true; // Carry More lets baristas carry more too
             serialized.ApplyModifiedPropertiesWithoutUndo();

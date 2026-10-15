@@ -443,6 +443,7 @@ namespace BubbleTea.EditorTools
             CreatePricePanel(hud, content.Menu);
             CreateRatingView(hud, rating);
             CreatePriceyAlert(hud);
+            CreateStaffQuitAlert(hud);
             CreateWelcomeBackPopup(hud, offlineEarnings);
             CreateGameOverPopup(hud, rating, saveManager);
 
@@ -645,13 +646,13 @@ namespace BubbleTea.EditorTools
             // Items the player carries ride on a tray in front of them.
             var hands = new GameObject("HandStack").transform;
             hands.SetParent(player.transform, false);
-            hands.localPosition = new Vector3(0f, 0.1f, 0.95f);
+            hands.localPosition = new Vector3(0f, 0.1f, 0.78f);
             var carrier = player.AddComponent<ItemCarrier>();
             var serializedCarrier = new SerializedObject(carrier);
             serializedCarrier.FindProperty("stack.anchor").objectReferenceValue = hands;
             serializedCarrier.FindProperty("stack.capacity").intValue = 1; // +1 per Carry More level, like baristas
             // Drinks ride side by side on a tray instead of piling up.
-            SetStackGrid(serializedCarrier, "stack", 3, 2, TraySpacing, DrinkSize);
+            SetStackGrid(serializedCarrier, "stack", 3, 2, TraySpacing, TrayDrinkSize);
             serializedCarrier.FindProperty("tray").objectReferenceValue = AddTray(hands, matchaTray);
             serializedCarrier.ApplyModifiedPropertiesWithoutUndo();
             return player;
@@ -1217,7 +1218,7 @@ namespace BubbleTea.EditorTools
             hint.rectTransform.sizeDelta = new Vector2(900f, 160f);
             hint.horizontalOverflow = HorizontalWrapMode.Wrap;
             hint.verticalOverflow = VerticalWrapMode.Overflow;
-            hint.text = "Every customer who gives up waiting and walks out costs half a star.\nServing customers earns stars back. At 0 stars your shop closes!";
+            hint.text = "Every customer who walks out (tired of waiting or prices too high) costs half a star.\nServing customers earns stars back. At 0 stars your shop closes!";
             hint.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.7f);
 
             SetReference(view, "rating", rating);
@@ -1399,7 +1400,7 @@ namespace BubbleTea.EditorTools
             hint.horizontalOverflow = HorizontalWrapMode.Wrap;
             hint.fontStyle = FontStyle.Normal;
             hint.color = new Color(0.85f, 0.85f, 0.9f);
-            hint.text = "Higher prices earn more, but customers who think it's too much walk out and lower your rating a little.";
+            hint.text = "Higher prices earn more, but customers who think it's too much walk out and cost half a star.";
 
             Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
             SetTopRow((RectTransform)close.transform, top + rowHeight * menu.Length + 130f, 110f, 260f, 260f);
@@ -1692,8 +1693,37 @@ namespace BubbleTea.EditorTools
             Stretch(text.rectTransform);
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.raycastTarget = false;
-            text.text = "A customer left: too pricey!\nConsider lowering your prices.";
+            text.text = "A customer left: too pricey! (-0.5 stars)\nConsider lowering your prices.";
             SetReference(alert, "banner", banner.gameObject);
+        }
+
+        // A red banner when workers quit because their wages couldn't be paid.
+        private static void CreateStaffQuitAlert(Transform hud)
+        {
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform root = CreateUiObject("StaffQuitAlert", hud);
+            Stretch(root);
+            var alert = root.gameObject.AddComponent<StaffQuitAlert>();
+
+            RectTransform banner = CreateUiObject("Banner", root);
+            banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 1f);
+            banner.pivot = new Vector2(0.5f, 1f);
+            banner.anchoredPosition = new Vector2(0f, -HudMargin - 120f * HudScale - 170f); // under the pricey alert
+            banner.sizeDelta = new Vector2(760f, 130f);
+            var image = banner.gameObject.AddComponent<Image>();
+            image.sprite = rounded;
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.55f, 0.2f, 0.5f, 0.92f);
+            image.raycastTarget = false;
+
+            Text text = CreateHudText("Text", banner, font, 36, TextAnchor.MiddleCenter);
+            Stretch(text.rectTransform);
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.raycastTarget = false;
+            SetReference(alert, "banner", banner.gameObject);
+            SetReference(alert, "label", text);
         }
 
         private static void CreateUpgradePanel(Transform hud, UpgradeManager manager, UpgradeDefinition[] upgrades)
@@ -1934,12 +1964,15 @@ namespace BubbleTea.EditorTools
         /// <summary>Every drink in the world (bars, counter, trays, order bubbles) is shown this big.</summary>
         internal const float DrinkSize = 2f;
 
-        // Gap between drinks on a tray, so drinks at full size fit side by side.
-        internal const float TraySpacing = 0.46f;
+        // Drinks on a tray are a bit smaller than elsewhere, so the tray stays compact.
+        internal const float TrayDrinkSize = DrinkSize * 0.72f;
+
+        // Gap between drinks on a tray, so the smaller drinks fit side by side.
+        internal const float TraySpacing = 0.33f;
 
         // A lacquered serving tray under a carrier's hands: red in the Boba Shop, green in the
         // Matcha House. The ItemCarrier shows it only while something is being carried. Drinks sit
-        // in a 3 x 2 grid on top, at full size.
+        // in a 3 x 2 grid on top.
         internal static GameObject AddTray(Transform hands, bool matcha)
         {
             var tray = new GameObject("Tray");
@@ -1948,7 +1981,7 @@ namespace BubbleTea.EditorTools
                 ? GetOrCreateMaterial("TrayLacquerMatcha", new Color(0.33f, 0.52f, 0.26f))
                 : GetOrCreateMaterial("TrayLacquer", new Color(0.72f, 0.16f, 0.14f));
             Material gold = GetOrCreateMaterial("TrayGold", new Color(0.93f, 0.72f, 0.30f));
-            const float width = 1.5f, depth = 1.02f;
+            const float width = 1.08f, depth = 0.74f;
             TrayPart(tray.transform, new Vector3(0f, -0.02f, 0f), new Vector3(width, 0.035f, depth), lacquer);
             TrayPart(tray.transform, new Vector3(0f, 0.01f, depth / 2f), new Vector3(width, 0.05f, 0.03f), gold);
             TrayPart(tray.transform, new Vector3(0f, 0.01f, -depth / 2f), new Vector3(width, 0.05f, 0.03f), gold);

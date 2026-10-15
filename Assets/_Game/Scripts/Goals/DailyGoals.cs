@@ -194,12 +194,12 @@ namespace BubbleTea.Goals
             {
                 case GoalKind.SellAny:
                     goal.target = NextMilestone(DrinkMilestones, 500, Mathf.Max(lastTarget, Current(kind, null)));
-                    goal.reward = Reward(goal.target * AveragePrice() * 0.4f);
+                    goal.reward = Reward(Shrink(goal.target) * AveragePrice() * 0.4f);
                     goal.label = $"Sell {goal.target:N0} drinks";
                     break;
                 case GoalKind.EarnMoney:
                     goal.target = NextMilestone(MoneyMilestones, -2, Mathf.Max(lastTarget, Current(kind, null)));
-                    goal.reward = Reward(goal.target * 0.25f);
+                    goal.reward = Reward(Shrink(goal.target) * 0.3f);
                     goal.label = $"Earn ${goal.target:N0} from sales";
                     break;
                 case GoalKind.SellDrink:
@@ -207,7 +207,7 @@ namespace BubbleTea.Goals
                     if (recipe == null) return null;
                     goal.item = recipe.Drink.name;
                     goal.target = NextMilestone(OneDrinkMilestones, 150, Current(kind, goal.item));
-                    goal.reward = Reward(goal.target * recipe.Price * 0.6f);
+                    goal.reward = Reward(Shrink(goal.target) * recipe.Price * 0.5f);
                     goal.label = $"Sell {goal.target:N0} {recipe.Drink.DisplayName}";
                     break;
                 default:
@@ -256,6 +256,10 @@ namespace BubbleTea.Goals
             }
             return count > 0 ? total / count : 10f;
         }
+
+        // Rewards grow slower than the milestones, so later goals don't pay out huge sums
+        // (a target 10 times bigger pays about 5.6 times more).
+        private static float Shrink(int target) => Mathf.Pow(Mathf.Max(1, target), 0.75f);
 
         private int Reward(float amount) => Mathf.Max(25, RoundTo(amount * rewardMultiplier, 5));
 
