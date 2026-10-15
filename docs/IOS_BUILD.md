@@ -72,6 +72,7 @@ With a free Apple ID, the app stops opening after 7 days. Just press ▶ in Xcod
 
 ## When something goes wrong
 
+- **Xcode build fails with "Sandbox: ... deny file-write-create" or "deny file-read-data":** Xcode's User Script Sandboxing is blocking Unity's IL2CPP step. The project turns it off by itself on every iOS build, so pull the latest version and build from Unity again (choose Replace). To fix an existing Xcode project by hand: click Unity-iPhone at the top of the left sidebar, open Build Settings, search "sandboxing", and set **User Script Sandboxing** to **No** for every target (Unity-iPhone, UnityFramework, GameAssembly). Then Product > Clean Build Folder and press ▶.
 - **"iOS module not loaded" in Unity:** iOS Build Support isn't installed for 6.6 (see step 2).
 - **The iPhone isn't in Xcode's device list, or "iOS 26 is not supported":** update Xcode, and make sure Developer Mode is on (step 6).
 - **"No signing certificate" or "Failed to register bundle identifier":** pick your Team, or change the bundle ID (step 5).
