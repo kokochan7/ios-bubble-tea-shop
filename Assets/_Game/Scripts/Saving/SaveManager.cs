@@ -159,6 +159,7 @@ namespace BubbleTea.Saving
                 clockMinutes = GameClock.Instance != null ? GameClock.Instance.MinuteOfDay : -1f,
                 clockDay = GameClock.Instance != null ? GameClock.Instance.Day : 1,
             };
+            if (ShopRecords.Instance != null) data.records = ShopRecords.Instance.Snapshot();
             if (dailyGoals != null) data.goals.AddRange(dailyGoals.Goals);
             foreach (UnlockPad pad in pads)
             {
@@ -253,6 +254,7 @@ namespace BubbleTea.Saving
                 }
             }
 
+            if (ShopRecords.Instance != null) ShopRecords.Instance.Restore(data.records);
             if (dailyGoals != null) dailyGoals.Restore(data.goalsDay, data.goals);
             if (rating != null && data.ratingService >= 0f) rating.Restore(data.ratingService, data.ratingLost);
             if (floorCash != null) floorCash.Restore(data.floorCashGiven);

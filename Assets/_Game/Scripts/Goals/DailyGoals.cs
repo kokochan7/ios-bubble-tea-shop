@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using BubbleTea.Cooking;
 using BubbleTea.Core;
 using BubbleTea.Economy;
-using BubbleTea.Upgrades;
 using UnityEngine;
 
 namespace BubbleTea.Goals
@@ -37,9 +36,13 @@ namespace BubbleTea.Goals
     }
 
     /// <summary>
-    /// Three small goals at a time ("Sell 20 Taro Milk Tea", "Get 8 tips"...) that pay a cash
-    /// bonus. Claiming a finished goal replaces it with a new one straight away, so there is
-    /// always something to work toward. Targets and rewards grow as the shop unlocks more drinks.
+    /// Three milestone goals that grow with the shop, with no randomness:
+    ///  - sell drinks (10, 25, 50, 100, 200...),
+    ///  - earn money from sales ($100, $250, $500, $1,000...),
+    ///  - sell the newest drink on the menu (5, 15, 30, 60...), which moves on to each new drink as
+    ///    the shop unlocks it.
+    /// Progress is the shop's lifetime total from <see cref="ShopRecords"/>. Claiming a finished
+    /// goal pays its bonus and sets the next milestone on the same track.
     /// (The class keeps its old name so saves and scenes still find it.)
     /// </summary>
     public class DailyGoals : MonoBehaviour
@@ -47,25 +50,26 @@ namespace BubbleTea.Goals
         [SerializeField, Tooltip("Where rewards go.")]
         private Wallet wallet;
 
-        [SerializeField, Tooltip("Every drink on the menu. Goals only ask for drinks the shop can make.")]
+        [SerializeField, Tooltip("Every drink on the menu, in unlock order. The drink goal follows the newest one the shop can make.")]
         private DrinkRecipe[] menu;
 
-        [SerializeField, Tooltip("Used to size money goals to how fast the shop earns. Optional.")]
+        [SerializeField, Tooltip("Kept for older scenes; no longer used.")]
         private OfflineEarnings earnings;
-
-        [SerializeField, Range(1, 5), Tooltip("Goals shown at once.")]
-        private int goalsPerDay = 3;
 
         [SerializeField, Min(0.1f), Tooltip("Multiplies every reward.")]
         private float rewardMultiplier = 1f;
 
+        private static readonly int[] DrinkMilestones = { 10, 25, 50, 100, 200, 350, 500, 750, 1000 };
+        private static readonly int[] MoneyMilestones = { 100, 250, 500, 1000, 2500, 5000, 10000, 20000, 40000 };
+        private static readonly int[] OneDrinkMilestones = { 5, 15, 30, 60, 100, 150, 250 };
+        private static readonly GoalKind[] Tracks = { GoalKind.SellAny, GoalKind.EarnMoney, GoalKind.SellDrink };
+
         private readonly List<GoalState> goals = new();
-        private readonly System.Random rng = new();
         private string day;
 
         public IReadOnlyList<GoalState> Goals => goals;
 
-        /// <summary>Kept for older saves; goals no longer change by day.</summary>
+        /// <summary>Kept for older saves.</summary>
         public string Day => day;
 
         /// <summary>True if any goal is finished and waiting to be claimed.</summary>
@@ -77,51 +81,40 @@ namespace BubbleTea.Goals
         /// <summary>Raised the moment a goal is finished.</summary>
         public event Action<GoalState> Completed;
 
-        private void OnEnable()
-        {
-            GameEvents.DrinkServed += OnDrinkServed;
-            GameEvents.DrinkSold += OnDrinkSold;
-            GameEvents.Tipped += OnTipped;
-            GameEvents.UpgradeBought += OnUpgradeBought;
-        }
+        private void OnEnable() => ShopRecords.Changed += UpdateProgress;
+        private void OnDisable() => ShopRecords.Changed -= UpdateProgress;
 
-        private void OnDisable()
-        {
-            GameEvents.DrinkServed -= OnDrinkServed;
-            GameEvents.DrinkSold -= OnDrinkSold;
-            GameEvents.Tipped -= OnTipped;
-            GameEvents.UpgradeBought -= OnUpgradeBought;
-        }
-
-        private void OnDrinkServed(string itemId)
-        {
-            Advance(GoalKind.SellAny, null, 1);
-            Advance(GoalKind.SellDrink, itemId, 1);
-        }
-
-        private void OnDrinkSold(Vector3 _, int amount) => Advance(GoalKind.EarnMoney, null, amount);
-        private void OnTipped(Vector3 _, int amount) => Advance(GoalKind.Tips, null, 1);
-        private void OnUpgradeBought() => Advance(GoalKind.BuyUpgrades, null, 1);
-
-        /// <summary>Puts back goals from the save file.</summary>
+        /// <summary>Puts back goals from the save file (only milestone goals; anything else is replaced).</summary>
         public void Restore(string savedDay, List<GoalState> saved)
         {
             day = savedDay;
             goals.Clear();
-            if (saved != null) goals.AddRange(saved.FindAll(g => g != null && g.target > 0));
+            if (saved != null)
+            {
+                foreach (GoalKind kind in Tracks)
+                {
+                    GoalState goal = saved.Find(g => g != null && g.kind == kind && g.target > 0 && !g.claimed);
+                    if (goal != null) goals.Add(goal);
+                }
+            }
             Changed?.Invoke();
         }
 
-        /// <summary>Fills up to the full set of goals (dropping claimed ones). Call after the save is loaded.</summary>
+        /// <summary>Makes sure every track has a goal. Call after the save is loaded.</summary>
         public void EnsureGoals()
         {
-            int before = goals.Count;
             goals.RemoveAll(g => g.claimed);
-            Generate();
-            if (goals.Count != before) Changed?.Invoke();
+            for (int i = 0; i < Tracks.Length; i++)
+            {
+                if (goals.Exists(g => g.kind == Tracks[i])) continue;
+                GoalState goal = MakeGoal(Tracks[i], 0);
+                if (goal != null) goals.Insert(Mathf.Min(i, goals.Count), goal);
+            }
+            UpdateProgress();
+            Changed?.Invoke();
         }
 
-        /// <summary>Pays the reward for a finished goal.</summary>
+        /// <summary>Pays the reward for a finished goal and sets the next milestone on its track.</summary>
         public bool Claim(int index)
         {
             if (index < 0 || index >= goals.Count) return false;
@@ -132,123 +125,136 @@ namespace BubbleTea.Goals
             if (wallet != null) wallet.Add(goal.reward);
             GameEvents.RaiseBonusCollected();
 
-            // A new goal takes its place.
             goals.RemoveAt(index);
-            Generate(index);
+            GoalState next = MakeGoal(goal.kind, goal.target);
+            if (next != null) goals.Insert(index, next);
+            UpdateProgress();
             Changed?.Invoke();
             return true;
         }
 
-        private void Advance(GoalKind kind, string item, int amount)
+        // Progress is the lifetime total, so it's always right after loading too.
+        private void UpdateProgress()
         {
             bool changed = false;
             foreach (GoalState goal in goals)
             {
-                if (goal.kind != kind || goal.IsComplete) continue;
-                if (kind == GoalKind.SellDrink && goal.item != item) continue;
-
-                goal.progress = Mathf.Min(goal.target, goal.progress + amount);
+                bool wasComplete = goal.IsComplete;
+                int progress = Mathf.Min(goal.target, Current(goal.kind, goal.item));
+                if (progress == goal.progress) continue;
+                goal.progress = progress;
                 changed = true;
-                if (goal.IsComplete) Completed?.Invoke(goal);
+                if (!wasComplete && goal.IsComplete) Completed?.Invoke(goal);
+            }
+            // A newer drink just unlocked: an unfinished drink goal moves on to it (or the drink
+            // goal appears, once the first drink can be made).
+            DrinkRecipe newest = NewestDrink();
+            if (newest != null && !goals.Exists(g => g.kind == GoalKind.SellDrink))
+            {
+                GoalState first = MakeGoal(GoalKind.SellDrink, 0);
+                if (first != null)
+                {
+                    goals.Add(first);
+                    changed = true;
+                }
+            }
+            GoalState drinkGoal = goals.Find(g => g.kind == GoalKind.SellDrink && !g.IsComplete);
+            if (drinkGoal != null && newest != null && drinkGoal.item != newest.Drink.name)
+            {
+                int at = goals.IndexOf(drinkGoal);
+                GoalState replacement = MakeGoal(GoalKind.SellDrink, 0);
+                if (replacement != null)
+                {
+                    goals[at] = replacement;
+                    replacement.progress = Mathf.Min(replacement.target, Current(replacement.kind, replacement.item));
+                    changed = true;
+                }
             }
             if (changed) Changed?.Invoke();
         }
 
-        // Adds goals until there are enough, inserting the first new one at insertAt (so a
-        // replaced goal keeps its place in the list). Avoids repeating a kind already shown.
-        private void Generate(int insertAt = -1)
+        private static int Current(GoalKind kind, string item)
         {
-            var makeable = new List<DrinkRecipe>();
-            if (menu != null)
+            ShopRecords records = ShopRecords.Instance;
+            if (records == null) return 0;
+            return kind switch
             {
-                foreach (DrinkRecipe recipe in menu)
-                {
-                    if (recipe != null && recipe.Drink != null && Station.AnyCanMake(recipe.Drink)) makeable.Add(recipe);
-                }
-            }
-            int level = makeable.Count;
-            float averagePrice = 10f;
-            if (makeable.Count > 0)
-            {
-                averagePrice = 0f;
-                foreach (DrinkRecipe recipe in makeable) averagePrice += recipe.Price;
-                averagePrice /= makeable.Count;
-            }
-
-            var kinds = new List<GoalKind> { GoalKind.SellAny, GoalKind.Tips, GoalKind.EarnMoney };
-            if (makeable.Count > 0) kinds.Add(GoalKind.SellDrink);
-            if (HasUpgradeToBuy()) kinds.Add(GoalKind.BuyUpgrades);
-
-            // A second "sell this drink" goal makes shops with many drinks more interesting.
-            if (makeable.Count >= 3) kinds.Add(GoalKind.SellDrink);
-            foreach (GoalState existing in goals) kinds.Remove(existing.kind);
-
-            while (goals.Count < goalsPerDay && kinds.Count > 0)
-            {
-                int pick = rng.Next(kinds.Count);
-                GoalKind kind = kinds[pick];
-                kinds.RemoveAt(pick);
-                GoalState goal = MakeGoal(kind, rng, level, averagePrice, makeable);
-                if (goal == null) continue;
-                if (insertAt >= 0 && insertAt <= goals.Count)
-                {
-                    goals.Insert(insertAt, goal);
-                    insertAt = -1;
-                }
-                else
-                {
-                    goals.Add(goal);
-                }
-            }
+                GoalKind.SellAny => records.DrinksSold,
+                GoalKind.EarnMoney => records.MoneyEarned,
+                GoalKind.SellDrink => records.SoldOf(item),
+                _ => 0,
+            };
         }
 
-        private GoalState MakeGoal(GoalKind kind, System.Random rng, int level, float averagePrice, List<DrinkRecipe> makeable)
+        // The next milestone on a track that is above both the last claimed one and the current total.
+        private GoalState MakeGoal(GoalKind kind, int lastTarget)
         {
             var goal = new GoalState { kind = kind };
             switch (kind)
             {
-                case GoalKind.SellDrink:
-                    DrinkRecipe recipe = makeable[rng.Next(makeable.Count)];
-                    if (goals.Exists(g => g.kind == GoalKind.SellDrink && g.item == recipe.Drink.name)) return null;
-                    goal.item = recipe.Drink.name;
-                    goal.target = 8 + 3 * level + rng.Next(5);
-                    goal.reward = Reward(goal.target * recipe.Price * 1f);
-                    goal.label = $"Sell {goal.target} {recipe.Drink.DisplayName}";
-                    break;
                 case GoalKind.SellAny:
-                    goal.target = 15 + 5 * level + rng.Next(6);
-                    goal.reward = Reward(goal.target * averagePrice * 0.6f);
-                    goal.label = $"Sell {goal.target} drinks";
-                    break;
-                case GoalKind.Tips:
-                    goal.target = 5 + 2 * level + rng.Next(4);
-                    goal.reward = Reward(goal.target * averagePrice * 1.2f);
-                    goal.label = $"Get {goal.target} tips";
+                    goal.target = NextMilestone(DrinkMilestones, 500, Mathf.Max(lastTarget, Current(kind, null)));
+                    goal.reward = Reward(goal.target * AveragePrice() * 0.4f);
+                    goal.label = $"Sell {goal.target:N0} drinks";
                     break;
                 case GoalKind.EarnMoney:
-                    float rate = earnings != null ? earnings.RatePerMinute : 0f;
-                    goal.target = RoundTo(Mathf.Max(150f + 100f * level, rate * 10f), 50);
-                    goal.reward = Reward(goal.target * 0.4f);
+                    goal.target = NextMilestone(MoneyMilestones, -2, Mathf.Max(lastTarget, Current(kind, null)));
+                    goal.reward = Reward(goal.target * 0.25f);
                     goal.label = $"Earn ${goal.target:N0} from sales";
                     break;
-                case GoalKind.BuyUpgrades:
-                    goal.target = 1 + rng.Next(2);
-                    goal.reward = Reward(100f + 60f * level * goal.target);
-                    goal.label = goal.target == 1 ? "Buy an upgrade" : $"Buy {goal.target} upgrades";
+                case GoalKind.SellDrink:
+                    DrinkRecipe recipe = NewestDrink();
+                    if (recipe == null) return null;
+                    goal.item = recipe.Drink.name;
+                    goal.target = NextMilestone(OneDrinkMilestones, 150, Current(kind, goal.item));
+                    goal.reward = Reward(goal.target * recipe.Price * 0.6f);
+                    goal.label = $"Sell {goal.target:N0} {recipe.Drink.DisplayName}";
                     break;
+                default:
+                    return null;
             }
             return goal;
         }
 
-        private static bool HasUpgradeToBuy()
+        // The first milestone above the value. Past the end of the list, milestones keep growing:
+        // by `step` each time, or (negative step) doubling.
+        private static int NextMilestone(int[] milestones, int step, int above)
         {
-            UpgradeManager manager = UpgradeManager.Instance;
-            if (manager == null) return false;
-            foreach (UpgradeDefinition upgrade in manager.All)
+            foreach (int milestone in milestones)
             {
-                if (upgrade != null && manager.NextCost(upgrade) >= 0) return true;
+                if (milestone > above) return milestone;
             }
-            return false;
+            long next = milestones[milestones.Length - 1];
+            while (next <= above) next = step < 0 ? next * 2 : next + step;
+            return (int)Mathf.Min(next, int.MaxValue / 2);
+        }
+
+        // The last drink on the menu that the shop can make right now.
+        private DrinkRecipe NewestDrink()
+        {
+            if (menu == null) return null;
+            for (int i = menu.Length - 1; i >= 0; i--)
+            {
+                DrinkRecipe recipe = menu[i];
+                if (recipe != null && recipe.Drink != null && Station.AnyCanMake(recipe.Drink)) return recipe;
+            }
+            return null;
+        }
+
+        private float AveragePrice()
+        {
+            float total = 0f;
+            int count = 0;
+            if (menu != null)
+            {
+                foreach (DrinkRecipe recipe in menu)
+                {
+                    if (recipe == null || recipe.Drink == null || !Station.AnyCanMake(recipe.Drink)) continue;
+                    total += recipe.Price;
+                    count++;
+                }
+            }
+            return count > 0 ? total / count : 10f;
         }
 
         private int Reward(float amount) => Mathf.Max(25, RoundTo(amount * rewardMultiplier, 5));

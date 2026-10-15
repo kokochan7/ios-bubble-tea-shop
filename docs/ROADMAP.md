@@ -246,3 +246,10 @@ Tap to open pass:
 - The red carpet is gone; the To Matcha House bus stop now stands on the left of the dining room, like level 2's To Boba Shop stop.
 - Cash Pile 1 (the starting floor money) sits in the kitchen just left of the counter, with a "$on the pile/$left to collect" label (like $30/$500) that disappears once all $500 is collected.
 - A sale makes no sound of its own anymore (the ka-ching and the ding were both removed); collecting money still ticks.
+
+Milestones and stats pass:
+
+- Goals are fixed milestones with no randomness (`Goals/DailyGoals`): sell drinks (10, 25, 50, 100...), earn money ($100, $250, $500, $1,000...) and sell the newest drink on the menu (5, 15, 30...). Progress is the lifetime total, and claiming sets the next milestone.
+- New `Goals/ShopRecords` keeps lifetime totals per shop (money, drinks of each kind, customers, tips, walkouts, too pricey, upgrades, tables cleaned, time played), saved in SaveData v9. A STATS button under GOALS shows them (`UI/StatsPanel`).
+- Workers steer around solid things instead of walking through them (`Staff/StaffSteering`); baristas help from in front of a bar, and the cleaner stands beside a table.
+- No more breakfast/lunch/dinner rushes: customer traffic drifts to a random level (0.6x to 1.8x) every 15 to 40 seconds. The clock runs 10 game minutes per second (a day is about 2.4 minutes).

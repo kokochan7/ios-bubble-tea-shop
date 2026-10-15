@@ -42,7 +42,8 @@ namespace BubbleTea.Staff
             SeatingTable messy = NearestMessyTable();
             if (messy != null)
             {
-                if (WalkTo(messy.ZoneCenter)) messy.TryCleanOne();
+                // Stand in the aisle beside the table, not inside it.
+                if (WalkTo(messy.ZoneCenter + new Vector3(0f, 0f, -1f))) messy.TryCleanOne();
                 return;
             }
 
@@ -100,7 +101,7 @@ namespace BubbleTea.Staff
             if (offset.sqrMagnitude < 0.09f) return true;
 
             float pace = speed * Stats.Get(StatId.MoveSpeed, 1f);
-            transform.position = Vector3.MoveTowards(transform.position, target, pace * Time.deltaTime);
+            StaffSteering.Step(transform, target, pace * Time.deltaTime);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(offset), 720f * Time.deltaTime);
             return false;
         }

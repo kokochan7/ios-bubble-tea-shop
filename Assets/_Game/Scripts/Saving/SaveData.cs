@@ -12,7 +12,7 @@ namespace BubbleTea.Saving
     public class SaveData
     {
         /// <summary>Bumped when the layout changes, so old saves can be upgraded instead of lost.</summary>
-        public int version = 8;
+        public int version = 9;
 
         public int money;
         public List<PadSave> pads = new();
@@ -47,6 +47,8 @@ namespace BubbleTea.Saving
         /// <summary>Added in version 8: the shop clock (minutes since midnight, -1 = not saved) and day number.</summary>
         public float clockMinutes = -1f;
         public int clockDay = 1;
+        /// <summary>Added in version 9: lifetime totals for the Stats panel and the milestone goals.</summary>
+        public ShopRecordsSave records = new();
     }
 
     /// <summary>One unlock pad's progress.</summary>

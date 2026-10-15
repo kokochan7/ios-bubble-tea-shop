@@ -40,7 +40,7 @@ namespace BubbleTea.Staff
         [SerializeField, Tooltip("Seconds between looking for a busier station while helping at one.")]
         private float rethinkSeconds = 8f;
 
-        [SerializeField, Tooltip("How far behind a station they stand to help, in meters.")]
+        [SerializeField, Tooltip("How far in front of a station's middle they stand to help, in meters.")]
         private float standDistance = 1.1f;
 
         private enum Job { None, Fetch, Deliver, Trash }
@@ -185,13 +185,17 @@ namespace BubbleTea.Staff
             return score;
         }
 
-        // Behind the station, on the opposite side from where the player stands.
+        // Where a barista stands while helping at a station.
         private Vector3 StandSpot(Station target)
         {
-            Vector3 away = target.transform.position - target.ZoneCenter;
-            away.y = 0f;
-            if (away.sqrMagnitude < 0.0001f) away = -target.transform.forward;
-            return target.transform.position + away.normalized * standDistance;
+            // In front of the bar (the bars stand against the back wall), a little to one side
+            // so it doesn't block the hand-off spot.
+            Vector3 front = target.ZoneCenter - target.transform.position;
+            front.y = 0f;
+            if (front.sqrMagnitude < 0.0001f) front = target.transform.forward;
+            front.Normalize();
+            Vector3 side = Vector3.Cross(Vector3.up, front);
+            return target.transform.position + front * standDistance + side * 0.7f;
         }
 
         // ---------- Choosing a job ----------
@@ -446,7 +450,7 @@ namespace BubbleTea.Staff
             if (offset.sqrMagnitude < 0.09f) return true;
 
             float pace = speed * Stats.Get(StatId.MoveSpeed, 1f);
-            transform.position = Vector3.MoveTowards(transform.position, target, pace * Time.deltaTime);
+            StaffSteering.Step(transform, target, pace * Time.deltaTime);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(offset), 720f * Time.deltaTime);
             return false;
         }

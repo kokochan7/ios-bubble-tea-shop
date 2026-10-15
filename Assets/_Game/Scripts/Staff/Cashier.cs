@@ -76,7 +76,7 @@ namespace BubbleTea.Staff
                 return;
             }
             float pace = speed * Stats.Get(StatId.MoveSpeed, 1f);
-            transform.position = Vector3.MoveTowards(transform.position, target, pace * Time.deltaTime);
+            StaffSteering.Step(transform, target, pace * Time.deltaTime);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(offset), 720f * Time.deltaTime);
         }
     }

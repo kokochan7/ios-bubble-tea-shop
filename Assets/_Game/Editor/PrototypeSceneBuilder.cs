@@ -425,6 +425,7 @@ namespace BubbleTea.EditorTools
             UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
             CreateUpgradePanel(hud, upgrades, content.Upgrades);
             OfflineEarnings offlineEarnings = CreateOfflineEarnings(wallet);
+            new GameObject("ShopRecords").AddComponent<ShopRecords>(); // lifetime totals for goals and stats
             DailyGoals dailyGoals = CreateDailyGoals(wallet, content.Menu, offlineEarnings);
             ShopRating rating = CreateShopRating(pads, content);
             SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings, dailyGoals, rating, floorCash);
@@ -434,6 +435,7 @@ namespace BubbleTea.EditorTools
             CreateFeedback();
             CreateSettingsMenu(hud, saveManager, wallet, upgrades);
             CreateGoalsPanel(hud, dailyGoals);
+            CreateStatsPanel(hud, content.Menu);
             CreateClock(hud);
             CreatePricePanel(hud, content.Menu);
             CreateRatingView(hud, rating);
@@ -1021,7 +1023,7 @@ namespace BubbleTea.EditorTools
             SetTopRow(hint.rectTransform, 115f, 60f, 0f, 0f);
             hint.fontStyle = FontStyle.Normal;
             hint.color = new Color(0.8f, 0.8f, 0.85f);
-            hint.text = "New goals every day at midnight";
+            hint.text = "Reach each milestone for a bonus";
 
             var descriptions = new Text[rows];
             var progress = new Text[rows];
@@ -1073,6 +1075,52 @@ namespace BubbleTea.EditorTools
             SetReferences(view, "claimButtons", claims);
             SetReferences(view, "claimLabels", claimLabels);
             SetReference(view, "banner", banner);
+        }
+
+        // A STATS button under GOALS that opens this shop's lifetime totals.
+        private static void CreateStatsPanel(Transform hud, DrinkRecipe[] menu)
+        {
+            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            RectTransform root = CreateUiObject("Stats", hud);
+            Stretch(root);
+            var view = root.gameObject.AddComponent<StatsPanel>();
+
+            Button openButton = CreateMenuButton("StatsButton", root, "STATS", rounded, font, new Color(0.45f, 0.62f, 0.9f, 0.9f), out _);
+            var openRect = (RectTransform)openButton.transform;
+            openRect.anchorMin = openRect.anchorMax = new Vector2(1f, 1f);
+            openRect.pivot = new Vector2(1f, 1f);
+            openRect.anchoredPosition = new Vector2(-HudMargin, -HudMargin - 2f * (110f * HudScale + 10f));
+            openRect.sizeDelta = new Vector2(200f, 110f);
+            openRect.localScale = Vector3.one * HudScale;
+
+            RectTransform panel = CreateUiObject("Panel", root);
+            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = new Vector2(940f, 1360f);
+            var panelImage = panel.gameObject.AddComponent<Image>();
+            panelImage.sprite = rounded;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.95f);
+
+            Text title = CreateHudText("Title", panel, font, 60, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 20f, 100f, 0f, 0f);
+            title.text = "STATS";
+
+            Text body = CreateHudText("Body", panel, font, 38, TextAnchor.UpperLeft);
+            SetTopRow(body.rectTransform, 140f, 1060f, 50f, 50f);
+            body.fontStyle = FontStyle.Normal;
+            body.horizontalOverflow = HorizontalWrapMode.Wrap;
+            body.verticalOverflow = VerticalWrapMode.Overflow;
+
+            Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
+            SetTopRow((RectTransform)close.transform, 1220f, 110f, 250f, 250f);
+
+            SetReference(view, "panel", panel.gameObject);
+            SetReference(view, "openButton", openButton);
+            SetReference(view, "closeButton", close);
+            SetReference(view, "body", body);
+            SetReferences(view, "menu", menu);
         }
 
         // The star rating. Every pad counts; decorations and big expansions count more.
@@ -1232,7 +1280,7 @@ namespace BubbleTea.EditorTools
             SetReference(popup, "earnings", earnings);
         }
 
-        // The shop clock (rush hours) and its display in the top-left corner.
+        // The shop clock (random customer traffic) and its display in the top-left corner.
         // Size and edge gap of the top-corner HUD widgets (clock, money, stars, MENU, GOALS).
         private const float HudScale = 0.62f;
         private const float HudMargin = 16f;
@@ -1261,20 +1309,10 @@ namespace BubbleTea.EditorTools
             SetTopRow(day.rectTransform, 70f, 44f, 0f, 0f);
             day.color = new Color(0.8f, 0.8f, 0.88f);
 
-            Text period = CreateHudText("Period", root, font, 36, TextAnchor.UpperLeft);
-            // Beside the clock (the money sits right under it).
-            period.rectTransform.anchorMin = period.rectTransform.anchorMax = new Vector2(1f, 0.5f);
-            period.rectTransform.pivot = new Vector2(0f, 0.5f);
-            period.rectTransform.anchoredPosition = new Vector2(14f, 0f);
-            period.alignment = TextAnchor.MiddleLeft;
-            period.rectTransform.sizeDelta = new Vector2(420f, 50f);
-            period.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.7f);
-
             var view = root.gameObject.AddComponent<ClockView>();
             SetReference(view, "clock", clock);
             SetReference(view, "timeLabel", time);
             SetReference(view, "dayLabel", day);
-            SetReference(view, "periodLabel", period);
         }
 
         // Opens when you tap a counter: a row per drink to raise or lower its price.
