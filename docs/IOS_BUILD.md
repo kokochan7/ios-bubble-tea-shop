@@ -55,12 +55,17 @@ The project is already set up for iPhone: the app name (Bubble Tea Shop), the bu
 
 With a free Apple ID, the app stops opening after 7 days. Just press ▶ in Xcode again to renew it.
 
-## Every new version
+## Every new version (the quick way)
 
-1. On the PC, commit and push.
-2. On the Mac, open GitHub Desktop and click **Pull origin**, then open the project in Unity.
-3. Build Profiles > **Build**, choose the same folder, and pick **Replace** when asked.
-4. In Xcode, press ▶. Your signing settings are kept.
+Do this all on the Mac, with the iPhone plugged in (or on the same Wi-Fi once Xcode has paired with it):
+
+1. In GitHub Desktop, click **Pull origin**.
+2. In Unity, wait for it to finish loading. Only if the update says scenes changed: click **Bubble Tea > Build Second Shop Scene**, then **Build Prototype Scene**.
+3. **File > Build Profiles > iOS**, then click **Build And Run**. Choose the same folder and pick **Append** (faster than Replace). Unity builds, opens Xcode and installs the game on the phone by itself, so you don't have to press anything in Xcode.
+
+Afterwards, don't commit the files the Mac changed: in GitHub Desktop, right-click and choose **Discard All Changes**. The PC stays the one that commits.
+
+If Append ever gives a strange Xcode error, build once more with **Replace** and then **Product > Clean Build Folder** in Xcode.
 
 ## What to check on the phone
 
