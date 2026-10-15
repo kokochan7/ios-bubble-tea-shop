@@ -68,7 +68,7 @@ namespace BubbleTea.Staff
             Vector3 target = counter.transform.TransformPoint(spot);
             target.y = transform.position.y;
             Vector3 offset = target - transform.position;
-            if (offset.sqrMagnitude < 0.01f)
+            if (offset.sqrMagnitude < 0.04f) // within 20 cm: settle in and stay put
             {
                 transform.position = target;
                 transform.rotation = Quaternion.LookRotation(-counter.transform.forward);

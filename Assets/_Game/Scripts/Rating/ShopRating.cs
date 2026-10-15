@@ -8,7 +8,7 @@ namespace BubbleTea.Rating
     /// <summary>
     /// The shop's star rating, from 0 to 5. Half comes from service (happy customers raise it)
     /// and half from how built-up the shop is. Messy café tables take stars away until they're
-    /// cleaned. Every customer who walks out (too slow, or too expensive) costs a whole star, earned back a little with each
+    /// cleaned. Every customer who walks out (too slow, or too expensive) costs half a star, earned back a little with each
     /// customer served. At 0 stars the shop closes and the game starts over.
     /// More stars bring customers more often and let more of them line up.
     /// </summary>
@@ -29,7 +29,7 @@ namespace BubbleTea.Rating
         private float serveWeight = 0.05f;
 
         [SerializeField, Tooltip("Stars lost each time a customer walks out.")]
-        private float starsPerWalkout = 1f;
+        private float starsPerWalkout = 0.5f;
 
         [SerializeField, Tooltip("Stars lost each time a customer leaves because a price is too high.")]
         private float starsPerPriceyWalkout = 0.1f;

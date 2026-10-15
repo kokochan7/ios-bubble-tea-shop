@@ -27,6 +27,7 @@ namespace BubbleTea.Goals
         public int upgradesBought;
         public int tablesCleaned;
         public float secondsPlayed;
+        public int wagesPaid;
         public List<DrinkCount> perDrink = new();
     }
 
@@ -54,6 +55,13 @@ namespace BubbleTea.Goals
         public int UpgradesBought => data.upgradesBought;
         public int TablesCleaned => data.tablesCleaned;
         public float SecondsPlayed => data.secondsPlayed;
+        public int WagesPaid => data.wagesPaid;
+
+        /// <summary>Adds wages just paid to the workers.</summary>
+        public void AddWagesPaid(int amount)
+        {
+            if (amount > 0) Bump(() => data.wagesPaid += amount);
+        }
 
         /// <summary>How many of this drink (by its item asset name) have been sold.</summary>
         public int SoldOf(string item)

@@ -287,7 +287,7 @@ namespace BubbleTea.Customers
 
         private bool TooExpensive(DrinkRecipe order) => counter.PriceOf(order) > counter.FairPriceOf(order) * tolerance + 0.01f;
 
-        // The price is more than this customer will pay: they leave without buying (costs a star).
+        // The price is more than this customer will pay: they leave without buying (lowers the rating a little).
         private void RefusePrice()
         {
             GameEvents.RaiseCustomerRefusedPrice(transform.position);

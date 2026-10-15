@@ -12,10 +12,14 @@ namespace BubbleTea.Staff
     {
         private const float Radius = 0.3f;     // about a person's half-width
         private const float LookAhead = 1.2f;  // meters checked in front each step
+        private const float FinalStretch = 0.9f; // this close, walk straight in (spots sit right against counters and bars)
         private static readonly float[] Turns = { 30f, -30f, 60f, -60f, 90f, -90f, 120f, -120f };
         private static readonly RaycastHit[] hits = new RaycastHit[8];
 
-        /// <summary>Moves <paramref name="mover"/> up to <paramref name="distance"/> meters toward the target, around obstacles.</summary>
+        /// <summary>
+        /// Moves <paramref name="mover"/> up to <paramref name="distance"/> meters toward the target, around obstacles.
+        /// The last stretch is walked straight, since work spots are right up against the furniture.
+        /// </summary>
         public static void Step(Transform mover, Vector3 target, float distance)
         {
             Vector3 from = mover.position;
@@ -26,7 +30,7 @@ namespace BubbleTea.Staff
             Vector3 direction = toTarget / remaining;
             float probe = Mathf.Min(LookAhead, remaining);
 
-            if (Blocked(mover, from, direction, probe))
+            if (remaining > FinalStretch && Blocked(mover, from, direction, probe))
             {
                 // Prefer turning to the side that keeps heading toward the target.
                 foreach (float turn in Turns)

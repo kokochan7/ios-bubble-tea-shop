@@ -8,6 +8,7 @@ using BubbleTea.Goals;
 using BubbleTea.Player;
 using BubbleTea.Rating;
 using BubbleTea.Saving;
+using BubbleTea.Staff;
 using BubbleTea.UI;
 using BubbleTea.Upgrades;
 using UnityEditor;
@@ -309,6 +310,7 @@ namespace BubbleTea.EditorTools
             var settings = settingsRoot.gameObject.AddComponent<SettingsMenu>();
             RectTransform panel = CreateUiObject("Panel", settingsRoot);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.gameObject.AddComponent<FitToScreen>();
             panel.sizeDelta = new Vector2(800f, 760f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
@@ -426,6 +428,7 @@ namespace BubbleTea.EditorTools
             CreateUpgradePanel(hud, upgrades, content.Upgrades);
             OfflineEarnings offlineEarnings = CreateOfflineEarnings(wallet);
             new GameObject("ShopRecords").AddComponent<ShopRecords>(); // lifetime totals for goals and stats
+            new GameObject("Payroll").AddComponent<Payroll>(); // pays the hired workers every shop hour
             DailyGoals dailyGoals = CreateDailyGoals(wallet, content.Menu, offlineEarnings);
             ShopRating rating = CreateShopRating(pads, content);
             SaveManager saveManager = CreateSaveManager(wallet, pads, upgrades, offlineEarnings, dailyGoals, rating, floorCash);
@@ -737,7 +740,7 @@ namespace BubbleTea.EditorTools
             Stretch(labelRect);
             var label = labelRect.gameObject.AddComponent<Text>();
             label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            label.fontSize = 64;
+            label.fontSize = 72;
             label.fontStyle = FontStyle.Bold;
             label.alignment = TextAnchor.MiddleCenter;
             label.color = Color.white;
@@ -1010,6 +1013,7 @@ namespace BubbleTea.EditorTools
 
             RectTransform panel = CreateUiObject("Panel", root);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.gameObject.AddComponent<FitToScreen>();
             panel.sizeDelta = new Vector2(940f, 220f + rows * 170f + 140f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
@@ -1095,31 +1099,44 @@ namespace BubbleTea.EditorTools
             openRect.sizeDelta = new Vector2(200f, 110f);
             openRect.localScale = Vector3.one * HudScale;
 
+            // Centered; the panel grows to fit the list at runtime and shrinks to fit short screens.
             RectTransform panel = CreateUiObject("Panel", root);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
-            panel.sizeDelta = new Vector2(940f, 1360f);
+            panel.pivot = new Vector2(0.5f, 0.5f);
+            panel.sizeDelta = new Vector2(900f, 1500f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
             panelImage.type = Image.Type.Sliced;
             panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.95f);
 
-            Text title = CreateHudText("Title", panel, font, 60, TextAnchor.MiddleCenter);
-            SetTopRow(title.rectTransform, 20f, 100f, 0f, 0f);
+            Text title = CreateHudText("Title", panel, font, 64, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, 25f, 100f, 0f, 0f);
             title.text = "STATS";
 
-            Text body = CreateHudText("Body", panel, font, 38, TextAnchor.UpperLeft);
-            SetTopRow(body.rectTransform, 140f, 1060f, 50f, 50f);
+            Text body = CreateHudText("Labels", panel, font, 40, TextAnchor.UpperLeft);
+            SetTopRow(body.rectTransform, 150f, 1160f, 60f, 60f);
             body.fontStyle = FontStyle.Normal;
-            body.horizontalOverflow = HorizontalWrapMode.Wrap;
+            body.horizontalOverflow = HorizontalWrapMode.Overflow;
             body.verticalOverflow = VerticalWrapMode.Overflow;
 
+            Text values = CreateHudText("Values", panel, font, 40, TextAnchor.UpperRight);
+            SetTopRow(values.rectTransform, 150f, 1160f, 60f, 60f);
+            values.horizontalOverflow = HorizontalWrapMode.Overflow;
+            values.verticalOverflow = VerticalWrapMode.Overflow;
+
             Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
-            SetTopRow((RectTransform)close.transform, 1220f, 110f, 250f, 250f);
+            var closeRect = (RectTransform)close.transform;
+            closeRect.anchorMin = closeRect.anchorMax = new Vector2(0.5f, 0f);
+            closeRect.pivot = new Vector2(0.5f, 0f);
+            closeRect.anchoredPosition = new Vector2(0f, 40f);
+            closeRect.sizeDelta = new Vector2(400f, 110f);
+            panel.gameObject.AddComponent<FitToScreen>();
 
             SetReference(view, "panel", panel.gameObject);
             SetReference(view, "openButton", openButton);
             SetReference(view, "closeButton", close);
             SetReference(view, "body", body);
+            SetReference(view, "values", values);
             SetReferences(view, "menu", menu);
         }
 
@@ -1197,9 +1214,10 @@ namespace BubbleTea.EditorTools
             hint.rectTransform.pivot = new Vector2(0f, 1f);
             hint.rectTransform.anchoredPosition = new Vector2(0f, -10f);
             hint.alignment = TextAnchor.UpperLeft;
-            hint.rectTransform.sizeDelta = new Vector2(900f, 100f);
+            hint.rectTransform.sizeDelta = new Vector2(900f, 160f);
             hint.horizontalOverflow = HorizontalWrapMode.Wrap;
-            hint.text = "Every customer who walks out costs a star.\nAt 0 stars your shop closes and you start over!";
+            hint.verticalOverflow = VerticalWrapMode.Overflow;
+            hint.text = "Every customer who gives up waiting and walks out costs half a star.\nServing customers earns stars back. At 0 stars your shop closes!";
             hint.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.7f);
 
             SetReference(view, "rating", rating);
@@ -1245,6 +1263,7 @@ namespace BubbleTea.EditorTools
 
             RectTransform panel = CreateUiObject("Panel", backdrop);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.gameObject.AddComponent<FitToScreen>();
             panel.sizeDelta = new Vector2(860f, 760f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
@@ -1282,7 +1301,7 @@ namespace BubbleTea.EditorTools
 
         // The shop clock (random customer traffic) and its display in the top-left corner.
         // Size and edge gap of the top-corner HUD widgets (clock, money, stars, MENU, GOALS).
-        private const float HudScale = 0.62f;
+        private const float HudScale = 0.82f; // bigger so money, time, stars and buttons are easy to read on a phone
         private const float HudMargin = 16f;
 
         private static void CreateClock(Transform hud)
@@ -1303,9 +1322,9 @@ namespace BubbleTea.EditorTools
             back.color = new Color(0.15f, 0.15f, 0.2f, 0.75f);
             back.raycastTarget = false;
 
-            Text time = CreateHudText("Time", root, font, 50, TextAnchor.MiddleCenter);
+            Text time = CreateHudText("Time", root, font, 56, TextAnchor.MiddleCenter);
             SetTopRow(time.rectTransform, 8f, 66f, 0f, 0f);
-            Text day = CreateHudText("Day", root, font, 32, TextAnchor.MiddleCenter);
+            Text day = CreateHudText("Day", root, font, 36, TextAnchor.MiddleCenter);
             SetTopRow(day.rectTransform, 70f, 44f, 0f, 0f);
             day.color = new Color(0.8f, 0.8f, 0.88f);
 
@@ -1332,6 +1351,7 @@ namespace BubbleTea.EditorTools
 
             RectTransform panel = CreateUiObject("Panel", backdrop);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.gameObject.AddComponent<FitToScreen>();
             panel.sizeDelta = new Vector2(940f, top + rowHeight * menu.Length + 260f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
@@ -1379,7 +1399,7 @@ namespace BubbleTea.EditorTools
             hint.horizontalOverflow = HorizontalWrapMode.Wrap;
             hint.fontStyle = FontStyle.Normal;
             hint.color = new Color(0.85f, 0.85f, 0.9f);
-            hint.text = "Higher prices earn more, but customers who think it's too much walk out and cost a star.";
+            hint.text = "Higher prices earn more, but customers who think it's too much walk out and lower your rating a little.";
 
             Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
             SetTopRow((RectTransform)close.transform, top + rowHeight * menu.Length + 130f, 110f, 260f, 260f);
@@ -1417,6 +1437,7 @@ namespace BubbleTea.EditorTools
 
             RectTransform panel = CreateUiObject("Panel", backdrop);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.gameObject.AddComponent<FitToScreen>();
             panel.sizeDelta = new Vector2(860f, 620f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
@@ -1524,6 +1545,7 @@ namespace BubbleTea.EditorTools
 
             RectTransform panel = CreateUiObject("Panel", root);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.gameObject.AddComponent<FitToScreen>();
             panel.sizeDelta = new Vector2(800f, 1210f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
@@ -1576,6 +1598,7 @@ namespace BubbleTea.EditorTools
 
             RectTransform panel = CreateUiObject("GmPanel", root);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.gameObject.AddComponent<FitToScreen>();
             panel.sizeDelta = new Vector2(800f, 910f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
@@ -1689,6 +1712,7 @@ namespace BubbleTea.EditorTools
             panel.pivot = new Vector2(0.5f, 0f);
             panel.anchoredPosition = new Vector2(0f, 60f);
             panel.sizeDelta = new Vector2(960f, titleHeight + rowHeight * upgrades.Length + 30f);
+            panel.gameObject.AddComponent<FitToScreen>();
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
             panelImage.type = Image.Type.Sliced;

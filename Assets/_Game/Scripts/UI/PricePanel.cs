@@ -10,7 +10,7 @@ namespace BubbleTea.UI
     /// <summary>
     /// Tap a counter to open this panel and set what each drink costs, from half price to
     /// three times the normal price. Customers each have a limit: charge more than theirs and
-    /// they walk out (losing a star), so higher prices earn more per drink but cost customers.
+    /// they walk out (lowering the rating a little), so higher prices earn more per drink but cost customers.
     /// </summary>
     public class PricePanel : MonoBehaviour
     {
