@@ -458,29 +458,55 @@ namespace BubbleTea.EditorTools
             return root.gameObject;
         }
 
+        // The Mango Fruit Bar: a crate of whole mangoes, a cutting board with a mango cut
+        // "hedgehog" style, a blender of yellow mango smoothie and a stack of cubes in a bowl.
         private static GameObject BuildFruitBar()
         {
-            Transform root = CounterBase("FruitBar", 1.4f, 1f, Palette.Peach, Palette.DeepMint);
+            Transform root = CounterBase("FruitBar", 1.4f, 1f, Palette.Butter, Palette.Mango);
             float top = CounterHeight;
+            Color ripe = Palette.Mango;
+            Color blush = Color.Lerp(Palette.Mango, Palette.Strawberry, 0.45f);
+            Color flesh = Hex("FFD23F");
 
-            // Blender.
-            Box(root, "BlenderBase", new Vector3(-0.35f, top + 0.07f, -0.2f), new Vector3(0.22f, 0.14f, 0.22f), Palette.Charcoal);
-            Cylinder(root, "Jar", new Vector3(-0.35f, top + 0.3f, -0.2f), 0.09f, 0.32f, Palette.Glass);
-            Cylinder(root, "Smoothie", new Vector3(-0.35f, top + 0.22f, -0.2f), 0.085f, 0.15f, Palette.Mango);
-            Cylinder(root, "JarLid", new Vector3(-0.35f, top + 0.47f, -0.2f), 0.095f, 0.03f, Palette.Charcoal);
+            // Blender full of mango smoothie.
+            Box(root, "BlenderBase", new Vector3(-0.45f, top + 0.07f, -0.24f), new Vector3(0.22f, 0.14f, 0.22f), Palette.Charcoal);
+            Transform jar = Cylinder(root, "Jar", new Vector3(-0.45f, top + 0.3f, -0.24f), 0.09f, 0.32f, Palette.Glass);
+            jar.GetComponent<Renderer>().sharedMaterial = GetClearMaterial(Palette.Glass, 0.35f);
+            Cylinder(root, "Smoothie", new Vector3(-0.45f, top + 0.25f, -0.24f), 0.082f, 0.2f, flesh);
+            Cylinder(root, "JarLid", new Vector3(-0.45f, top + 0.47f, -0.24f), 0.095f, 0.03f, Palette.Charcoal);
 
-            // Fruit bowl piled with mango, strawberries, kiwi and lemon.
-            Cylinder(root, "Bowl", new Vector3(0.22f, top + 0.05f, -0.22f), 0.26f, 0.1f, Palette.Cream);
-            Color[] fruit = { Palette.Mango, Palette.Strawberry, Palette.Kiwi, Palette.Lemon, Palette.Mango, Palette.Strawberry, Palette.Kiwi };
-            for (int i = 0; i < fruit.Length; i++)
+            // A wooden crate heaped with whole mangoes (oval, yellow-orange with a red blush, tiny stems).
+            Box(root, "Crate", new Vector3(0.05f, top + 0.08f, -0.3f), new Vector3(0.44f, 0.16f, 0.3f), Palette.Bamboo);
+            Box(root, "CrateSlat", new Vector3(0.05f, top + 0.1f, -0.145f), new Vector3(0.44f, 0.03f, 0.01f), Palette.DarkWood);
+            for (int i = 0; i < 7; i++)
             {
-                float angle = i * Mathf.PI * 2f / 6f;
-                float radius = i == fruit.Length - 1 ? 0f : 0.14f;
-                float y = top + (i == fruit.Length - 1 ? 0.2f : 0.13f);
-                Sphere(root, "Fruit", new Vector3(0.22f + Mathf.Cos(angle) * radius, y, -0.22f + Mathf.Sin(angle) * radius),
-                    Vector3.one * 0.12f, fruit[i]);
+                float x = -0.1f + (i % 4) * 0.1f + (i >= 4 ? 0.05f : 0f);
+                float z = -0.34f + (i >= 4 ? 0.1f : 0f);
+                float y = top + (i >= 4 ? 0.23f : 0.19f);
+                Transform mango = Sphere(root, "Mango", new Vector3(x, y, z), new Vector3(0.1f, 0.09f, 0.14f), i % 3 == 0 ? blush : ripe);
+                mango.localRotation = Quaternion.Euler(0f, i * 37f, 0f);
+                Cylinder(root, "Stem", new Vector3(x, y + 0.045f, z), 0.008f, 0.025f, Palette.DarkWood);
             }
-            Sphere(root, "Leaf", new Vector3(0.22f, top + 0.27f, -0.22f), new Vector3(0.06f, 0.02f, 0.1f), Palette.Leaf);
+            Sphere(root, "Leaf", new Vector3(0.1f, top + 0.29f, -0.3f), new Vector3(0.05f, 0.015f, 0.1f), Palette.Leaf);
+
+            // Cutting board with a halved mango cut into cubes, and a knife.
+            Box(root, "Board", new Vector3(0.45f, top + 0.015f, -0.2f), new Vector3(0.26f, 0.03f, 0.2f), Palette.LightWood);
+            Sphere(root, "MangoHalf", new Vector3(0.42f, top + 0.06f, -0.22f), new Vector3(0.12f, 0.06f, 0.15f), flesh);
+            for (int i = 0; i < 6; i++)
+            {
+                Box(root, "Cube", new Vector3(0.39f + (i % 2) * 0.05f, top + 0.1f, -0.27f + (i / 2) * 0.05f), Vector3.one * 0.035f, flesh);
+            }
+            Box(root, "Knife", new Vector3(0.53f, top + 0.035f, -0.15f), new Vector3(0.02f, 0.008f, 0.16f), Palette.Steel);
+            Box(root, "KnifeHandle", new Vector3(0.53f, top + 0.04f, -0.26f), new Vector3(0.025f, 0.02f, 0.06f), Palette.DarkWood);
+
+            // A bowl of mango cubes ready to blend.
+            Cylinder(root, "Bowl", new Vector3(-0.2f, top + 0.04f, -0.08f), 0.1f, 0.08f, Palette.Ceramic);
+            for (int i = 0; i < 5; i++)
+            {
+                float angle = i * 1.25f;
+                Box(root, "Cube", new Vector3(-0.2f + Mathf.Cos(angle) * 0.04f, top + 0.1f + (i == 4 ? 0.02f : 0f), -0.08f + Mathf.Sin(angle) * 0.04f),
+                    Vector3.one * 0.04f, flesh);
+            }
             return root.gameObject;
         }
 

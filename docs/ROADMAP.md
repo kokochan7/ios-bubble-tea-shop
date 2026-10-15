@@ -56,7 +56,7 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 - The counter only accepts drinks someone in line is waiting for, so it never clogs up with drinks nobody buys.
 - Customers only order drinks your shop can make, so new drinks show up in orders as you unlock their stations.
 - New drinks: **Taro Milk Tea** ($12), **Taro Boba** ($20, taro tea through the Topping Bar) and **Mango Fruit Tea** ($14).
-- New stations on the pad chain after the Topping Bar: **Taro Station** ($250), then **Fruit Bar** ($400).
+- New stations on the pad chain after the Topping Bar: **Taro Station** ($250), then **Mango Fruit Bar** ($400, asset "Fruit Bar").
 
 ## Milestone 4: Staff
 
@@ -69,7 +69,7 @@ Not saved on purpose: cash lying on the floor, drinks on stations, and customers
 ## Milestone 5: Shop expansion
 
 - The shop now has low walls, so nobody can walk off the edge.
-- After the Fruit Bar, an **Expand Shop** pad ($1,000) appears by the east wall. Paying it removes the wall and reveals a new 16 x 30 m area.
+- After the Mango Fruit Bar, an **Expand Shop** pad ($1,000) appears by the east wall. Paying it removes the wall and reveals a new 16 x 30 m area.
 - In the new area, a **Drive Thru** pad ($600) builds a blue drive-through window. Cars line up, order like customers, and pay **1.5x** the menu price.
 - Each counter has a **lane** (Main, DriveThru) and its own customer spawner, so more counters can be added later without code. Runners serve whichever counter has someone waiting.
 

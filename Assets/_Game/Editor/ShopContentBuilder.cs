@@ -86,6 +86,7 @@ namespace BubbleTea.EditorTools
             public string BrewerName;
             public string TaroName;
             public string FruitName;
+            public string FruitShownName; // a new name for the menu and label; the save keeps FruitName
         }
 
         internal static Content Build(CashBill billPrefab, int shop)
@@ -148,7 +149,7 @@ namespace BubbleTea.EditorTools
                 TeaBrewer = GetOrCreateBuildable(set.BrewerName, 80, set.Brewer),
                 ToppingBar = GetOrCreateBuildable(set.ToppingName ?? "Topping Bar", 150, set.ToppingBar),
                 TaroStation = GetOrCreateBuildable(set.TaroName, 250, set.TaroStation),
-                FruitBar = GetOrCreateBuildable(set.FruitName, 400, set.FruitBar),
+                FruitBar = GetOrCreateBuildable(set.FruitName, 400, set.FruitBar, shownName: set.FruitShownName),
                 ExtraBar = set.ExtraBar != null ? GetOrCreateBuildable(set.ExtraName, 700, set.ExtraBar) : null,
                 // The expansion builds nothing itself; its pad opens the wall and shows the new floor.
                 Expansion = GetOrCreateBuildable("Expand Shop", 1000, null),
@@ -204,7 +205,7 @@ namespace BubbleTea.EditorTools
             ItemDefinition bobaTea = GetOrCreateItem("Boba Milk Tea", new Color(0.88f, 0.76f, 0.60f), new Color(0.12f, 0.08f, 0.06f));
             ItemDefinition taroTea = GetOrCreateItem("Taro Milk Tea", new Color(0.66f, 0.50f, 0.84f), null);
             ItemDefinition taroBoba = GetOrCreateItem("Taro Boba", new Color(0.70f, 0.55f, 0.88f), new Color(0.12f, 0.08f, 0.06f));
-            ItemDefinition mangoTea = GetOrCreateItem("Mango Fruit Tea", new Color(1f, 0.66f, 0.18f), null);
+            ItemDefinition mangoTea = GetOrCreateItem("Mango Fruit Tea", new Color(1f, 0.86f, 0.2f), null); // mango yellow
 
             RecipeStep brew = GetOrCreateStep("Brew Milk Tea", null, milkTea, 2f);
             RecipeStep addBoba = GetOrCreateStep("Add Boba", milkTea, bobaTea, 1.5f);
@@ -232,7 +233,8 @@ namespace BubbleTea.EditorTools
                     new Color(1f, 0.85f, 0.25f), new[] { makeMango }, inputCapacity: 0),
                 BrewerName = "Tea Brewer",
                 TaroName = "Taro Station",
-                FruitName = "Fruit Bar",
+                FruitName = "Fruit Bar", // saved under this name; shown as "Mango Fruit Bar"
+                FruitShownName = "Mango Fruit Bar",
             };
         }
 
@@ -302,6 +304,19 @@ namespace BubbleTea.EditorTools
 
         // ---------- Data assets ----------
 
+        // The drink's color, kept up to date with the code on every build (so a color change reaches
+        // cups made before it).
+        private static Material DrinkMaterial(string name, Color color)
+        {
+            Material material = GetOrCreateMaterial(name, color);
+            if (material.color != color)
+            {
+                material.color = color;
+                EditorUtility.SetDirty(material);
+            }
+            return material;
+        }
+
         private static ItemDefinition GetOrCreateItem(string displayName, Color cupColor, Color? pearlColor, Color? foamColor = null)
         {
             var item = GetOrCreateAsset<ItemDefinition>($"{DataFolder}/Items/{FileName(displayName)}.asset",
@@ -363,8 +378,9 @@ namespace BubbleTea.EditorTools
 
         // keepPriceUpToDate: also reset the price of an existing asset (for a price change that
         // should reach scenes built before it).
+        // shownName renames it on its pad and label without changing its asset (which save files refer to).
         private static BuildableDefinition GetOrCreateBuildable(string displayName, int cost, GameObject prefab,
-            bool keepPriceUpToDate = false)
+            bool keepPriceUpToDate = false, string shownName = null)
         {
             var buildable = GetOrCreateAsset<BuildableDefinition>($"{DataFolder}/{FileName(displayName)}.asset", serialized =>
             {
@@ -376,6 +392,7 @@ namespace BubbleTea.EditorTools
             var serializedBuildable = new SerializedObject(buildable);
             serializedBuildable.FindProperty("prefab").objectReferenceValue = prefab;
             if (keepPriceUpToDate) serializedBuildable.FindProperty("cost").intValue = cost * costScale;
+            if (shownName != null) serializedBuildable.FindProperty("displayName").stringValue = shownName;
             serializedBuildable.ApplyModifiedPropertiesWithoutUndo();
             return buildable;
         }
@@ -403,7 +420,7 @@ namespace BubbleTea.EditorTools
             var root = new GameObject(name);
 
             AddPart(root.transform, PrimitiveType.Cylinder, "Cup", new Vector3(0f, 0.14f, 0f),
-                new Vector3(0.24f, 0.14f, 0.24f), GetOrCreateMaterial(name, cupColor));
+                new Vector3(0.24f, 0.14f, 0.24f), DrinkMaterial(name, cupColor));
             AddPart(root.transform, PrimitiveType.Cube, "Straw", new Vector3(0.04f, 0.34f, 0f),
                 new Vector3(0.03f, 0.18f, 0.03f), GetOrCreateMaterial("Straw", new Color(0.95f, 0.45f, 0.55f)));
             GameObject pearls = null;
@@ -423,7 +440,7 @@ namespace BubbleTea.EditorTools
                 Transform drink = ArtLibrary.FindChild(cupArt.transform, "Drink");
                 if (drink != null)
                 {
-                    ArtLibrary.Recolor(drink, GetOrCreateMaterial(name, cupColor));
+                    ArtLibrary.Recolor(drink, DrinkMaterial(name, cupColor));
                     Transform artPearls = ArtLibrary.FindChild(cupArt.transform, "Pearls");
                     if (artPearls != null)
                     {
@@ -447,7 +464,7 @@ namespace BubbleTea.EditorTools
                 else
                 {
                     AddPart(root.transform, PrimitiveType.Cylinder, "Lid", new Vector3(0f, 0.33f, 0f),
-                        new Vector3(0.22f, 0.01f, 0.22f), GetOrCreateMaterial(name, cupColor));
+                        new Vector3(0.22f, 0.01f, 0.22f), DrinkMaterial(name, cupColor));
                     if (pearlColor.HasValue)
                     {
                         AddPart(root.transform, PrimitiveType.Sphere, "PearlsOnTop", new Vector3(0f, 0.35f, 0f),
