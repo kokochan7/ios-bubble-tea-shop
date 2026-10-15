@@ -6,7 +6,7 @@ namespace BubbleTea.EditorTools
 {
     /// <summary>
     /// Builds a matching set of cute, pastel bubble tea shop models out of simple shapes and puts
-    /// them in the art slots: tea urns, a topping bar, a cup sealer, a fruit bar, a register counter,
+    /// them in the art slots: tea urns, a tapioca topping bar, a cup sealer, a fruit bar, a register counter,
     /// chibi characters in aprons, a toy-like car, boba cups, plants, a menu board and a giant boba
     /// cup statue. It also recolors the floor and walls to match.
     ///
@@ -350,33 +350,89 @@ namespace BubbleTea.EditorTools
             return root.gameObject;
         }
 
+        // The tapioca bar: a big steel pot of pearls simmering on a burner, a tall glass jar packed
+        // with black pearls, a brown sugar syrup dispenser, a warming tray of fresh pearls with a
+        // slotted scoop, smaller tubs of other toppings and a pearl sign on the back.
         private static GameObject BuildToppingBar()
         {
             Transform root = CounterBase("ToppingBar", 2f, 1f, Palette.Mint, Palette.Cream);
             float top = CounterHeight;
+            Color brownSugar = Hex("8A4B23");
+            Color pearlShine = Color.Lerp(Palette.Pearl, Palette.BlackTea, 0.35f);
 
-            // A row of topping tubs: tapioca, golden pearls, coconut jelly, red bean, strawberry popping boba.
-            Color[] toppings = { Palette.Pearl, Palette.GoldenPearl, Palette.Jelly, Palette.RedBean, Palette.Strawberry };
-            for (int i = 0; i < toppings.Length; i++)
+            // Pearl cooker: a burner, a wide steel pot and pearls heaped above the water.
+            Box(root, "Burner", new Vector3(-0.66f, top + 0.04f, -0.24f), new Vector3(0.44f, 0.08f, 0.42f), Palette.Charcoal);
+            Cylinder(root, "Flame", new Vector3(-0.66f, top + 0.085f, -0.24f), 0.14f, 0.01f, Palette.Mango);
+            Cylinder(root, "Pot", new Vector3(-0.66f, top + 0.24f, -0.24f), 0.2f, 0.3f, Palette.Steel);
+            Cylinder(root, "PotRim", new Vector3(-0.66f, top + 0.39f, -0.24f), 0.21f, 0.025f, Color.Lerp(Palette.Steel, Palette.Charcoal, 0.3f));
+            Cylinder(root, "Syrup", new Vector3(-0.66f, top + 0.375f, -0.24f), 0.185f, 0.01f, brownSugar);
+            Box(root, "PotHandleL", new Vector3(-0.89f, top + 0.33f, -0.24f), new Vector3(0.06f, 0.03f, 0.1f), Palette.Charcoal);
+            Box(root, "PotHandleR", new Vector3(-0.43f, top + 0.33f, -0.24f), new Vector3(0.06f, 0.03f, 0.1f), Palette.Charcoal);
+            for (int i = 0; i < 14; i++)
             {
-                float x = -0.48f + i * 0.24f;
-                Cylinder(root, "Tub", new Vector3(x, top + 0.07f, -0.22f), 0.1f, 0.14f, Palette.Steel);
-                Cylinder(root, "Topping", new Vector3(x, top + 0.13f, -0.22f), 0.088f, 0.04f, toppings[i]);
-                for (int p = 0; p < 4; p++)
+                float angle = i * 2.4f;
+                float radius = 0.03f + (i % 5) * 0.03f;
+                Sphere(root, "Pearl", new Vector3(-0.66f + Mathf.Cos(angle) * radius, top + 0.39f + (i % 3) * 0.015f, -0.24f + Mathf.Sin(angle) * radius),
+                    Vector3.one * 0.055f, i % 4 == 0 ? pearlShine : Palette.Pearl);
+            }
+            // Steam rising from the pot.
+            for (int i = 0; i < 3; i++)
+            {
+                Transform puff = Sphere(root, "Steam", new Vector3(-0.66f + (i - 1) * 0.06f, top + 0.5f + i * 0.09f, -0.26f),
+                    Vector3.one * (0.12f + i * 0.03f), Color.white);
+                puff.GetComponent<Renderer>().sharedMaterial = GetClearMaterial(Color.white, 0.45f);
+            }
+
+            // A tall glass jar packed with black tapioca pearls.
+            Transform jar = Cylinder(root, "PearlJar", new Vector3(-0.17f, top + 0.27f, -0.3f), 0.15f, 0.54f, Palette.Glass);
+            jar.GetComponent<Renderer>().sharedMaterial = GetClearMaterial(Palette.Glass, 0.3f);
+            Cylinder(root, "JarLid", new Vector3(-0.17f, top + 0.555f, -0.3f), 0.16f, 0.04f, Palette.TeaRed);
+            Sphere(root, "LidKnob", new Vector3(-0.17f, top + 0.6f, -0.3f), Vector3.one * 0.06f, Palette.Gold);
+            for (int layer = 0; layer < 6; layer++)
+            {
+                for (int i = 0; i < 6; i++)
                 {
-                    float angle = p * Mathf.PI * 0.5f + i;
-                    Sphere(root, "Bead", new Vector3(x + Mathf.Cos(angle) * 0.04f, top + 0.16f, -0.22f + Mathf.Sin(angle) * 0.04f),
-                        Vector3.one * 0.045f, toppings[i]);
+                    float angle = i * Mathf.PI / 3f + layer * 0.5f;
+                    Sphere(root, "Pearl", new Vector3(-0.17f + Mathf.Cos(angle) * 0.085f, top + 0.05f + layer * 0.075f, -0.3f + Mathf.Sin(angle) * 0.085f),
+                        Vector3.one * 0.07f, (i + layer) % 5 == 0 ? pearlShine : Palette.Pearl);
                 }
             }
 
-            // Sneeze guard and a ladle.
-            Transform guard = Box(root, "Guard", new Vector3(0f, top + 0.32f, -0.05f), new Vector3(1.3f, 0.32f, 0.02f), Palette.Glass);
-            guard.localRotation = Quaternion.Euler(-20f, 0f, 0f);
-            Cylinder(root, "GuardPostL", new Vector3(-0.64f, top + 0.15f, -0.05f), 0.015f, 0.3f, Palette.Steel);
-            Cylinder(root, "GuardPostR", new Vector3(0.64f, top + 0.15f, -0.05f), 0.015f, 0.3f, Palette.Steel);
-            Transform ladle = Cylinder(root, "Ladle", new Vector3(-0.48f, top + 0.22f, -0.3f), 0.012f, 0.25f, Palette.Steel);
-            ladle.localRotation = Quaternion.Euler(-25f, 0f, 0f);
+            // Brown sugar syrup dispenser with a pump.
+            Cylinder(root, "SyrupBottle", new Vector3(0.15f, top + 0.17f, -0.34f), 0.09f, 0.34f, brownSugar);
+            Cylinder(root, "PumpNeck", new Vector3(0.15f, top + 0.38f, -0.34f), 0.025f, 0.08f, Palette.Cream);
+            Box(root, "PumpHead", new Vector3(0.15f, top + 0.43f, -0.3f), new Vector3(0.05f, 0.04f, 0.12f), Palette.Cream);
+            Box(root, "SyrupLabel", new Vector3(0.15f, top + 0.18f, -0.25f), new Vector3(0.1f, 0.09f, 0.01f), Palette.Gold);
+
+            // Warming tray of fresh pearls with a slotted scoop resting in it.
+            Box(root, "WarmingTray", new Vector3(0.48f, top + 0.05f, -0.24f), new Vector3(0.34f, 0.1f, 0.28f), Palette.Steel);
+            Box(root, "TrayPearls", new Vector3(0.48f, top + 0.1f, -0.24f), new Vector3(0.3f, 0.01f, 0.24f), brownSugar);
+            for (int i = 0; i < 12; i++)
+            {
+                Sphere(root, "Pearl", new Vector3(0.36f + (i % 4) * 0.08f, top + 0.115f, -0.33f + (i / 4) * 0.08f), Vector3.one * 0.06f,
+                    i % 3 == 0 ? pearlShine : Palette.Pearl);
+            }
+            Transform scoopHandle = Cylinder(root, "ScoopHandle", new Vector3(0.6f, top + 0.18f, -0.2f), 0.012f, 0.24f, Palette.Steel);
+            scoopHandle.localRotation = Quaternion.Euler(0f, 0f, -55f);
+            Cylinder(root, "Scoop", new Vector3(0.5f, top + 0.12f, -0.2f), 0.05f, 0.015f, Palette.Steel);
+
+            // Small tubs of the other toppings: golden pearls, coconut jelly, red bean.
+            Color[] toppings = { Palette.GoldenPearl, Palette.Jelly, Palette.RedBean };
+            for (int i = 0; i < toppings.Length; i++)
+            {
+                float x = 0.78f;
+                float z = -0.4f + i * 0.14f;
+                Cylinder(root, "Tub", new Vector3(x, top + 0.05f, z), 0.06f, 0.1f, Palette.Steel);
+                Cylinder(root, "Topping", new Vector3(x, top + 0.095f, z), 0.052f, 0.02f, toppings[i]);
+            }
+
+            // A cream sign on the back with a big black pearl on it.
+            Box(root, "Sign", new Vector3(0.15f, top + 0.75f, -0.47f), new Vector3(0.5f, 0.32f, 0.03f), Palette.Cream);
+            Box(root, "SignTrim", new Vector3(0.15f, top + 0.75f, -0.48f), new Vector3(0.56f, 0.38f, 0.02f), Palette.TeaRed);
+            Sphere(root, "SignPearl", new Vector3(0.05f, top + 0.75f, -0.45f), new Vector3(0.16f, 0.16f, 0.04f), Palette.Pearl);
+            Sphere(root, "SignPearl", new Vector3(0.21f, top + 0.71f, -0.45f), new Vector3(0.11f, 0.11f, 0.04f), Palette.Pearl);
+            Sphere(root, "SignPearl", new Vector3(0.31f, top + 0.8f, -0.45f), new Vector3(0.08f, 0.08f, 0.04f), Palette.Pearl);
+            Cylinder(root, "SignPost", new Vector3(0.15f, top + 0.3f, -0.48f), 0.015f, 0.6f, Palette.DarkWood);
             return root.gameObject;
         }
 

@@ -470,7 +470,7 @@ namespace BubbleTea.Staff
             Vector3 offset = target - transform.position;
             if (offset.sqrMagnitude < 0.09f) return true;
 
-            float pace = speed * Stats.Get(StatId.MoveSpeed, 1f);
+            float pace = speed * Stats.Get(StatId.MoveSpeed, 1f) * PayStatus.SpeedOf(this); // slower while their pay is late
             StaffSteering.Step(transform, target, pace * Time.deltaTime);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(offset), 720f * Time.deltaTime);
             return false;

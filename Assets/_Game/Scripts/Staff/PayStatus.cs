@@ -3,16 +3,24 @@ using UnityEngine;
 namespace BubbleTea.Staff
 {
     /// <summary>
-    /// A worker's pay light, a round light above their head like a customer's mood light:
-    /// green while they're paid and working, red while their wages are owed. While unpaid,
-    /// the worker stands still and does nothing until the <see cref="Payroll"/> can pay them.
+    /// A worker's pay light, a round light above their head like a customer's mood light.
+    /// Green: paid and working. Yellow: wages owed for up to <see cref="GraceHours"/> shop hours;
+    /// they keep working, but slower. Red: owed for longer; they stand still and do nothing.
+    /// Once the <see cref="Payroll"/> pays what they're owed, they're back to green.
     /// </summary>
     public class PayStatus : MonoBehaviour
     {
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly Color Paid = new(0.35f, 0.85f, 0.4f);
-        private static readonly Color Owed = new(0.95f, 0.3f, 0.3f);
+        private static readonly Color Late = new(1f, 0.82f, 0.2f);
+        private static readonly Color Stopped_ = new(0.95f, 0.3f, 0.3f); // red
+
+        /// <summary>Shop hours a worker keeps working (slower) without pay before they stop.</summary>
+        public const int GraceHours = 6;
+
+        /// <summary>How fast a worker works while their pay is late (1 = normal).</summary>
+        public const float LateSpeed = 0.5f;
 
         [SerializeField, Tooltip("The round light above the worker's head. Optional.")]
         private Renderer statusLight;
@@ -26,8 +34,24 @@ namespace BubbleTea.Staff
         private MaterialPropertyBlock block;
         private bool placed;
 
-        /// <summary>True while this worker's wages are owed: they stand still.</summary>
-        public bool Unpaid { get; private set; }
+        /// <summary>Shop hours of wages this worker is owed (0 = paid up).</summary>
+        public int HoursOwed { get; private set; }
+
+        /// <summary>True while any wages are owed (yellow or red).</summary>
+        public bool Unpaid => HoursOwed > 0;
+
+        /// <summary>True once they've gone unpaid past the grace hours: they stand still.</summary>
+        public bool Stopped => HoursOwed > GraceHours;
+
+        /// <summary>Multiplies how fast this worker walks and works: slower while their pay is late.</summary>
+        public float Speed => Unpaid ? LateSpeed : 1f;
+
+        /// <summary>Speed for any worker: 1 for workers without a pay light.</summary>
+        public static float SpeedOf(Component worker)
+        {
+            var status = worker.GetComponent<PayStatus>();
+            return status != null ? status.Speed : 1f;
+        }
 
         private void Start() => Show();
 
@@ -47,19 +71,23 @@ namespace BubbleTea.Staff
             placed = true;
         }
 
-        /// <summary>Marks the worker as owed (they stop) or paid (they get back to work).</summary>
-        public void SetUnpaid(bool unpaid)
+        /// <summary>One more shop hour went unpaid.</summary>
+        public void AddHourOwed() => SetHoursOwed(HoursOwed + 1);
+
+        /// <summary>Everything they were owed has been paid: back to full speed.</summary>
+        public void PaidUp() => SetHoursOwed(0);
+
+        private void SetHoursOwed(int hours)
         {
-            if (Unpaid == unpaid) return;
-            Unpaid = unpaid;
-            if (work != null) work.enabled = !unpaid;
+            HoursOwed = Mathf.Max(0, hours);
+            if (work != null) work.enabled = !Stopped;
             Show();
         }
 
         private void Show()
         {
             if (statusLight == null) return;
-            Color color = Unpaid ? Owed : Paid;
+            Color color = Stopped ? Stopped_ : Unpaid ? Late : Paid;
             block ??= new MaterialPropertyBlock();
             statusLight.GetPropertyBlock(block);
             block.SetColor(BaseColorId, color);
@@ -70,8 +98,8 @@ namespace BubbleTea.Staff
         private void Update()
         {
             if (!placed && statusLight != null) PlaceLight();
-            // Blink while unpaid, so it catches the eye.
-            if (statusLight != null && Unpaid) statusLight.enabled = Mathf.Repeat(Time.time * 2f, 1f) < 0.7f;
+            // Blink once they've stopped, so it catches the eye.
+            if (statusLight != null && Stopped) statusLight.enabled = Mathf.Repeat(Time.time * 2f, 1f) < 0.7f;
             else if (statusLight != null && !statusLight.enabled) statusLight.enabled = true;
         }
     }

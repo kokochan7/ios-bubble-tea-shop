@@ -9,8 +9,9 @@ namespace BubbleTea.Staff
     /// <summary>
     /// Pays the hired workers. At the end of every shop hour each barista, cashier and cleaner
     /// takes their hourly wage out of the player's money. A worker who can't be paid (not enough
-    /// money) stops and stands still with a red light over their head (see <see cref="PayStatus"/>)
-    /// until there's money to pay them, then gets back to work. The Stats panel shows what each
+    /// money) keeps working, slower, with a yellow light over their head; after 6 unpaid hours
+    /// they stop with a red light (see <see cref="PayStatus"/>). Once their back pay is paid
+    /// they're back to full speed. The Stats panel shows what each
     /// kind of worker charges and how much has been paid in total.
     /// </summary>
     public class Payroll : MonoBehaviour
@@ -27,7 +28,7 @@ namespace BubbleTea.Staff
         [SerializeField, Min(1f), Tooltip("Real seconds between paydays when the shop has no clock.")]
         private float secondsPerHourWithoutClock = 6f;
 
-        /// <summary>Raised when workers stop because they weren't paid, with a description like "A barista".</summary>
+        /// <summary>Raised with a message for the player when workers go unpaid or stop.</summary>
         public static event Action<string> WorkersUnpaid;
 
         /// <summary>The payroll of the shop that's open, if any.</summary>
@@ -92,35 +93,45 @@ namespace BubbleTea.Staff
             PayWages();
         }
 
-        // Pays everyone in turn (baristas, then cashiers, then cleaners). Anyone who can't be paid stops.
+        // Pays everyone in turn (baristas, then cashiers, then cleaners). Anyone who can't be paid
+        // (or is already owed) owes one more hour: yellow and slower, red and stopped after the grace hours.
         private void PayWages()
         {
             if (wallet == null) return;
-            var unpaid = new List<MonoBehaviour>();
+            var late = new List<MonoBehaviour>();
+            var stopped = new List<MonoBehaviour>();
             int paidOut = 0;
-            Pay(FindAll<Barista>(), baristaWage, unpaid, ref paidOut);
-            Pay(FindAll<Cashier>(), cashierWage, unpaid, ref paidOut);
-            Pay(FindAll<Cleaner>(), cleanerWage, unpaid, ref paidOut);
+            Pay(FindAll<Barista>(), baristaWage, late, stopped, ref paidOut);
+            Pay(FindAll<Cashier>(), cashierWage, late, stopped, ref paidOut);
+            Pay(FindAll<Cleaner>(), cleanerWage, late, stopped, ref paidOut);
             Record(paidOut);
-            if (unpaid.Count > 0) WorkersUnpaid?.Invoke(Describe(unpaid));
+            if (stopped.Count > 0)
+                WorkersUnpaid?.Invoke($"{Describe(stopped)} stopped working: unpaid for {PayStatus.GraceHours} hours!\nThey'll start again once you can pay them.");
+            else if (late.Count > 0)
+                WorkersUnpaid?.Invoke($"{Describe(late)} didn't get paid: working slower!\nAfter {PayStatus.GraceHours} unpaid hours they stop.");
         }
 
-        private void Pay<T>(T[] workers, int wage, List<MonoBehaviour> unpaid, ref int paidOut) where T : MonoBehaviour
+        private void Pay<T>(T[] workers, int wage, List<MonoBehaviour> late, List<MonoBehaviour> stopped, ref int paidOut)
+            where T : MonoBehaviour
         {
             foreach (T worker in workers)
             {
                 PayStatus status = worker.GetComponent<PayStatus>();
-                if (status != null && status.Unpaid) continue; // still owed from before; paid by PayWhatsOwed
-                if (wallet.TrySpend(wage)) paidOut += wage;
-                else
+                bool behind = status != null && status.Unpaid; // back pay is settled by PayWhatsOwed
+                if (!behind && wallet.TrySpend(wage))
                 {
-                    unpaid.Add(worker);
-                    if (status != null) status.SetUnpaid(true);
+                    paidOut += wage;
+                    continue;
                 }
+                if (status == null) continue;
+                bool wasWorking = !status.Stopped;
+                status.AddHourOwed();
+                if (status.Stopped && wasWorking) stopped.Add(worker);
+                else if (status.HoursOwed == 1) late.Add(worker);
             }
         }
 
-        // Every second: workers who are owed their wage get paid as soon as there's enough money.
+        // Every second: workers who are owed get all their back pay as soon as there's enough money.
         private void PayWhatsOwed()
         {
             if (wallet == null) return;
@@ -128,10 +139,10 @@ namespace BubbleTea.Staff
             foreach (PayStatus status in FindAll<PayStatus>())
             {
                 if (!status.Unpaid) continue;
-                int wage = WageOf(status);
-                if (!wallet.TrySpend(wage)) continue;
-                paidOut += wage;
-                status.SetUnpaid(false);
+                int owed = WageOf(status) * status.HoursOwed;
+                if (!wallet.TrySpend(owed)) continue;
+                paidOut += owed;
+                status.PaidUp();
             }
             Record(paidOut);
         }

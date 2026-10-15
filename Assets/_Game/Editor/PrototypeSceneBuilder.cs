@@ -86,7 +86,7 @@ namespace BubbleTea.EditorTools
         //  - the kitchen (north of the counter): every bar in one row against the back wall, a row of
         //    staff pads in front of them (cashier beside the counter's cash, then the baristas), the
         //    upgrade desk standing free in the west corner (tap it to open the upgrades), the floor cash
-        //    beside the counter, and the trash can by the west wall;
+        //    beside the counter, and the trash can in the front-west corner, well away from the bars;
         //  - the dining room (south): the queue runs from the front door up to the counter, the café
         //    tables sit east of it, and the staff door is at the far east end of the glass wall so
         //    nothing stands in front of it.
@@ -101,7 +101,7 @@ namespace BubbleTea.EditorTools
             Counter = new(-2f, 0f, 0f),
             Seating = new(3f, 0f, -4.6f),      // east of the queue, clear of the staff door
             DriveThru = new(14f, 0f, 3.5f),
-            TrashCan = new(-8.3f, 0f, 4.6f),
+            TrashCan = new(-8.3f, 0f, 0.8f),   // front-west corner of the kitchen, away from the bars
             FloorCash = new(-4.6f, 0f, 0.9f),  // in the kitchen, just left of the counter
             PlayerStart = new(-4.4f, 1f, 3f),
             TeaBrewer = bars[0],
@@ -1471,6 +1471,7 @@ namespace BubbleTea.EditorTools
         {
             var go = new GameObject("TrashCan");
             go.transform.position = Layout.TrashCan;
+            go.transform.rotation = Quaternion.Euler(0f, 90f, 0f); // stand-here tile on its east side, facing into the kitchen
 
             GameObject bin = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             bin.name = "Bin";
@@ -1495,7 +1496,7 @@ namespace BubbleTea.EditorTools
             var label = new GameObject("Label").AddComponent<TextMesh>();
             label.transform.SetParent(go.transform, false);
             label.transform.localPosition = new Vector3(0f, 1.3f, 0f);
-            label.transform.localRotation = Quaternion.Euler(45f, 0f, 0f);
+            label.transform.rotation = Quaternion.Euler(45f, 0f, 0f); // faces the camera whichever way the bin turns
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             label.font = font;
             label.GetComponent<MeshRenderer>().sharedMaterial = font.material;

@@ -57,7 +57,7 @@ namespace BubbleTea.Staff
             }
             if (wallet == null || counter.CashPile == null) return;
 
-            cooldown -= Time.deltaTime * Stats.Get(StatId.MoveSpeed, 1f);
+            cooldown -= Time.deltaTime * Stats.Get(StatId.MoveSpeed, 1f) * PayStatus.SpeedOf(this); // slower while their pay is late
             if (cooldown > 0f) return;
             if (counter.CashPile.TrySendBill(hands != null ? hands : transform, wallet)) cooldown = secondsPerBill;
         }
@@ -75,7 +75,7 @@ namespace BubbleTea.Staff
                 atSpot = true;
                 return;
             }
-            float pace = speed * Stats.Get(StatId.MoveSpeed, 1f);
+            float pace = speed * Stats.Get(StatId.MoveSpeed, 1f) * PayStatus.SpeedOf(this);
             StaffSteering.Step(transform, target, pace * Time.deltaTime);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(offset), 720f * Time.deltaTime);
         }

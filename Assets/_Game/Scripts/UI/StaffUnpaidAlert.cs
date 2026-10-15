@@ -5,8 +5,8 @@ using UnityEngine.UI;
 namespace BubbleTea.UI
 {
     /// <summary>
-    /// A banner near the top of the screen that says workers stopped because there wasn't enough
-    /// money to pay them; they get back to work once they're paid. Hides itself after a few seconds.
+    /// A banner near the top of the screen when workers can't be paid (they work slower, then
+    /// stop). Hides itself after a few seconds.
     /// </summary>
     public class StaffUnpaidAlert : MonoBehaviour
     {
@@ -29,10 +29,10 @@ namespace BubbleTea.UI
         private void OnEnable() => Payroll.WorkersUnpaid += Show;
         private void OnDisable() => Payroll.WorkersUnpaid -= Show;
 
-        private void Show(string who)
+        private void Show(string message)
         {
             timer = seconds;
-            if (label != null) label.text = $"{who} stopped working: not enough money for wages!\nThey'll get back to work once you can pay them.";
+            if (label != null) label.text = message;
             if (banner != null) banner.SetActive(true);
         }
 
