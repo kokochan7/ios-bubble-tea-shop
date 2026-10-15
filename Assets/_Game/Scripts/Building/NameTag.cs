@@ -8,7 +8,7 @@ namespace BubbleTea.Building
     /// </summary>
     public class NameTag : MonoBehaviour
     {
-        private const float CharacterSize = 0.045f;
+        private const float CharacterSize = 0.055f;
 
         [SerializeField] private string text;
         [SerializeField, Tooltip("Meters above the object's position.")]
@@ -34,14 +34,22 @@ namespace BubbleTea.Building
             return nameTag;
         }
 
-        /// <summary>The name shown for a pad's buildable: "Hire Barista 3" shows as "Barista".</summary>
+        // Things that get no label (they're easy to tell apart, and labels cluttered the shop).
+        private static readonly string[] Unlabeled =
+            { "Counter", "Barista", "Cleaner", "Seating Area", "More Seating", "Drive Thru", "Drive-Thru Cashier" };
+
+        /// <summary>
+        /// The name shown for a pad's buildable: "Hire Barista 3" shows as "Barista", "Upgrades" as
+        /// "Upgrade Desk". Null for things that get no label.
+        /// </summary>
         public static string NameFor(string displayName)
         {
             if (string.IsNullOrEmpty(displayName)) return displayName;
             string name = displayName.StartsWith("Hire ") ? displayName.Substring(5) : displayName;
             int space = name.LastIndexOf(' ');
             if (space > 0 && int.TryParse(name.Substring(space + 1), out _)) name = name.Substring(0, space);
-            return name;
+            if (name == "Upgrades") return "Upgrade Desk";
+            return System.Array.IndexOf(Unlabeled, name) >= 0 ? null : name;
         }
 
         private void Start()
@@ -49,19 +57,27 @@ namespace BubbleTea.Building
             label = new GameObject("Name Tag").transform;
             label.SetParent(transform, false);
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            // A dark copy just behind the white text, so it reads on any floor.
-            MakeText(label, font, new Color(0.25f, 0.17f, 0.13f, 0.85f), new Vector3(0.025f, -0.025f, 0.01f));
-            MakeText(label, font, Color.white, Vector3.zero);
+            // A thick dark outline (dark copies all around, just behind) so the bright text reads on any floor.
+            var outline = new Color(0.18f, 0.1f, 0.08f, 1f);
+            const float o = 0.03f;
+            for (int i = 0; i < 8; i++)
+            {
+                float angle = i * Mathf.PI / 4f;
+                MakeText(label, font, outline, new Vector3(Mathf.Cos(angle) * o, Mathf.Sin(angle) * o, 0.01f));
+            }
+            MakeText(label, font, new Color(1f, 0.93f, 0.45f), Vector3.zero, 1); // warm yellow, drawn on top
         }
 
-        private void MakeText(Transform parent, Font font, Color color, Vector3 offset)
+        private void MakeText(Transform parent, Font font, Color color, Vector3 offset, int sortingOrder = 0)
         {
             var go = new GameObject("Text");
             go.transform.SetParent(parent, false);
             go.transform.localPosition = offset;
             var mesh = go.AddComponent<TextMesh>();
             mesh.font = font;
-            go.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            var meshRenderer = go.GetComponent<MeshRenderer>();
+            meshRenderer.sharedMaterial = font.material;
+            meshRenderer.sortingOrder = sortingOrder;
             mesh.text = text;
             mesh.fontSize = 64;
             mesh.fontStyle = FontStyle.Bold;

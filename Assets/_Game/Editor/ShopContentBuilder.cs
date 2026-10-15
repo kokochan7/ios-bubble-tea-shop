@@ -468,12 +468,12 @@ namespace BubbleTea.EditorTools
         // Size of the drinks on the bars and the counter: the same as everywhere else.
         private const float DrinkSizeOnBars = DrinkSize;
 
-        // A small sign standing on the middle of the counter, showing what the customer at the
-        // front still wants. Low and small so it doesn't hide the kitchen behind it.
+        // A sign standing low on the customers' side of the counter, showing what the customer at
+        // the front still wants. Kept low so it doesn't hide the kitchen behind it.
         private static void AddOrderBoard(GameObject root, ServingCounter counter, float counterTop)
         {
-            Transform board = AddAnchor(root.transform, "OrderBoard", new Vector3(0f, counterTop + 0.12f, 0f));
-            board.localScale = Vector3.one * 0.7f;
+            Transform board = AddAnchor(root.transform, "OrderBoard", new Vector3(0f, counterTop - 0.1f, -0.35f));
+            board.localScale = Vector3.one * 0.95f;
             GameObject backing = GameObject.CreatePrimitive(PrimitiveType.Cube);
             backing.name = "Backing";
             Object.DestroyImmediate(backing.GetComponent<Collider>());

@@ -9,8 +9,8 @@ namespace BubbleTea.Customers
     /// <summary>
     /// Where drinks are sold. Customers line up on the other side, each wanting one or more
     /// drinks from the menu (only drinks the shop can already make). Drinks are made fresh:
-    /// the counter never keeps any. A drink brought here goes straight to the first customer in
-    /// line who ordered it, and one nobody ordered stays with whoever carried it.
+    /// the counter never keeps any. Only the customer at the front of the line is served: a drink
+    /// they ordered goes straight to them, and any other drink stays with whoever carried it.
     /// Each customer pays into the counter's cash pile.
     /// </summary>
     public class ServingCounter : MonoBehaviour
@@ -215,19 +215,16 @@ namespace BubbleTea.Customers
             if (tip > 0) GameEvents.RaiseTipped(transform.position, tip);
         }
 
-        // Hands a drink the carrier brought straight to the first customer in line who ordered
-        // it. Drinks nobody ordered stay with the carrier (the trash can takes them).
+        // Hands a drink the carrier brought to the customer at the front of the line, if it's one
+        // they ordered. Everyone behind them waits their turn; other drinks stay with the carrier.
         private bool Handoff(ItemCarrier carrier)
         {
             if (!carrier.WillGiveTo(this)) return false;
-            if (!carrier.Stack.TryTake(IsStillWanted, out CarriedItem drink)) return false;
-            foreach (Customer customer in queue)
-            {
-                if (customer == null || CountIn(customer.Orders, drink.Definition) == 0) continue;
-                if (customer.ServeNow(drink)) return true;
-                break;
-            }
-            carrier.Stack.Push(drink); // nobody to give it to after all
+            Customer front = FrontCustomer;
+            if (front == null || !front.IsAtCounter) return false;
+            if (!carrier.Stack.TryTake(item => CountIn(front.Orders, item) > 0, out CarriedItem drink)) return false;
+            if (front.ServeNow(drink)) return true;
+            carrier.Stack.Push(drink); // they didn't take it after all (too pricey)
             return false;
         }
 

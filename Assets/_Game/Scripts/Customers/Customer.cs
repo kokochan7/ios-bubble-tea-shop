@@ -82,6 +82,7 @@ namespace BubbleTea.Customers
         private Action<Customer> onGone;
         private State state;
         private float waited;
+        private bool atCounter;
         private MaterialPropertyBlock moodBlock;
         private SeatingTable table;
         private int seat = -1;
@@ -93,6 +94,9 @@ namespace BubbleTea.Customers
         private readonly List<CarriedItem> held = new();
         private readonly List<GameObject> icons = new();
         private float patience;
+
+        /// <summary>True while this customer is first in line and standing at the counter, ready to be served.</summary>
+        public bool IsAtCounter => state == State.Queueing && atCounter;
 
         /// <summary>The drinks this customer still wants.</summary>
         public IReadOnlyList<DrinkRecipe> Orders => orders;
@@ -204,7 +208,9 @@ namespace BubbleTea.Customers
                 return;
             }
 
-            if (!WalkTo(counter.QueuePosition(Mathf.Max(index, 0))) || index != 0) return;
+            bool inPlace = WalkTo(counter.QueuePosition(Mathf.Max(index, 0)));
+            atCounter = inPlace && index == 0;
+            if (!atCounter) return;
 
             // At the front of the line they read the prices; too expensive and they leave.
             if (!checkedPrice)
@@ -225,7 +231,7 @@ namespace BubbleTea.Customers
         }
 
         /// <summary>
-        /// Handed one of their drinks, fresh, wherever they are in line. They pay at the counter as usual.
+        /// Handed one of their drinks, fresh, at the counter. They pay at the counter as usual.
         /// </summary>
         public bool ServeNow(CarriedItem drink)
         {
