@@ -656,7 +656,7 @@ namespace BubbleTea.EditorTools
         {
             var go = new GameObject("Main Camera") { tag = "MainCamera" };
             var camera = go.AddComponent<Camera>();
-            camera.fieldOfView = 40f;
+            camera.fieldOfView = 50f;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.48f, 0.70f, 0.36f); // grass, past the edge of the ground
             camera.allowMSAA = true;
