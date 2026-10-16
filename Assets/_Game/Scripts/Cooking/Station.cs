@@ -75,7 +75,7 @@ namespace BubbleTea.Cooking
         private FloatingText jamHint;
         // One jam at a time for the whole shop, on a real-time clock (not per-bar work time).
         private static float nextJamTime = float.PositiveInfinity;
-        private static int jamScene = -1;
+        private static UnityEngine.SceneManagement.Scene jamScene;
         private float hintTimer;
 
         private int baristas;
@@ -137,7 +137,7 @@ namespace BubbleTea.Cooking
             if (needsPlayer) handLabel = FloatingText.Create(transform, front + Vector3.up * 1.1f, 0.05f);
             jamMark = FloatingText.Create(transform, Vector3.up * 2.4f, 0.16f);
             jamHint = FloatingText.Create(transform, Vector3.up * 1.95f, 0.04f);
-            int scene = gameObject.scene.handle;
+            UnityEngine.SceneManagement.Scene scene = gameObject.scene;
             if (jamScene != scene)
             {
                 // New shop loaded: the first jam comes 45 to 90 seconds in.
@@ -207,7 +207,7 @@ namespace BubbleTea.Cooking
         private void OnDisable()
         {
             active.Remove(this);
-            if (Jammed && gameObject.scene.handle == jamScene) PlanNextJam(); // don't stall jams if a jammed bar goes away
+            if (Jammed && gameObject.scene == jamScene) PlanNextJam(); // don't stall jams if a jammed bar goes away
             VirtualJoystick.Tapped -= OnTapped;
             Stats.Changed -= OnStatChanged;
         }
