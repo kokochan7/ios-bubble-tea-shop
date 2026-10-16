@@ -43,6 +43,33 @@ namespace BubbleTea.Customers
 
         private readonly List<Customer> inside = new();
         private float timer;
+        private float gap = -1f;      // seconds until the next customer, a bit random each time
+
+        // The shop's traffic comes and goes at random, the same for every spawner: a quiet spell,
+        // normal trade, a busy rush, or now and then nobody at all for a little while.
+        private static float trafficRate = 1f;
+        private static int trafficExtra;
+        private static float nextTrafficChange;
+
+        private static void UpdateTraffic()
+        {
+            if (Time.time < nextTrafficChange) return;
+            float roll = UnityEngine.Random.value;
+            float lasts;
+            if (roll < 0.12f) { trafficRate = 0f; trafficExtra = 0; lasts = UnityEngine.Random.Range(10f, 20f); }           // empty
+            else if (roll < 0.4f) { trafficRate = 0.4f; trafficExtra = -1; lasts = UnityEngine.Random.Range(20f, 40f); }    // quiet
+            else if (roll < 0.75f) { trafficRate = 1f; trafficExtra = 0; lasts = UnityEngine.Random.Range(25f, 50f); }      // normal
+            else { trafficRate = 1.9f; trafficExtra = 2; lasts = UnityEngine.Random.Range(20f, 35f); }                     // busy
+            nextTrafficChange = Time.time + lasts;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay()
+        {
+            trafficRate = 1f;
+            trafficExtra = 0;
+            nextTrafficChange = 0f;
+        }
         private float criticTimer;
 
         private void Update()
@@ -51,12 +78,17 @@ namespace BubbleTea.Customers
             if (customerPrefab == null || counter == null || !counter.CanMakeAnything) return;
             criticTimer += Time.deltaTime;
 
-            // A better rating and rush hours (see GameClock) both bring customers faster.
+            // A better rating and rush hours (see GameClock) both bring customers faster, and the
+            // traffic swings at random between empty, quiet, normal and busy spells.
+            UpdateTraffic();
             timer += Time.deltaTime * Stats.Get(StatId.CustomerRate, 1f) * GameClock.RushMultiplier
-                * (1f + BubbleTea.Building.ShopDecor.Flow); // decor draws more customers in
-            int max = maxCustomers + Mathf.RoundToInt(Stats.Get(StatId.ExtraCustomers, 0f)) + GameClock.RushExtraCustomers;
-            if (timer < secondsBetweenCustomers || inside.Count >= max) return;
+                * (1f + BubbleTea.Building.ShopDecor.Flow) // decor draws more customers in
+                * trafficRate;
+            int max = Mathf.Max(1, maxCustomers + Mathf.RoundToInt(Stats.Get(StatId.ExtraCustomers, 0f)) + GameClock.RushExtraCustomers + trafficExtra);
+            if (gap < 0f) gap = secondsBetweenCustomers * UnityEngine.Random.Range(0.5f, 1.6f);
+            if (timer < gap || inside.Count >= max) return;
             timer = 0f;
+            gap = secondsBetweenCustomers * UnityEngine.Random.Range(0.5f, 1.6f); // customers don't arrive like clockwork
 
             Customer.Visit kind = Customer.Visit.Regular;
             if (criticChance > 0f && criticTimer >= secondsBetweenCritics && UnityEngine.Random.value < criticChance)

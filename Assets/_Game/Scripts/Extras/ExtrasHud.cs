@@ -30,6 +30,8 @@ namespace BubbleTea.Extras
         private RectTransform column;
         private Text pearlLabel;
         private Text playLabel;
+        private Text pointsLabel;
+        private GameObject pointsBadge;
         private GameObject playButton;
         private BubbleTea.Saving.SaveManager saveManager;
         private float endgameCheck;
@@ -85,7 +87,18 @@ namespace BubbleTea.Extras
         private void OnChanged()
         {
             if (pearlLabel != null) pearlLabel.text = Profile.Pearls.ToString("N0");
+            ShowPoints();
             refresh?.Invoke();
+        }
+
+        // Skill points waiting to be spent across every team, on the TEAM button's red bubble.
+        private void ShowPoints()
+        {
+            if (pointsBadge == null) return;
+            int points = 0;
+            foreach (TeamSkills.Role role in Enum.GetValues(typeof(TeamSkills.Role))) points += TeamSkills.PointsLeft(role);
+            if (pointsBadge.activeSelf != points > 0) pointsBadge.SetActive(points > 0);
+            pointsLabel.text = "+" + points;
         }
 
         private void Update()
@@ -101,6 +114,7 @@ namespace BubbleTea.Extras
             if (endgameCheck <= 0f)
             {
                 endgameCheck = 1f;
+                ShowPoints();
                 bool endgame = EverythingUnlocked();
                 if (playButton.activeSelf != endgame) playButton.SetActive(endgame);
             }
@@ -145,7 +159,18 @@ namespace BubbleTea.Extras
             pearlLabel.rectTransform.offsetMax = new Vector2(-18f, 0f);
 
             Place((RectTransform)UiKit.Button(column, "SHOP", new Color(0.95f, 0.66f, 0.3f, 0.92f), Vector2.zero, () => Open(DecorShop), 50).transform, 3);
-            Place((RectTransform)UiKit.Button(column, "TEAM", new Color(0.62f, 0.45f, 0.88f, 0.92f), Vector2.zero, () => Open(Team), 50).transform, 4);
+            Button team = UiKit.Button(column, "TEAM", new Color(0.62f, 0.45f, 0.88f, 0.92f), Vector2.zero, () => Open(Team), 50);
+            Place((RectTransform)team.transform, 4);
+            // A red "+1" bubble on the top-left corner while there are skill points to spend.
+            RectTransform badge = UiKit.Box(team.transform, "Points", new Color(0.9f, 0.2f, 0.2f), UiKit.Circle);
+            UiKit.Pin(badge, new Vector2(0f, 1f), new Vector2(-22f, 22f), new Vector2(76f, 76f));
+            badge.pivot = new Vector2(0f, 1f);
+            badge.GetComponent<Image>().raycastTarget = false;
+            pointsLabel = UiKit.Label(badge, "", 38, Color.white);
+            UiKit.Fill(pointsLabel.rectTransform);
+            pointsLabel.raycastTarget = false;
+            pointsBadge = badge.gameObject;
+            ShowPoints();
             Place((RectTransform)UiKit.Button(column, "PETS", new Color(0.4f, 0.75f, 0.7f, 0.92f), Vector2.zero, () => Open(Pets), 50).transform, 5);
             Button play = UiKit.Button(column, "PLAY", new Color(0.35f, 0.7f, 0.95f, 0.92f), Vector2.zero, () => Open(Play, true), 50);
             playLabel = UiKit.TextOf(play);
