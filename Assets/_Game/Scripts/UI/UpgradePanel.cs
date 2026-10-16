@@ -18,10 +18,16 @@ namespace BubbleTea.UI
         [SerializeField, Tooltip("Closes the menu and unpauses the game.")]
         private Button closeButton;
 
+        [SerializeField, Tooltip("Closes the menu and lets you move the upgrade desk.")]
+        private Button moveButton;
+
+        private UpgradeZone desk; // the desk that was tapped
+
         private void Start()
         {
             if (panel != null) panel.SetActive(false);
             if (closeButton != null) closeButton.onClick.AddListener(Close);
+            if (moveButton != null) moveButton.onClick.AddListener(MoveDesk);
         }
 
         private void OnEnable() => VirtualJoystick.Tapped += OnTapped;
@@ -40,11 +46,19 @@ namespace BubbleTea.UI
             Ray ray = camera.ScreenPointToRay(screenPosition);
             foreach (RaycastHit hit in Physics.RaycastAll(ray, 200f))
             {
-                if (hit.collider.GetComponentInParent<UpgradeZone>() == null) continue;
+                desk = hit.collider.GetComponentInParent<UpgradeZone>();
+                if (desk == null) continue;
                 panel.SetActive(true);
                 Time.timeScale = 0f;
                 return;
             }
+        }
+
+        // Closes the menu and picks up the desk: the joystick slides it, ROTATE turns it, DONE puts it down.
+        private void MoveDesk()
+        {
+            Close();
+            if (desk != null) BubbleTea.Building.MoveMode.Begin(desk.GetComponentInParent<BubbleTea.Building.Movable>());
         }
 
         /// <summary>Hides the menu and unpauses the game.</summary>

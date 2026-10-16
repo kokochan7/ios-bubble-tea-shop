@@ -37,6 +37,8 @@ namespace BubbleTea.Cooking
             return best;
         }
 
+        private void Awake() => BubbleTea.Building.Movable.Make(gameObject, "TrashCan", tapToMove: true);
+
         private void OnEnable() => active.Add(this);
         private void OnDisable() => active.Remove(this);
 

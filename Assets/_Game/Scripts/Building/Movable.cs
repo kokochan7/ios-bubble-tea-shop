@@ -9,9 +9,10 @@ using UnityEngine;
 namespace BubbleTea.Building
 {
     /// <summary>
-    /// Something bought on a pad that the player can tap and move or turn: bars, decor and tables.
-    /// Its pad adds this when it builds it. Where it was moved to is kept in the save file
-    /// (by the pad's save ID), so it stays put next time.
+    /// Something the player can move or turn: bars and decor (tap them), the trash can and the staff
+    /// sofa (tap them too), and the upgrade desk (its MOVE button is in the Upgrades menu). Pads add
+    /// this when they build things. Where it was moved to is kept in the save file (by its ID), so it
+    /// stays put next time.
     /// </summary>
     public class Movable : MonoBehaviour
     {
@@ -26,26 +27,35 @@ namespace BubbleTea.Building
         /// <summary>The save ID of the pad that built it.</summary>
         public string Id { get; private set; }
 
+        /// <summary>False for things moved another way (the upgrade desk moves from its menu, since a tap opens it).</summary>
+        public bool TapToMove { get; private set; } = true;
+
         /// <summary>True once it stands somewhere other than where its pad built it.</summary>
         public bool HasMoved { get; private set; }
 
-        /// <summary>True for things the player may move: bars, decor and tables (not counters, desks or travel spots).</summary>
-        public static bool CanMove(GameObject built)
-        {
-            if (built == null) return false;
-            if (built.GetComponentInChildren<ServingCounter>(true) != null) return false;
-            if (built.GetComponentInChildren<UpgradeZone>(true) != null) return false;
-            if (built.GetComponentInChildren<ShopTravel>(true) != null) return false;
-            return built.GetComponentInChildren<Station>(true) != null
-                || built.GetComponentInChildren<ShopDecor>(true) != null
-                || built.GetComponentInChildren<SeatingTable>(true) != null;
-        }
-
-        /// <summary>Makes a just-built thing movable, if it's the kind that can be moved.</summary>
+        /// <summary>
+        /// Makes a just-built thing movable if it's the kind that can be moved: bars and decor, and the
+        /// upgrade desk (from its menu). Counters, tables and travel spots stay put.
+        /// </summary>
         public static void AddTo(GameObject built, string id)
         {
-            if (!CanMove(built)) return;
-            built.AddComponent<Movable>().Id = id;
+            if (built == null) return;
+            if (built.GetComponentInChildren<ServingCounter>(true) != null) return;
+            if (built.GetComponentInChildren<ShopTravel>(true) != null) return;
+            if (built.GetComponentInChildren<SeatingTable>(true) != null) return;
+            if (built.GetComponentInChildren<UpgradeZone>(true) != null) Make(built, id, tapToMove: false);
+            else if (built.GetComponentInChildren<Station>(true) != null || built.GetComponentInChildren<ShopDecor>(true) != null)
+                Make(built, id, tapToMove: true);
+        }
+
+        /// <summary>Makes something movable, saved under this ID (unique in the shop).</summary>
+        public static Movable Make(GameObject thing, string id, bool tapToMove)
+        {
+            if (thing.TryGetComponent(out Movable movable)) return movable;
+            movable = thing.AddComponent<Movable>();
+            movable.Id = id;
+            movable.TapToMove = tapToMove;
+            return movable;
         }
 
         /// <summary>The movable thing built by the pad with this save ID, or null.</summary>
@@ -70,10 +80,10 @@ namespace BubbleTea.Building
         public bool CanMoveNow(out string reason)
         {
             reason = null;
-            SeatingTable table = GetComponentInChildren<SeatingTable>();
-            if (table != null && table.InUse)
+            BubbleTea.Staff.StaffSofa sofa = GetComponentInChildren<BubbleTea.Staff.StaffSofa>();
+            if (sofa != null && sofa.InUse)
             {
-                reason = "Wait until nobody is sitting here.";
+                reason = "Wait until nobody is taking a break on the sofa.";
                 return false;
             }
             return true;

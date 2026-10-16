@@ -117,17 +117,6 @@ namespace BubbleTea.Customers
 
         public Transform Seat(int seat) => seats[seat];
 
-        /// <summary>True while a customer has a seat here (sitting or on their way).</summary>
-        public bool InUse
-        {
-            get
-            {
-                if (occupants == null) return false;
-                foreach (Customer occupant in occupants) if (occupant != null) return true;
-                return false;
-            }
-        }
-
         /// <summary>The customer got up. Pays the bonus and leaves a mess if they actually sat down.</summary>
         public void Leave(int seat, bool sat)
         {

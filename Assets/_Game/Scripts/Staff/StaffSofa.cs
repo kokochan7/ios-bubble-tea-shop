@@ -16,6 +16,18 @@ namespace BubbleTea.Staff
 
         private readonly Dictionary<Transform, Object> takenBy = new();
 
+        private void Awake() => BubbleTea.Building.Movable.Make(gameObject, "StaffSofa", tapToMove: true);
+
+        /// <summary>True while a barista has a seat here (sitting or on their way).</summary>
+        public bool InUse
+        {
+            get
+            {
+                foreach (KeyValuePair<Transform, Object> taken in takenBy) if (taken.Value != null) return true;
+                return false;
+            }
+        }
+
         private void OnEnable() => active.Add(this);
         private void OnDisable() => active.Remove(this);
 

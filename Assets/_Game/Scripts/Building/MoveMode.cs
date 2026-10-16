@@ -10,7 +10,8 @@ using UnityEngine.UI;
 namespace BubbleTea.Building
 {
     /// <summary>
-    /// Tap a bar, a piece of decor or a table and a MOVE button pops up over it. Tap MOVE and
+    /// Tap a bar, a piece of decor, the trash can or the sofa and a MOVE button pops up over it
+    /// (the upgrade desk's MOVE button is in its menu). Tap MOVE and
     /// the joystick slides it around the shop instead of walking you (it won't go through walls,
     /// other things or the unlock pads); ROTATE turns it a quarter turn, DONE keeps the new spot
     /// and CANCEL puts it back. Builds its own buttons, so the scenes don't need rebuilding.
@@ -39,6 +40,16 @@ namespace BubbleTea.Building
         private RectTransform moveButton;
         private GameObject bar;
         private Text hint;
+
+        /// <summary>Starts moving something straight away (the upgrade desk's menu button does this).</summary>
+        public static void Begin(Movable thing)
+        {
+            if (thing == null) return;
+            Ensure();
+            if (instance.target != null) return;
+            instance.picked = thing;
+            instance.BeginMove();
+        }
 
         /// <summary>Makes sure the open shop has one (movable things call this when they appear).</summary>
         public static void Ensure()
@@ -100,14 +111,14 @@ namespace BubbleTea.Building
             foreach (RaycastHit hit in Physics.RaycastAll(camera.ScreenPointToRay(screenPosition), 200f))
             {
                 Movable movable = hit.collider.GetComponentInParent<Movable>();
-                if (movable != null) return movable;
+                if (movable != null && movable.TapToMove) return movable;
             }
             // Things without colliders: the nearest one close to the tap on screen.
             Movable best = null;
             float bestDistance = Screen.height * 0.06f;
             foreach (Movable movable in Movable.All)
             {
-                if (movable == null) continue;
+                if (movable == null || !movable.TapToMove) continue;
                 Vector3 spot = camera.WorldToScreenPoint(movable.transform.position + Vector3.up * 0.6f);
                 if (spot.z <= 0f) continue;
                 float distance = Vector2.Distance(screenPosition, spot);

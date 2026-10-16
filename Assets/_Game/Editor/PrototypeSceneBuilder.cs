@@ -771,6 +771,67 @@ namespace BubbleTea.EditorTools
             return camera;
         }
 
+        // A 512px anti-aliased rounded square with a bright rim for the money filling a pad (the
+        // built-in UI sprite is tiny, so its border went blurry and jagged stretched over a pad).
+        private static Sprite padFillSprite;
+
+        private static Sprite PadFillSprite()
+        {
+            if (padFillSprite != null) return padFillSprite;
+            const string folder = "Assets/_Game/Art/Generated";
+            const int size = 512;
+            const float corner = 44f;
+            const float rimWidth = 14f;
+            if (!AssetDatabase.IsValidFolder(folder))
+            {
+                System.IO.Directory.CreateDirectory(folder);
+                AssetDatabase.Refresh();
+            }
+
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            var pixels = new Color[size * size];
+            float half = size * 0.5f - 2f; // a little transparent margin keeps the edge smooth
+            float center = (size - 1) * 0.5f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    // Distance inside the rounded square's edge (negative outside).
+                    float qx = Mathf.Abs(x - center) - (half - corner);
+                    float qy = Mathf.Abs(y - center) - (half - corner);
+                    float outside = Mathf.Sqrt(Mathf.Max(qx, 0f) * Mathf.Max(qx, 0f) + Mathf.Max(qy, 0f) * Mathf.Max(qy, 0f))
+                        + Mathf.Min(Mathf.Max(qx, qy), 0f) - corner;
+                    float depth = -outside;
+                    float alpha = Mathf.Clamp01(depth + 0.5f);
+                    float rim = Mathf.Clamp01(rimWidth - depth + 0.5f); // 1 on the rim, fading inside over a pixel
+                    float shade = Mathf.Lerp(0.8f, 1f, rim);
+                    pixels[y * size + x] = new Color(shade, shade, shade, alpha * Mathf.Lerp(0.85f, 1f, rim));
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+
+            string path = $"{folder}/PadFill.png";
+            System.IO.File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            if (importer != null)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.alphaIsTransparency = true;
+                importer.mipmapEnabled = true;
+                importer.filterMode = FilterMode.Trilinear;
+                importer.anisoLevel = 4;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+            }
+            padFillSprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            return padFillSprite;
+        }
+
         // Draws a 512px anti-aliased circle into a PNG and imports it as a UI sprite. The ring is a
         // soft disc with a bright rim; the knob is a solid disc with a darker edge and a top highlight.
         private static Sprite JoystickSprite(string name, bool ring)
@@ -2153,6 +2214,16 @@ namespace BubbleTea.EditorTools
             closeRect.sizeDelta = new Vector2(90f, 80f);
             SetReference(panelSwitch, "closeButton", close);
 
+            // Top-left: pick up the upgrade desk and move it (a tap on the desk opens this menu instead).
+            Button move = CreateMenuButton("Move", panel, "MOVE", rounded, font, new Color(0.91f, 0.51f, 0.6f), out Text moveLabel);
+            moveLabel.fontSize = 40;
+            var moveRect = (RectTransform)move.transform;
+            moveRect.anchorMin = moveRect.anchorMax = new Vector2(0f, 1f);
+            moveRect.pivot = new Vector2(0f, 1f);
+            moveRect.anchoredPosition = new Vector2(20f, -15f);
+            moveRect.sizeDelta = new Vector2(170f, 80f);
+            SetReference(panelSwitch, "moveButton", move);
+
             for (int i = 0; i < upgrades.Length; i++)
             {
                 RectTransform row = CreateUiObject(upgrades[i].DisplayName, panel);
@@ -2301,8 +2372,10 @@ namespace BubbleTea.EditorTools
             rect.sizeDelta = new Vector2(220f, 220f);
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
+            // Draws the price and name at a higher resolution, so they stay sharp up close.
+            canvasGo.AddComponent<CanvasScaler>().dynamicPixelsPerUnit = 4f;
 
-            Sprite square = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            Sprite square = PadFillSprite();
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             RectTransform fillRect = CreateUiObject("Fill", rect);
