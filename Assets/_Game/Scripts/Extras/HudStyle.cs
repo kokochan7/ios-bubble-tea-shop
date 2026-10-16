@@ -21,7 +21,7 @@ namespace BubbleTea.Extras
         private const float Highlight = 5f;   // the bright line along the top
 
         private static Sprite bevel;
-        private readonly HashSet<int> done = new();
+        private readonly HashSet<Object> done = new(); // (not instance ids: GetInstanceID is obsolete in Unity 6.6)
         private float timer;
 
         /// <summary>A white rounded square with a top highlight and a bottom lip (tinted by the Image's color).</summary>
@@ -53,7 +53,7 @@ namespace BubbleTea.Extras
         private void Style(Image image)
         {
             if (done.Count > 5000) done.Clear(); // pop-ups redraw their rows; forget the old ones now and then
-            if (!done.Add(image.GetInstanceID())) return;
+            if (!done.Add(image)) return;
             Sprite sprite = image.sprite;
             if (sprite == null) return;
             bool rounded = sprite == bevel || sprite.name == "UISprite" || sprite.name == UiKit.RoundedName;
@@ -77,7 +77,7 @@ namespace BubbleTea.Extras
 
         private void Style(Text text)
         {
-            if (!done.Add(text.GetInstanceID())) return;
+            if (!done.Add(text)) return;
             Color c = text.color;
             if (c.r + c.g + c.b < 1.8f || text.GetComponent<Shadow>() != null) return; // only light text
             Shadow shadow = text.gameObject.AddComponent<Shadow>();
