@@ -532,7 +532,7 @@ namespace BubbleTea.EditorTools
         private const float DrinkSizeOnBars = DrinkSize;
 
         // A floating high-tech screen on the customers' side of the counter, showing what the
-        // customer at the front still wants: a bright white screen with dark text in a metal bezel
+        // customer at the front still wants: a white screen with black text in a metal bezel
         // with a neon rim, a "NOW ORDERING" header and a status light. It floats out in front of
         // the counter and above the register, so the register can't poke through it.
         private static void AddOrderBoard(GameObject root, ServingCounter counter, float counterTop)
@@ -541,20 +541,20 @@ namespace BubbleTea.EditorTools
             board.localScale = Vector3.one * 0.95f;
             Color cyan = new Color(0.45f, 0.95f, 1f);
             Transform screen = AddScreenPart(board, "Screen", new Vector3(0f, 0.42f, 0.08f), new Vector3(1f, 1.1f, 0.04f),
-                ScreenMaterial("OrderScreen", Color.white, new Color(0.35f, 0.35f, 0.38f)));
+                ScreenMaterial("OrderScreen", new Color(0.96f, 0.96f, 0.96f), Color.black, unlit: true));
             Transform bezel = AddScreenPart(board, "Bezel", new Vector3(0f, 0.42f, 0.11f), new Vector3(1.1f, 1.2f, 0.05f),
                 ScreenMaterial("OrderScreenBezel", new Color(0.13f, 0.14f, 0.18f), Color.black));
             Transform rim = AddScreenPart(board, "NeonRim", new Vector3(0f, 0.42f, 0.13f), new Vector3(1.16f, 1.26f, 0.02f),
-                ScreenMaterial("OrderScreenRim", cyan, cyan * 1.4f));
+                ScreenMaterial("OrderScreenRim", cyan, cyan * 0.6f));
             Transform led = AddScreenPart(board, "StatusLight", new Vector3(0f, 0f, 0.08f), new Vector3(0.05f, 0.05f, 0.02f),
-                ScreenMaterial("OrderScreenLed", new Color(0.3f, 1f, 0.45f), new Color(0.3f, 1f, 0.45f) * 1.5f));
+                ScreenMaterial("OrderScreenLed", new Color(0.3f, 1f, 0.45f), new Color(0.3f, 1f, 0.45f) * 0.8f));
             Transform icons = AddAnchor(board, "Icons", Vector3.zero);
 
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             // The order in words above the pictures.
-            TextMesh label = AddScreenText(board, "OrderText", font, new Vector3(0f, 0.7f, 0f), 64, 0.035f, new Color(0.1f, 0.14f, 0.28f));
+            TextMesh label = AddScreenText(board, "OrderText", font, new Vector3(0f, 0.7f, 0f), 64, 0.035f, Color.black);
             // A small header along the top of the screen.
-            TextMesh header = AddScreenText(board, "Header", font, new Vector3(0f, 1f, 0f), 48, 0.022f, new Color(0.85f, 0.25f, 0.55f));
+            TextMesh header = AddScreenText(board, "Header", font, new Vector3(0f, 1f, 0f), 48, 0.022f, Color.black);
             header.text = "NOW ORDERING";
             board.gameObject.SetActive(false);
 
@@ -603,13 +603,27 @@ namespace BubbleTea.EditorTools
             return text;
         }
 
-        // A glowing material (set every build, so older materials pick up the new look).
-        private static Material ScreenMaterial(string name, Color color, Color emission)
+        // A glowing material (set every build, so older materials pick up the new look). Matte, with
+        // no sun highlight or sky reflection, so the sun doesn't glare off the screen. An unlit
+        // material shows its exact color whatever the light (the white screen never blooms).
+        private static Material ScreenMaterial(string name, Color color, Color emission, bool unlit = false)
         {
             Material material = GetOrCreateMaterial(name, color);
+            Shader shader = Shader.Find(unlit ? "Universal Render Pipeline/Unlit" : "Universal Render Pipeline/Lit");
+            if (shader != null && material.shader != shader) material.shader = shader;
             material.color = color;
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
-            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.85f);
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.2f);
+            if (material.HasProperty("_SpecularHighlights"))
+            {
+                material.SetFloat("_SpecularHighlights", 0f);
+                material.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+            }
+            if (material.HasProperty("_EnvironmentReflections"))
+            {
+                material.SetFloat("_EnvironmentReflections", 0f);
+                material.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
+            }
             if (material.HasProperty("_EmissionColor"))
             {
                 if (emission.maxColorComponent > 0f) material.EnableKeyword("_EMISSION");
@@ -1023,6 +1037,7 @@ namespace BubbleTea.EditorTools
             Transform bubble = AddAnchor(root.transform, "OrderBubble", new Vector3(0f, 1.9f, 0f));
 
             var customer = root.AddComponent<Customer>();
+            root.AddComponent<CarLook>(); // a random sedan, SUV, van or pickup in a random color
             var serialized = new SerializedObject(customer);
             serialized.FindProperty("speed").floatValue = 5f;
             serialized.FindProperty("canSit").boolValue = false;

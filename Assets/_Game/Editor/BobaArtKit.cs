@@ -102,6 +102,16 @@ namespace BubbleTea.EditorTools
         private const float CounterHeight = 1f;
         private static readonly Dictionary<string, Material> Materials = new();
 
+        /// <summary>Re-saves just the drive-thru window's model (the shop builder calls this).</summary>
+        public static void RefreshDriveThru()
+        {
+            Materials.Clear();
+            EnsureFolder(KitFolder);
+            EnsureFolder(MaterialFolder);
+            EnsureFolder(MeshFolder);
+            Save("DriveThruCounter", BuildDriveThru());
+        }
+
         [MenuItem("Bubble Tea/Art/Build Boba Art Kit")]
         public static void BuildKit()
         {

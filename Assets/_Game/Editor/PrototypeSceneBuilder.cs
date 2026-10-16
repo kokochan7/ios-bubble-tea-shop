@@ -460,6 +460,7 @@ namespace BubbleTea.EditorTools
             }
 
             Layout = plan.Layout;
+            BobaArtKit.RefreshDriveThru(); // the window's art without its old awning (it hid the order screen)
             // Colors are set every build (the materials may already exist with older colors).
             Material floorMat = GetOrCreateMaterial(plan.FloorMaterial, plan.FloorColor);
             floorMat.color = plan.FloorColor;
