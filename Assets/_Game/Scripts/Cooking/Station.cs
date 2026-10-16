@@ -52,13 +52,13 @@ namespace BubbleTea.Cooking
         private int maxSupplies = 20;
 
         [SerializeField, Tooltip("Seconds standing at the bar before the first drink goes onto the tray.")]
-        private float pickupDelay = 0.6f;
+        private float pickupDelay = 0f;
 
         [SerializeField, Tooltip("Seconds between drinks going onto (or off) the tray here.")]
         private float secondsPerItem = 0.7f;
 
-        [SerializeField, Tooltip("Seconds of work between jams, picked at random in this range (0 = never jams).")]
-        private Vector2 secondsBetweenJams = new(150f, 300f);
+        [SerializeField, Tooltip("Seconds between jams anywhere in the shop, picked at random in this range (0 = never jams).")]
+        private Vector2 secondsBetweenJams = new(60f, 120f);
 
         [SerializeField, Tooltip("How close the player must be (meters) to fix a jam by tapping.")]
         private float fixDistance = 3.5f;
@@ -73,7 +73,9 @@ namespace BubbleTea.Cooking
         private FloatingText handLabel;
         private FloatingText jamMark;
         private FloatingText jamHint;
-        private float untilJam;
+        // One jam at a time for the whole shop, on a real-time clock (not per-bar work time).
+        private static float nextJamTime = float.PositiveInfinity;
+        private static int jamScene = -1;
         private float hintTimer;
 
         private int baristas;
@@ -135,15 +137,33 @@ namespace BubbleTea.Cooking
             if (needsPlayer) handLabel = FloatingText.Create(transform, front + Vector3.up * 1.1f, 0.05f);
             jamMark = FloatingText.Create(transform, Vector3.up * 2.4f, 0.16f);
             jamHint = FloatingText.Create(transform, Vector3.up * 1.95f, 0.04f);
-            PlanNextJam();
+            int scene = gameObject.scene.handle;
+            if (jamScene != scene)
+            {
+                // New shop loaded: the first jam comes 45 to 90 seconds in.
+                jamScene = scene;
+                nextJamTime = secondsBetweenJams.y > 0f ? Time.time + Random.Range(45f, 90f) : float.PositiveInfinity;
+            }
         }
 
         private void PlanNextJam() =>
-            untilJam = secondsBetweenJams.y > 0f ? Random.Range(secondsBetweenJams.x, secondsBetweenJams.y) : float.PositiveInfinity;
+            nextJamTime = secondsBetweenJams.y > 0f ? Time.time + Random.Range(secondsBetweenJams.x, secondsBetweenJams.y) : float.PositiveInfinity;
+
+        // True when it's time for a jam and no other bar is jammed. Only busy bars jam.
+        private static bool JamDue()
+        {
+            if (Time.time < nextJamTime) return false;
+            foreach (Station station in active)
+            {
+                if (station.Jammed) return false;
+            }
+            return true;
+        }
 
         private void Jam()
         {
             Jammed = true;
+            nextJamTime = float.PositiveInfinity; // the next one is planned once this is fixed
             GameEvents.RaiseStationJammed(transform.position, true);
         }
 
@@ -187,6 +207,7 @@ namespace BubbleTea.Cooking
         private void OnDisable()
         {
             active.Remove(this);
+            if (Jammed && gameObject.scene.handle == jamScene) PlanNextJam(); // don't stall jams if a jammed bar goes away
             VirtualJoystick.Tapped -= OnTapped;
             Stats.Changed -= OnStatChanged;
         }
@@ -317,8 +338,7 @@ namespace BubbleTea.Cooking
             if (current == null || Jammed) return;
             if (NeedsHands && !PlayerHere) return; // waits for the player to whisk
 
-            untilJam -= Time.deltaTime;
-            if (untilJam <= 0f)
+            if (JamDue() && Random.value < 0.5f) // a random busy bar gets it
             {
                 Jam();
                 return;

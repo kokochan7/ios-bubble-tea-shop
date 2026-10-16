@@ -677,14 +677,28 @@ namespace BubbleTea.EditorTools
         // and a sign behind it. The "BusStop" art slot replaces the sign.
         private static GameObject BuildTravelPrefab(string name, string targetScene, string destination, Color color)
         {
+            // A small, glowing pad with sparkles circling over it, so it's easy to spot.
             var root = new GameObject(name);
-            AddPart(root.transform, PrimitiveType.Cube, "Tile", new Vector3(0f, 0.01f, 0f),
-                new Vector3(2.2f, 0.02f, 2.2f), GetOrCreateMaterial(name, color));
+            GameObject tile = AddPart(root.transform, PrimitiveType.Cube, "Tile", new Vector3(0f, 0.01f, 0f),
+                new Vector3(1.4f, 0.02f, 1.4f), GetOrCreateMaterial(name, color));
             Transform fill = AddAnchor(root.transform, "Fill", new Vector3(0f, 0.025f, 0f));
-            AddPart(fill, PrimitiveType.Cylinder, "Ring", Vector3.zero, new Vector3(2f, 0.005f, 2f),
+            AddPart(fill, PrimitiveType.Cylinder, "Ring", Vector3.zero, new Vector3(1.3f, 0.005f, 1.3f),
                 GetOrCreateMaterial("TravelFill", new Color(1f, 1f, 1f)));
+            var sparkles = new Transform[3];
+            Material sparkle = GetOrCreateMaterial("PadSparkle", new Color(1f, 0.97f, 0.75f));
+            sparkle.EnableKeyword("_EMISSION");
+            sparkle.SetColor("_EmissionColor", new Color(1f, 0.9f, 0.5f));
+            for (int i = 0; i < sparkles.Length; i++)
+                sparkles[i] = AddPart(root.transform, PrimitiveType.Sphere, "Sparkle", new Vector3(0f, 0.4f, 0f), Vector3.one * 0.1f, sparkle).transform;
+            var shine = root.AddComponent<PadShine>();
+            var shineSettings = new SerializedObject(shine);
+            shineSettings.FindProperty("tile").objectReferenceValue = tile.GetComponent<Renderer>();
+            SerializedProperty sparkleList = shineSettings.FindProperty("sparkles");
+            sparkleList.arraySize = sparkles.Length;
+            for (int i = 0; i < sparkles.Length; i++) sparkleList.GetArrayElementAtIndex(i).objectReferenceValue = sparkles[i];
+            shineSettings.ApplyModifiedPropertiesWithoutUndo();
 
-            var signBase = new Vector3(0f, 0f, 1.5f);
+            var signBase = new Vector3(0f, 0f, 1.1f);
             GameObject pole = AddPart(root.transform, PrimitiveType.Cylinder, "Pole", signBase + new Vector3(0f, 1f, 0f),
                 new Vector3(0.1f, 1f, 0.1f), GetOrCreateMaterial("SignPole", new Color(0.4f, 0.4f, 0.45f)));
             GameObject sign = AddPart(root.transform, PrimitiveType.Cylinder, "Sign", signBase + new Vector3(0f, 2.1f, 0f),
@@ -695,28 +709,14 @@ namespace BubbleTea.EditorTools
                 ArtLibrary.HideGrayBox(pole, sign);
             }
 
-            // Floating text, turned toward the camera while playing.
-            var labelGo = new GameObject("Label");
-            labelGo.transform.SetParent(root.transform, false);
-            labelGo.transform.localPosition = new Vector3(0f, 2.9f, 1.5f);
-            labelGo.transform.localRotation = Quaternion.Euler(45f, 0f, 0f);
-            var text = labelGo.AddComponent<TextMesh>();
-            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            text.font = font;
-            labelGo.GetComponent<MeshRenderer>().sharedMaterial = font.material;
-            text.text = "To " + destination;
-            text.fontSize = 64;
-            text.characterSize = 0.06f;
-            text.anchor = TextAnchor.MiddleCenter;
-            text.alignment = TextAlignment.Center;
-            text.fontStyle = FontStyle.Bold;
-            text.color = new Color(0.25f, 0.2f, 0.2f);
+            // The same yellow outlined label as the stations.
+            NameTag.Add(root, "To " + destination);
 
             var travel = root.AddComponent<ShopTravel>();
             var serialized = new SerializedObject(travel);
             serialized.FindProperty("targetScene").stringValue = targetScene;
             serialized.FindProperty("fillRing").objectReferenceValue = fill;
-            serialized.FindProperty("label").objectReferenceValue = labelGo.transform;
+            serialized.FindProperty("halfSize").floatValue = 0.7f;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return SavePrefab(root, $"{PrefabFolder}/{name}.prefab");

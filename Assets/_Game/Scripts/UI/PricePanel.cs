@@ -108,7 +108,6 @@ namespace BubbleTea.UI
                 if (row.priceLabel != null)
                 {
                     row.priceLabel.text = $"${counter.PriceOf(row.recipe)}  ({Mathf.RoundToInt(factor * 100f)}%)";
-                    row.priceLabel.color = factor > 1.45f ? new Color(1f, 0.55f, 0.5f) : factor < 0.95f ? new Color(0.6f, 0.9f, 1f) : Color.white;
                 }
                 if (row.lowerButton != null) row.lowerButton.interactable = factor > PriceBook.Min + 0.001f;
                 if (row.raiseButton != null) row.raiseButton.interactable = factor < PriceBook.Max - 0.001f;

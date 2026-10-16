@@ -12,9 +12,9 @@ namespace BubbleTea.Customers
     /// </summary>
     public static class PriceBook
     {
-        public const float Min = 0.5f;
-        public const float Max = 3f;
-        public const float Step = 0.1f;
+        public const float Min = 1f; // never below the normal price
+        public const float Max = 2f;
+        public const float Step = 0.2f;
 
         private static readonly Dictionary<string, float> factors = new();
 
@@ -28,9 +28,13 @@ namespace BubbleTea.Customers
         public static void SetFactor(ItemDefinition drink, float factor)
         {
             if (drink == null) return;
-            factors[drink.name] = Mathf.Round(Mathf.Clamp(factor, Min, Max) * 10f) / 10f;
+            factors[drink.name] = Snap(factor);
             Changed?.Invoke();
         }
+
+        // Clamped to 100%-200% in 20% steps.
+        private static float Snap(float factor) =>
+            Min + Mathf.Round((Mathf.Clamp(factor, Min, Max) - Min) / Step) * Step;
 
         /// <summary>Every price that isn't normal, for the save file.</summary>
         public static List<PriceSave> Snapshot()
@@ -50,7 +54,7 @@ namespace BubbleTea.Customers
             {
                 foreach (PriceSave entry in saved)
                 {
-                    if (entry != null && !string.IsNullOrEmpty(entry.drink)) factors[entry.drink] = Mathf.Clamp(entry.factor, Min, Max);
+                    if (entry != null && !string.IsNullOrEmpty(entry.drink)) factors[entry.drink] = Snap(entry.factor);
                 }
             }
             Changed?.Invoke();

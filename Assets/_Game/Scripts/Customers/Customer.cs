@@ -50,7 +50,7 @@ namespace BubbleTea.Customers
         private Vector2 tipRange = new(0.01f, 0.3f);
 
         [SerializeField, Tooltip("Most a customer will pay, as a share of a drink's normal price. Each customer picks a limit between these two.")]
-        private Vector2 priceTolerance = new(1.4f, 2.6f);
+        private Vector2 priceTolerance = new(1.4f, 2.0f);
 
         [SerializeField, Tooltip("Whether they turn to face the counter at the front of the line (cars keep facing the lane).")]
         private bool faceCounter = true;
