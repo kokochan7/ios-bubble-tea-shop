@@ -300,43 +300,53 @@ namespace BubbleTea.EditorTools
         private static Material PaperRed() => Mat("PaperRed", new Color(0.92f, 0.16f, 0.14f), 0.2f);
         private static Material Gold() => Mat("LanternGold", new Color(0.95f, 0.75f, 0.32f), 0.7f);
 
-        // Bright festive touches: a gate with a tiled roof and red pillars over the front door,
-        // red couplet banners, strings of lanterns across the dining
-        // room and a potted plum tree in blossom.
+        // The shop front: automatic sliding glass doors across the front doorway.
         private static void CreateFestiveDecor(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
         {
-            float w = layout.HalfWidth, d = layout.HalfDepth;
-            CreateGate(root, style, layout);
+            CreateGlassDoor(root, layout);
         }
 
-        // A paifang-style gate over the front door: two red pillars on stone bases joined by a
-        // red beam (no roof or name plaque, so it doesn't hide the shop).
-        private static void CreateGate(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
+        // Two framed glass panels that meet in the middle of the doorway and slide apart when
+        // the player or a customer comes near (see SlidingDoor). A wooden header and two posts
+        // frame the opening.
+        private static void CreateGlassDoor(Transform root, PrototypeSceneBuilder.ShopLayout layout)
         {
-            float from = layout.DoorFrom - 0.5f, to = layout.DoorTo + 0.5f, z = -layout.HalfDepth - 1.1f;
-            float center = (from + to) / 2f, span = to - from;
-            Material red = Mat("GateRed", new Color(0.84f, 0.16f, 0.12f), 0.45f);
-            Material stone = Mat("GateStone", new Color(0.88f, 0.86f, 0.82f), 0.2f);
-            Material gold = Gold();
-            Transform gate = new GameObject("Front Gate").transform;
-            gate.SetParent(root, false);
-            foreach (float x in new[] { from, to })
+            float from = layout.DoorFrom, to = layout.DoorTo, z = -layout.HalfDepth - 0.55f;
+            float center = (from + to) / 2f, half = (to - from) / 2f, height = 2.2f;
+            Material frame = Mat("DoorFrameWood", new Color(0.42f, 0.27f, 0.21f), 0.35f);
+            Material handle = Gold();
+
+            var door = new GameObject("Glass Door").transform;
+            door.SetParent(root, false);
+            door.localPosition = new Vector3(center, 0f, z);
+            Part(door, PrimitiveType.Cube, "Header", new Vector3(0f, height + 0.1f, 0f), new Vector3(2f * half + 0.4f, 0.2f, 0.2f), frame);
+            Part(door, PrimitiveType.Cube, "Post", new Vector3(-half - 0.1f, height / 2f, 0f), new Vector3(0.2f, height, 0.2f), frame);
+            Part(door, PrimitiveType.Cube, "Post", new Vector3(half + 0.1f, height / 2f, 0f), new Vector3(0.2f, height, 0.2f), frame);
+
+            Transform[] panels = new Transform[2];
+            for (int i = 0; i < 2; i++)
             {
-                Part(gate, PrimitiveType.Cube, "Pillar Base", new Vector3(x, 0.2f, z), new Vector3(0.6f, 0.4f, 0.6f), stone);
-                Part(gate, PrimitiveType.Cylinder, "Pillar", new Vector3(x, 1.6f, z), new Vector3(0.36f, 1.4f, 0.36f), red);
-                Part(gate, PrimitiveType.Cylinder, "Pillar Ring", new Vector3(x, 2.75f, z), new Vector3(0.42f, 0.04f, 0.42f), gold);
-                // Red couplet banners hanging on the street side of each pillar.
-                Part(gate, PrimitiveType.Cube, "Couplet Border", new Vector3(x, 1.75f, z - 0.21f), new Vector3(0.42f, 1.5f, 0.02f), gold);
-                Part(gate, PrimitiveType.Cube, "Couplet", new Vector3(x, 1.75f, z - 0.225f), new Vector3(0.34f, 1.42f, 0.02f), red);
-                for (int i = 0; i < 4; i++)
-                {
-                    GameObject mark = Part(gate, PrimitiveType.Cube, "Couplet Mark", new Vector3(x, 1.25f + i * 0.34f, z - 0.24f),
-                        new Vector3(0.12f, 0.12f, 0.01f), gold);
-                    mark.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-                }
+                float side = i == 0 ? -1f : 1f;
+                var panel = new GameObject(i == 0 ? "Left Panel" : "Right Panel").transform;
+                panel.SetParent(door, false);
+                panel.localPosition = new Vector3(side * half / 2f, 0f, i == 0 ? 0f : -0.08f); // one slides past the other
+                float w = half;
+                Part(panel, PrimitiveType.Cube, "Glass", new Vector3(0f, height / 2f, 0f), new Vector3(w - 0.1f, height - 0.1f, 0.03f), Glass());
+                Part(panel, PrimitiveType.Cube, "Frame Top", new Vector3(0f, height - 0.04f, 0f), new Vector3(w, 0.08f, 0.06f), frame);
+                Part(panel, PrimitiveType.Cube, "Frame Bottom", new Vector3(0f, 0.06f, 0f), new Vector3(w, 0.12f, 0.06f), frame);
+                Part(panel, PrimitiveType.Cube, "Frame Side", new Vector3(-w / 2f + 0.04f, height / 2f, 0f), new Vector3(0.08f, height, 0.06f), frame);
+                Part(panel, PrimitiveType.Cube, "Frame Side", new Vector3(w / 2f - 0.04f, height / 2f, 0f), new Vector3(0.08f, height, 0.06f), frame);
+                // A long gold pull handle near the middle edge.
+                Part(panel, PrimitiveType.Cube, "Handle", new Vector3(-side * (w / 2f - 0.25f), 1.05f, -0.06f), new Vector3(0.04f, 0.7f, 0.04f), handle);
+                panels[i] = panel;
             }
-            Part(gate, PrimitiveType.Cube, "Beam", new Vector3(center, 2.95f, z), new Vector3(span + 0.6f, 0.3f, 0.4f), red);
-            Part(gate, PrimitiveType.Cube, "Beam Trim", new Vector3(center, 2.78f, z), new Vector3(span + 0.4f, 0.05f, 0.42f), gold);
+
+            var sliding = door.gameObject.AddComponent<BubbleTea.Building.SlidingDoor>();
+            var serialized = new SerializedObject(sliding);
+            serialized.FindProperty("left").objectReferenceValue = panels[0];
+            serialized.FindProperty("right").objectReferenceValue = panels[1];
+            serialized.FindProperty("slide").floatValue = half - 0.15f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // ---------- Floor plan ----------

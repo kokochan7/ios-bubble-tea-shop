@@ -42,6 +42,7 @@ namespace BubbleTea.Customers
             public string name;
             public string favorite;   // the drink's asset name; picked on their first visit
             public int fastVisits;
+            public bool introduced;   // their arrival banner has been shown (only ever once)
             public float visitAt = -1f; // minute of today they come in, -1 = not today / already came
         }
 
@@ -107,6 +108,8 @@ namespace BubbleTea.Customers
             if (vip == null) return;
             vip.MakeVip(r.name, favorite);
             NameTag.Add(vip.gameObject, "VIP " + r.name, 1.6f);
+            if (r.introduced) return; // the banner shows only on a VIP's first visit
+            r.introduced = true;
             string progress = r.fastVisits >= fastVisitsForPerk ? "a friend of the shop" : $"serve them fast to win them over ({r.fastVisits}/{fastVisitsForPerk})";
             GameEvents.RaiseAnnouncement($"VIP {r.name} is here for a {favorite.Drink.DisplayName}!\nThey're {progress}.", Pink);
         }
@@ -145,7 +148,7 @@ namespace BubbleTea.Customers
         public List<VipSave> Snapshot()
         {
             var list = new List<VipSave>();
-            foreach (Regular r in regulars) list.Add(new VipSave { name = r.name, favorite = r.favorite, fastVisits = r.fastVisits });
+            foreach (Regular r in regulars) list.Add(new VipSave { name = r.name, favorite = r.favorite, fastVisits = r.fastVisits, introduced = r.introduced });
             return list;
         }
 
@@ -160,6 +163,7 @@ namespace BubbleTea.Customers
                 if (r == null) continue;
                 r.favorite = entry.favorite;
                 r.fastVisits = Mathf.Max(0, entry.fastVisits);
+                r.introduced = entry.introduced || !string.IsNullOrEmpty(entry.favorite); // older saves: already met
             }
         }
     }
@@ -171,5 +175,6 @@ namespace BubbleTea.Customers
         public string name;
         public string favorite;
         public int fastVisits;
+        public bool introduced;
     }
 }

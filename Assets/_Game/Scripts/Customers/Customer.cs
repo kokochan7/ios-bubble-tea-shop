@@ -506,6 +506,14 @@ namespace BubbleTea.Customers
             Destroy(gameObject);
         }
 
+        private static readonly List<Customer> active = new();
+
+        /// <summary>Every customer in the scene right now (cars too).</summary>
+        public static IReadOnlyList<Customer> Active => active;
+
+        private void OnEnable() => active.Add(this);
+        private void OnDisable() => active.Remove(this);
+
         private void OnDestroy()
         {
             StandUp(false);

@@ -122,11 +122,13 @@ namespace BubbleTea.EditorTools
             // The third sits a little further forward, clear of the drive-thru window's spot.
             Baristas = new Vector3[] { new(3f, 0f, 2.75f), new(5.4f, 0f, 2.75f), new(7.8f, 0f, 2.2f) },
             StaffSofa = new(7.25f, 0f, 6.95f),  // against the back wall, east of the bars, clear of the drive-thru cash
-            // Decor pads in the dining room: down the west wall, and the koi pond in the front-east corner.
+            // Decor pads in the dining room: bamboo and lanterns down the west wall, the lucky cat
+            // against the glass wall left of the staff door, the koi pond in the front-east corner and
+            // the cherry tree out toward the middle, clear of the queue and the cleaner's pad.
             // Order: bamboo plants, paper lanterns, lucky cat, koi pond, cherry blossom tree.
             Decor = new Vector3[]
             {
-                new(-8.3f, 0f, -6.8f), new(-8.3f, 0f, -0.8f), new(-8.35f, 0f, -5.2f), new(7.8f, 0f, -6.6f), new(-8.3f, 0f, -3.0f),
+                new(-8.3f, 0f, -6.8f), new(-8.3f, 0f, -0.8f), new(5.2f, 0f, -0.65f), new(7.8f, 0f, -6.6f), new(-6.2f, 0f, -2.4f),
             },
             Windows = new[] { -6.2f, 6.2f },
             Lamps = new[] { -4.4f, 4.4f },
@@ -605,6 +607,9 @@ namespace BubbleTea.EditorTools
                 new Vector3(0.5f, 2f, -d - yardSouth));
             CreateBlocker(root.transform, "Front Yard (south)", new Vector3((from + yardEast) / 2f, 1f, yardSouth - 0.25f),
                 new Vector3(yardEast - from + 1f, 2f, 0.5f));
+            // The sidewalk outside has no collider of its own, so the yard gets an invisible floor.
+            CreateBlocker(root.transform, "Front Yard (floor)", new Vector3((from + yardEast) / 2f, -0.25f, (-d + yardSouth) / 2f),
+                new Vector3(yardEast - from + 1f, 0.5f, -d - yardSouth + 1f));
             CreateWall(root.transform, "West", new Vector3(-w - 0.25f, 0.5f, 0f), new Vector3(0.5f, 1f, 2f * d + 0.5f), wallMat);
             return CreateWall(root.transform, "East (opens with Expand Shop)", new Vector3(w + 0.25f, 0.5f, 0f),
                 new Vector3(0.5f, 1f, 2f * d + 0.5f), wallMat);
