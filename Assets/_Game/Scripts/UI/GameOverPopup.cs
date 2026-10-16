@@ -6,8 +6,9 @@ using UnityEngine.UI;
 namespace BubbleTea.UI
 {
     /// <summary>
-    /// Shown when the shop's rating drops to 0 stars: the game is lost. The save is deleted
-    /// right away and the game pauses; Start Over begins a brand-new game in the first shop.
+    /// Shown when the shop's rating drops to 0 stars: the shop is lost. In the first shop the
+    /// whole save is deleted and Start Over begins a brand-new game; in a later shop (the Matcha
+    /// House) only that shop's save is deleted and Start Over begins that shop again.
     /// </summary>
     public class GameOverPopup : MonoBehaviour
     {
@@ -39,7 +40,11 @@ namespace BubbleTea.UI
 
         private void Show()
         {
-            if (saveManager != null) saveManager.EraseSave();
+            if (saveManager != null)
+            {
+                if (SaveManager.InFirstShop) saveManager.EraseSave();
+                else saveManager.EraseThisShop();
+            }
             if (panel != null) panel.SetActive(true);
             Time.timeScale = 0f;
         }
@@ -47,7 +52,9 @@ namespace BubbleTea.UI
         private void StartOver()
         {
             Time.timeScale = 1f;
-            if (saveManager != null) saveManager.ResetProgress();
+            if (saveManager == null) return;
+            if (SaveManager.InFirstShop) saveManager.ResetProgress();
+            else saveManager.RestartThisShop();
         }
     }
 }

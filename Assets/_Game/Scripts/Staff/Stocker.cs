@@ -7,7 +7,7 @@ namespace BubbleTea.Staff
     /// <summary>
     /// A hired stocker (Matcha House) who keeps the bars supplied: when a bar has room for a whole
     /// crate, they fetch one from the supply dock and carry it there, emptiest bar first. With
-    /// nothing to do they stand still beside the dock. The Walk Speed upgrade makes them faster.
+    /// nothing to do they stand still beside the dock.
     /// </summary>
     [RequireComponent(typeof(ItemCarrier))]
     public class Stocker : MonoBehaviour

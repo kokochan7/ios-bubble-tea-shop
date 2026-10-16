@@ -21,7 +21,7 @@ namespace BubbleTea.Player
 
         // Phones only. Set in code (not in the scene) so changing them only needs a new build,
         // not a scene rebuild.
-        private const float PhoneViewWidth = 10f;    // meters across the screen at the player; bigger = more zoomed out
+        private const float PhoneViewWidth = 12f;    // meters across the screen at the player; bigger = more zoomed out
         private const float PhoneFieldOfView = 55f;  // vertical, in degrees
 
         private Vector3 velocity;

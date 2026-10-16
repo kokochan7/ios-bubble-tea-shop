@@ -17,7 +17,7 @@ namespace BubbleTea.Building
         private Transform label;
 
         /// <summary>Puts a name label on an object, just above its top.</summary>
-        public static NameTag Add(GameObject target, string text)
+        public static NameTag Add(GameObject target, string text, float minTop = 0.5f)
         {
             if (target == null || string.IsNullOrEmpty(text)) return null;
             float top = 1.2f;
@@ -30,7 +30,7 @@ namespace BubbleTea.Building
             }
             var nameTag = target.AddComponent<NameTag>();
             nameTag.text = text;
-            nameTag.height = Mathf.Max(top, 0.5f) + 0.45f;
+            nameTag.height = Mathf.Max(top, minTop) + 0.45f;
             return nameTag;
         }
 

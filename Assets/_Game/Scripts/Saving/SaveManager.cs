@@ -207,6 +207,35 @@ namespace BubbleTea.Saving
             else SceneManager.LoadScene(0);
         }
 
+        /// <summary>True in the first shop (the Boba Shop), where a new game starts.</summary>
+        public static bool InFirstShop => SceneManager.GetActiveScene().name == FirstShopScene;
+
+        /// <summary>
+        /// Deletes only this shop's save and stops saving it, without leaving the scene (losing a
+        /// later shop starts that shop over; the shops before it stay as they were).
+        /// </summary>
+        public void EraseThisShop()
+        {
+            resetting = true;
+            try
+            {
+                if (File.Exists(SavePath)) File.Delete(SavePath);
+                if (File.Exists(TempPath)) File.Delete(TempPath);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("Bubble Tea: couldn't delete this shop's save. " + e.Message);
+            }
+        }
+
+        /// <summary>Deletes this shop's save and starts this shop over from scratch.</summary>
+        public void RestartThisShop()
+        {
+            EraseThisShop();
+            BubbleTea.Core.Stats.Clear();
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
         /// <summary>
         /// Deletes every shop's save and stops saving, without leaving the scene (the game-over
         /// screen does this straight away, so quitting there can't keep a lost game).

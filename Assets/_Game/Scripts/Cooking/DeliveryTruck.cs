@@ -1,12 +1,14 @@
+using BubbleTea.Core;
 using UnityEngine;
 
 namespace BubbleTea.Cooking
 {
     /// <summary>
-    /// A little truck that brings crates of supplies to the <see cref="SupplyDock"/> every so often
-    /// (Matcha House): it drives along its route to the kitchen's side wall, drops a few crates
-    /// onto the dock and drives back the way it came. It only comes once a bar that uses supplies
-    /// is built, and not while the dock is full.
+    /// A little truck that brings crates of supplies to the <see cref="SupplyDock"/> twice a day
+    /// (Matcha House), at set hours on the shop's clock: it drives along its route to the kitchen's
+    /// side wall, drops 6 to 12 crates onto the dock and drives back the way it came. It only comes
+    /// once a bar that uses supplies is built; if the dock is full when it's due, it comes as soon
+    /// as there's room.
     /// </summary>
     public class DeliveryTruck : MonoBehaviour
     {
@@ -22,11 +24,14 @@ namespace BubbleTea.Cooking
         [SerializeField, Tooltip("Driving speed in meters per second.")]
         private float speed = 9f;
 
-        [SerializeField, Tooltip("Seconds between deliveries.")]
-        private float secondsBetweenDeliveries = 30f;
+        [SerializeField, Tooltip("Hours of the day (on the shop's clock) when the truck comes.")]
+        private float[] deliveryHours = { 8f, 16f };
 
-        [SerializeField, Min(1), Tooltip("Crates dropped off each time.")]
-        private int cratesPerDelivery = 3;
+        [SerializeField, Tooltip("Crates dropped off each time, picked at random in this range.")]
+        private Vector2Int cratesPerDelivery = new(6, 12);
+
+        [SerializeField, Tooltip("Without a shop clock: real seconds between deliveries.")]
+        private float secondsBetweenDeliveries = 72f;
 
         [SerializeField, Tooltip("Seconds between crates while unloading.")]
         private float secondsPerCrate = 0.4f;
@@ -37,6 +42,8 @@ namespace BubbleTea.Cooking
         private float timer;
         private int waypoint;
         private int toDrop;
+        private bool due;           // a delivery hour has passed and the truck hasn't come yet
+        private float lastMinute = -1f;
 
         private void Start()
         {
@@ -44,14 +51,38 @@ namespace BubbleTea.Cooking
             if (truck != null) truck.gameObject.SetActive(false);
         }
 
+        // True when the clock has just passed one of the delivery hours (or, with no clock, the timer ran out).
+        private bool DeliveryHourPassed()
+        {
+            GameClock clock = GameClock.Instance;
+            if (clock == null)
+            {
+                timer -= Time.deltaTime;
+                if (timer > 0f) return false;
+                timer = secondsBetweenDeliveries;
+                return true;
+            }
+            float now = clock.MinuteOfDay;
+            float before = lastMinute;
+            lastMinute = now;
+            if (before < 0f) return false;
+            foreach (float hour in deliveryHours)
+            {
+                float at = hour * 60f;
+                // Passed it this frame (also across midnight, when the clock wraps around).
+                if (now >= before ? before < at && now >= at : before < at || now >= at) return true;
+            }
+            return false;
+        }
+
         private void Update()
         {
             switch (state)
             {
                 case State.Waiting:
-                    if (dock == null || route.Length == 0 || !Station.AnyUsesSupplies || dock.IsFull) return;
-                    timer -= Time.deltaTime;
-                    if (timer > 0f) return;
+                    if (DeliveryHourPassed()) due = Station.AnyUsesSupplies; // nothing to bring before a bar needs supplies
+                    if (!due || dock == null || route.Length == 0 || dock.IsFull) return;
+                    due = false;
                     waypoint = 0;
                     if (truck != null)
                     {
@@ -68,7 +99,7 @@ namespace BubbleTea.Cooking
                         waypoint++;
                         return;
                     }
-                    toDrop = cratesPerDelivery;
+                    toDrop = Random.Range(cratesPerDelivery.x, cratesPerDelivery.y + 1);
                     timer = secondsPerCrate;
                     state = State.Unloading;
                     break;
@@ -94,7 +125,6 @@ namespace BubbleTea.Cooking
                         return;
                     }
                     if (truck != null) truck.gameObject.SetActive(false);
-                    timer = secondsBetweenDeliveries;
                     state = State.Waiting;
                     break;
             }

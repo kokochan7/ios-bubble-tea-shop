@@ -9,7 +9,7 @@ namespace BubbleTea.Staff
     /// A hired cashier who walks to their spot behind the counter, faces the customers and
     /// collects what they pay. Bills fly from the counter's cash pile to the cashier and go
     /// straight into the player's wallet, so the player no longer has to walk over to pick
-    /// them up. The Walk Speed upgrade makes them walk and collect faster.
+    /// them up.
     /// </summary>
     public class Cashier : MonoBehaviour
     {

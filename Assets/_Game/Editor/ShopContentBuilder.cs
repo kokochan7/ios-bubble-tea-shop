@@ -59,7 +59,6 @@ namespace BubbleTea.EditorTools
             /// <summary>Hire Barista pads in the order they unlock.</summary>
             public BuildableDefinition[] Baristas;
             public BuildableDefinition Cleaner;
-            public BuildableDefinition MoreSeating;
             public BuildableDefinition Seating;
             public BuildableDefinition Cashier;
             public BuildableDefinition DriveThruCashier;
@@ -132,28 +131,27 @@ namespace BubbleTea.EditorTools
                 // counter's customer side, instead of straight out from it.
                 queueOffset: new Vector3(0f, 0f, -3.5f), queueYaw: -90f);
 
-            // Values per level start at level 0; costs start at the price of level 1. Shop 2's
-            // upgrades go one level further (Lv 5/5).
-            bool fiveLevels = shop > 1;
-            UpgradeDefinition[] upgrades =
+            // Values per level start at level 0; costs start at the price of level 1. The Boba Shop's
+            // upgrades max out at Lv 3/3, the Matcha House's at Lv 4/4. Brew Speed starts slow (0.75x)
+            // so the first upgrade feels worth it. The Boba Shop has no Drink Shelf Space upgrade.
+            int maxLevel = shop > 1 ? 4 : 3;
+            var upgradeList = new System.Collections.Generic.List<UpgradeDefinition>
             {
-                GetOrCreateUpgrade("Walk Speed", StatId.MoveSpeed,
-                    Levels(fiveLevels, 1f, 1.15f, 1.3f, 1.45f, 1.6f, 1.75f), Costs(fiveLevels, 40, 90, 180, 350, 650)),
                 GetOrCreateUpgrade("Carry More", StatId.CarryBonus,
-                    Levels(fiveLevels, 0f, 1f, 2f, 3f, 4f, 5f), Costs(fiveLevels, 50, 120, 250, 500, 900)), // +1 item per level (see ItemCarrier)
+                    Levels(maxLevel, 0f, 1f, 2f, 3f, 4f), Costs(maxLevel, 50, 120, 250, 500)), // +1 item per level (see ItemCarrier)
                 GetOrCreateUpgrade("Brew Speed", StatId.BrewSpeed,
-                    Levels(fiveLevels, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.25f), Costs(fiveLevels, 60, 140, 280, 550, 1000)),
-                // Saved as "Bigger Bars" (the asset name), shown as "Drink Shelf Space".
-                GetOrCreateUpgrade("Bigger Bars", StatId.StationCapacity,
-                    Levels(fiveLevels, 0f, 1f, 2f, 3f, 4f, 5f), Costs(fiveLevels, 70, 150, 300, 600, 1100), // +1 finished drink per bar (see Station)
-                    shownName: "Drink Shelf Space"),
+                    Levels(maxLevel, 0.75f, 1f, 1.25f, 1.5f, 1.75f), Costs(maxLevel, 60, 140, 280, 550)),
             };
-            // The Matcha House's Whisk Bar is whisked by hand until Whisk Master lets it run on its own.
             if (shop > 1)
             {
-                upgrades = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Append(upgrades,
-                    GetOrCreateUpgrade("Whisk Master", StatId.AutoWhisk, new[] { 0f, 1f }, Scaled(400))));
+                // Saved as "Bigger Bars" (the asset name), shown as "Drink Shelf Space".
+                upgradeList.Add(GetOrCreateUpgrade("Bigger Bars", StatId.StationCapacity,
+                    Levels(maxLevel, 0f, 1f, 2f, 3f, 4f), Costs(maxLevel, 70, 150, 300, 600), // +1 finished drink per bar (see Station)
+                    shownName: "Drink Shelf Space"));
+                // The Whisk Bar is whisked by hand until Whisk Master lets it run on its own.
+                upgradeList.Add(GetOrCreateUpgrade("Whisk Master", StatId.AutoWhisk, new[] { 0f, 1f }, new[] { 500 }));
             }
+            UpgradeDefinition[] upgrades = upgradeList.ToArray();
             GameObject upgradeDesk = BuildUpgradeDeskPrefab();
             GameObject barista = BuildBaristaPrefab();
 
@@ -174,21 +172,18 @@ namespace BubbleTea.EditorTools
                 CustomerPrefab = BuildCustomerPrefab(),
                 Menu = menu,
                 Seating = GetOrCreateBuildable("Seating Area", 500, BuildSeatingPrefab(billPrefab)),
-                MoreSeating = GetOrCreateBuildable("More Seating", 1200, BuildSeatingPrefab(billPrefab)),
-                // 3 baristas in the Boba Shop, 4 in the Matcha House.
+                // 2 baristas in the Boba Shop, 3 in the Matcha House.
                 Baristas = shop > 1
                     ? new[]
                     {
                         GetOrCreateBuildable("Hire Barista", 150, barista, keepPriceUpToDate: true),
                         GetOrCreateBuildable("Hire Barista 2", 500, barista, keepPriceUpToDate: true),
                         GetOrCreateBuildable("Hire Barista 3", 900, barista),
-                        GetOrCreateBuildable("Hire Barista 4", 1300, barista),
                     }
                     : new[]
                     {
                         GetOrCreateBuildable("Hire Barista", 150, barista, keepPriceUpToDate: true),
                         GetOrCreateBuildable("Hire Barista 2", 500, barista, keepPriceUpToDate: true),
-                        GetOrCreateBuildable("Hire Barista 3", 900, barista),
                     },
                 Cleaner = GetOrCreateBuildable("Hire Cleaner", 400, BuildCleanerPrefab()),
                 Cashier = GetOrCreateBuildable("Hire Cashier", 150, BuildCashierPrefab("Cashier", "Main")),
@@ -202,7 +197,7 @@ namespace BubbleTea.EditorTools
                     BuildDecorPrefab("Statue", new Color(0.85f, 0.7f, 0.55f), new Vector3(1.2f, 1.8f, 1.2f))),
                 // Built once the first shop is finished; the stop it builds leads to the Matcha House.
                 SecondShop = shop == 1
-                    ? GetOrCreateBuildable("Open Matcha House", 10000,
+                    ? GetOrCreateBuildable("Open Matcha House", 5000,
                         BuildTravelPrefab("ToMatchaHouse", "Shop2", "Matcha House", new Color(0.55f, 0.78f, 0.45f)),
                         keepPriceUpToDate: true)
                     : null,
@@ -319,11 +314,13 @@ namespace BubbleTea.EditorTools
             };
         }
 
-        // The first five values (levels 0 to 4), or all six when the shop has a fifth level.
-        private static float[] Levels(bool fiveLevels, params float[] values) =>
-            fiveLevels ? values : System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(values, 5));
+        // The values for levels 0 to maxLevel.
+        private static float[] Levels(int maxLevel, params float[] values) =>
+            System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(values, maxLevel + 1));
 
-        private static int[] Costs(bool fiveLevels, params int[] costs) => Scaled(fiveLevels ? costs : System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(costs, 4)));
+        // The prices of levels 1 to maxLevel, scaled for the shop.
+        private static int[] Costs(int maxLevel, params int[] costs) =>
+            Scaled(System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(costs, maxLevel)));
 
         private static int[] Scaled(params int[] costs)
         {

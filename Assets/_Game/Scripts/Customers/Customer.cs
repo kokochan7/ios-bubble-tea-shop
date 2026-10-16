@@ -9,12 +9,12 @@ namespace BubbleTea.Customers
     /// <summary>
     /// Walks in, waits in line at a <see cref="ServingCounter"/>, buys their drinks (one to
     /// five, more as the shop can make more kinds) when it's their turn, and walks out with them. Gray-box movement: straight lines, no pathfinding.
-    /// Customers lose patience while they wait: a light by their order turns from green to
-    /// yellow to red. Quick service earns a tip; a customer who runs out of patience leaves
-    /// without buying.
+    /// Their order (and patience) starts when they reach the counter: then a light by their order
+    /// turns from green to yellow to red. Some customers tip (1% to 30%), more often and more when
+    /// served quickly; a customer who runs out of patience leaves without buying.
     /// Some visitors are special (the Matcha House has them): tourists off a tour bus wear a sun
     /// hat, order less and wait longer; a tea critic wears a gold crown, always orders the most,
-    /// tips double, and moves the rating by a whole star either way.
+    /// always tips well, and moves the rating by a whole star either way.
     /// </summary>
     public class Customer : MonoBehaviour, IHoldsItems
     {
@@ -42,17 +42,11 @@ namespace BubbleTea.Customers
         [SerializeField, Range(0f, 1f), Tooltip("How fast patience drains for customers behind the front of the line (0.5 = half speed).")]
         private float backOfLineDrain = 0.5f;
 
-        [SerializeField, Range(0f, 1f), Tooltip("Served before this share of their patience is used up: big tip.")]
-        private float fastServiceShare = 0.35f;
+        [SerializeField, Tooltip("Chance this customer tips: x when served at the last moment, y when served right away.")]
+        private Vector2 tipChance = new(0.1f, 0.6f);
 
-        [SerializeField, Range(0f, 1f), Tooltip("Served before this share of their patience is used up: small tip.")]
-        private float okServiceShare = 0.7f;
-
-        [SerializeField, Range(0f, 2f), Tooltip("Big tip, as a share of the drink's price (0.5 = half the price).")]
-        private float bigTip = 0.5f;
-
-        [SerializeField, Range(0f, 2f), Tooltip("Small tip, as a share of the drink's price.")]
-        private float smallTip = 0.2f;
+        [SerializeField, Tooltip("A tip is between these shares of the price (0.01 = 1%, 0.3 = 30%). Quicker service tips toward the top.")]
+        private Vector2 tipRange = new(0.01f, 0.3f);
 
         [SerializeField, Tooltip("Most a customer will pay, as a share of a drink's normal price. Each customer picks a limit between these two.")]
         private Vector2 priceTolerance = new(1.4f, 2.6f);
@@ -109,6 +103,7 @@ namespace BubbleTea.Customers
         private float sitTimer;
         private float tolerance;
         private bool checkedPrice;
+        private float tipShare = -1f; // decided once, on the first drink handed over
 
         private readonly List<DrinkRecipe> orders = new();
         private readonly List<CarriedItem> held = new();
@@ -129,7 +124,14 @@ namespace BubbleTea.Customers
         public bool IsAtCounter => state == State.Queueing && atCounter;
 
         /// <summary>The drinks this customer still wants.</summary>
-        public IReadOnlyList<DrinkRecipe> Orders => orders;
+        public IReadOnlyList<DrinkRecipe> Orders => OrderStarted ? orders : NoOrders;
+        private static readonly List<DrinkRecipe> NoOrders = new();
+
+        /// <summary>
+        /// True once they've walked up to the counter and placed their order. Until then their
+        /// bubble is hidden, their patience doesn't run down and nobody starts on their drinks.
+        /// </summary>
+        public bool OrderStarted { get; private set; }
 
         /// <summary>The next drink this customer wants, or null once they have them all.</summary>
         public DrinkRecipe Order => orders.Count > 0 ? orders[0] : null;
@@ -148,6 +150,8 @@ namespace BubbleTea.Customers
             waited = 0f;
             tolerance = UnityEngine.Random.Range(priceTolerance.x, priceTolerance.y);
             checkedPrice = false;
+            tipShare = -1f;
+            OrderStarted = false;
             if (kind == Visit.Tourist) counter.PickOrders(orders, maxCount: touristMaxDrinks);
             else if (kind == Visit.Critic) counter.PickOrders(orders, exactCount: counter.MaxDrinks);
             else counter.PickOrders(orders);
@@ -156,6 +160,9 @@ namespace BubbleTea.Customers
             else if (kind == Visit.Critic) patience *= criticPatience;
             if (kind != Visit.Regular) AddHat(kind == Visit.Critic);
             ShowOrder();
+            // The order stays hidden until they reach the counter.
+            if (orderBubble != null) orderBubble.gameObject.SetActive(false);
+            if (moodLight != null) moodLight.gameObject.SetActive(false);
             counter.JoinQueue(this);
             if (orders.Count == 0) StopWaiting(); // nothing on the menu can be made yet
         }
@@ -235,19 +242,24 @@ namespace BubbleTea.Customers
                 return;
             }
 
-            // Patience drains at full speed at the front of the line and slower further back.
+            // Patience only starts once they've ordered at the counter (then drains at full speed
+            // at the front of the line, slower if they're ever further back).
             int index = counter.QueueIndexOf(this);
-            waited += Time.deltaTime * (index <= 0 ? 1f : backOfLineDrain);
-            ShowMood();
-            if (patience > 0f && waited >= patience)
+            if (OrderStarted)
             {
-                GiveUp();
-                return;
+                waited += Time.deltaTime * (index <= 0 ? 1f : backOfLineDrain);
+                ShowMood();
+                if (patience > 0f && waited >= patience)
+                {
+                    GiveUp();
+                    return;
+                }
             }
 
             bool inPlace = WalkTo(counter.QueuePosition(Mathf.Max(index, 0)));
             atCounter = inPlace && index == 0;
             if (!atCounter) return;
+            if (!OrderStarted) StartOrder();
 
             // At the front of the line they read the prices; too expensive and they leave.
             if (!checkedPrice)
@@ -267,12 +279,23 @@ namespace BubbleTea.Customers
             if (faceCounter && toCounter.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(toCounter);
         }
 
+        // Reached the counter: the order bubble and mood light pop up and the clock starts.
+        private void StartOrder()
+        {
+            OrderStarted = true;
+            waited = 0f;
+            if (orderBubble != null) orderBubble.gameObject.SetActive(true);
+            if (moodLight != null) moodLight.gameObject.SetActive(true);
+            ShowOrder();
+            ShowMood();
+        }
+
         /// <summary>
         /// Handed one of their drinks, fresh, at the counter. They pay at the counter as usual.
         /// </summary>
         public bool ServeNow(CarriedItem drink)
         {
-            if (state != State.Queueing || counter == null || drink == null) return false;
+            if (state != State.Queueing || !OrderStarted || counter == null || drink == null) return false;
             DrinkRecipe order = orders.Find(o => o != null && o.Drink == drink.Definition);
             if (order == null) return false;
             if (TooExpensive(order))
@@ -310,13 +333,20 @@ namespace BubbleTea.Customers
             if (canSit && UnityEngine.Random.value < sitChance && SeatingTable.TryReserve(this, out table, out seat)) state = State.ToSeat;
         }
 
-        // How generous this customer is right now, as a share of the price.
+        // Not everyone tips. Whether this customer does, and how much (1% to 30% of the price), is
+        // decided on the first drink they're handed: the happier they are, the likelier and bigger.
+        // A tea critic always tips, at the generous end.
         private float TipShare()
         {
-            float used = 1f - Mood;
-            float share = used <= fastServiceShare ? bigTip : used <= okServiceShare ? smallTip : 0f;
-            // A tea critic always tips, and twice as much.
-            return visit == Visit.Critic ? Mathf.Max(share, smallTip) * 2f : share;
+            if (tipShare >= 0f) return tipShare;
+            float mood = Mood;
+            if (visit == Visit.Critic)
+                tipShare = UnityEngine.Random.Range(Mathf.Lerp(tipRange.x, tipRange.y, 0.5f), tipRange.y);
+            else if (UnityEngine.Random.value < Mathf.Lerp(tipChance.x, tipChance.y, mood))
+                tipShare = UnityEngine.Random.Range(tipRange.x, Mathf.Lerp(tipRange.x, tipRange.y, Mathf.Max(mood, 0.2f)));
+            else
+                tipShare = 0f;
+            return tipShare;
         }
 
         private bool TooExpensive(DrinkRecipe order) => counter.PriceOf(order) > counter.FairPriceOf(order) * tolerance + 0.01f;

@@ -65,7 +65,7 @@ namespace BubbleTea.EditorTools
             public float LaneWallX;                     // the east end of the expansion
             public Vector3 Counter, Seating, DriveThru, TrashCan, FloorCash, PlayerStart;
             public Vector3 TeaBrewer, ToppingBar, TaroStation, FruitBar, ExtraBar, UpgradeDesk, Cashier;
-            public Vector3 Expansion, MoreSeating, Cleaner, DriveThruCashier, SecondShopPad, TravelBack;
+            public Vector3 Expansion, Cleaner, DriveThruCashier, SecondShopPad, TravelBack;
             public Vector3 Stocker, SupplyDock, Chalkboard;      // Matcha House only
             public Vector3[] Baristas;
             public float[] Windows, Lamps, ExpansionWindows, ExpansionLamps; // x positions on the back wall
@@ -113,15 +113,14 @@ namespace BubbleTea.EditorTools
             UpgradeDesk = new(3f, 0f, 0.55f),  // right of the counter, its back to the glass wall
             Cashier = new(0.6f, 0f, 1.8f),
             Expansion = new(7.6f, 0f, -5.8f),   // by the east wall it opens up
-            MoreSeating = new(12f, 0f, -4.5f),
             Cleaner = new(-6.4f, 0f, -4.6f),
             DriveThruCashier = new(11f, 0f, 6f),
             SecondShopPad = new(-6.4f, 0f, -1.6f), // both bus stops stand on the left of the dining room
             TravelBack = new(-6.4f, 0f, -1.6f),
             // Matcha House: the supply dock against the west wall (its spot faces into the kitchen), the
-            // stocker's pad between it and the counter, and the specials chalkboard by the front door.
-            SupplyDock = new(-8.25f, 0f, 3.4f),
-            Stocker = new(-4.6f, 0f, 3.4f),
+            // stocker's small pad right beside it, and the specials chalkboard by the front door.
+            SupplyDock = new(-8.1f, 0f, 3.5f),
+            Stocker = new(-8.25f, 0f, 1.95f),  // just south of the dock, against the west wall
             Chalkboard = new(-4.2f, 0f, -3.4f),
             // A little back from the glass wall, so the first one clears the upgrade desk's pad.
             Baristas = new Vector3[] { new(3f, 0f, 2.75f), new(5.4f, 0f, 2.75f), new(7.8f, 0f, 2.75f), new(7.6f, 0f, 6.2f) },
@@ -497,7 +496,7 @@ namespace BubbleTea.EditorTools
                 secondsBetween: 6f, max: 3);
             UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
             CreateUpgradePanel(hud, upgrades, content.Upgrades);
-            OfflineEarnings offlineEarnings = CreateOfflineEarnings(wallet);
+            OfflineEarnings offlineEarnings = null; // no reward for time away from the game
             new GameObject("ShopRecords").AddComponent<ShopRecords>(); // lifetime totals for goals and stats
             new GameObject("Payroll").AddComponent<Payroll>(); // pays the hired workers every shop hour
             DailyGoals dailyGoals = CreateDailyGoals(wallet, content.Menu, offlineEarnings);
@@ -516,7 +515,6 @@ namespace BubbleTea.EditorTools
             CreatePriceyAlert(hud);
             CreateStaffUnpaidAlert(hud);
             CreateAnnouncementBanner(hud);
-            CreateWelcomeBackPopup(hud, offlineEarnings);
             CreateGameOverPopup(hud, rating, saveManager);
 
             EditorSceneManager.SaveScene(scene, plan.ScenePath);
@@ -750,6 +748,68 @@ namespace BubbleTea.EditorTools
             return camera;
         }
 
+        // Draws a 512px anti-aliased circle into a PNG and imports it as a UI sprite. The ring is a
+        // soft disc with a bright rim; the knob is a solid disc with a darker edge and a top highlight.
+        private static Sprite JoystickSprite(string name, bool ring)
+        {
+            const string folder = "Assets/_Game/Art/Generated";
+            const int size = 512;
+            if (!AssetDatabase.IsValidFolder(folder))
+            {
+                System.IO.Directory.CreateDirectory(folder);
+                AssetDatabase.Refresh();
+            }
+
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            var pixels = new Color[size * size];
+            float center = (size - 1) * 0.5f;
+            float radius = size * 0.5f - 4f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center, dy = y - center;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    float inside = Mathf.Clamp01(radius - d + 0.5f); // 1 inside, fading over one pixel at the edge
+                    Color c;
+                    if (ring)
+                    {
+                        float rim = Mathf.Clamp01(1f - Mathf.Abs(d - (radius - 9f)) / 9f);
+                        c = Color.Lerp(new Color(0.15f, 0.15f, 0.18f, 0.35f), new Color(1f, 1f, 1f, 1f), rim);
+                    }
+                    else
+                    {
+                        float edge = Mathf.Clamp01((d - (radius - 14f)) / 14f);
+                        float shine = Mathf.Clamp01(dy / radius) * 0.12f;
+                        float shade = Mathf.Lerp(1f, 0.82f, edge) + shine;
+                        c = new Color(shade, shade, shade, 1f);
+                    }
+                    c.a *= inside;
+                    pixels[y * size + x] = c;
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+
+            string path = $"{folder}/{name}.png";
+            System.IO.File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            if (importer != null)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.alphaIsTransparency = true;
+                importer.mipmapEnabled = true;
+                importer.filterMode = FilterMode.Trilinear;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
         private static VirtualJoystick CreateHud(Wallet wallet, out Transform hud)
         {
             var canvasGo = new GameObject("HUD", typeof(RectTransform));
@@ -761,7 +821,6 @@ namespace BubbleTea.EditorTools
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            Sprite circle = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
             Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
 
             // Joystick: an invisible full-screen touch area, with the stick drawn where you touch.
@@ -770,18 +829,19 @@ namespace BubbleTea.EditorTools
             var areaImage = area.gameObject.AddComponent<Image>();
             areaImage.color = new Color(0f, 0f, 0f, 0f);
 
+            // Smooth, high-resolution stick art (the built-in knob sprite is tiny and looks blurry on a phone).
             RectTransform ring = CreateUiObject("Background", area);
-            ring.sizeDelta = new Vector2(240f, 240f);
+            ring.sizeDelta = new Vector2(250f, 250f);
             var ringImage = ring.gameObject.AddComponent<Image>();
-            ringImage.sprite = circle;
-            ringImage.color = new Color(1f, 1f, 1f, 0.35f);
+            ringImage.sprite = JoystickSprite("JoystickRing", true);
+            ringImage.color = new Color(1f, 1f, 1f, 0.6f);
             ringImage.raycastTarget = false;
 
             RectTransform knob = CreateUiObject("Handle", ring);
-            knob.sizeDelta = new Vector2(110f, 110f);
+            knob.sizeDelta = new Vector2(115f, 115f);
             var knobImage = knob.gameObject.AddComponent<Image>();
-            knobImage.sprite = circle;
-            knobImage.color = new Color(1f, 1f, 1f, 0.85f);
+            knobImage.sprite = JoystickSprite("JoystickKnob", false);
+            knobImage.color = new Color(1f, 1f, 1f, 0.92f);
             knobImage.raycastTarget = false;
 
             var joystick = area.gameObject.AddComponent<VirtualJoystick>();
@@ -932,9 +992,8 @@ namespace BubbleTea.EditorTools
             UnlockPad driveThruPad = CreatePad(content.DriveThru, Layout.DriveThru, billPrefab, wallet, padMat,
                 driveThruCashierPad);
             Turn(driveThruPad, -90f);
-            UnlockPad moreSeatingPad = CreatePad(content.MoreSeating, Layout.MoreSeating, billPrefab, wallet, padMat);
             UnlockPad expansionPad = CreatePad(content.Expansion, Layout.Expansion, billPrefab, wallet, padMat,
-                driveThruPad, moreSeatingPad);
+                driveThruPad);
             SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
             SetObjectList(expansionPad, "hideWhenUnlocked", eastWall);
             // The bars stand in a row behind the counter, turned so you serve them from the counter side.
@@ -963,9 +1022,11 @@ namespace BubbleTea.EditorTools
             // Baristas in the row of staff pads in front of the bars, each pad revealing the next. Hiring
             // the first one also brings out the topping bar.
             // Matcha House: hiring the first barista also brings out the stocker's pad.
+            // A smaller pad than the rest, right beside the supply dock.
             UnlockPad stockerPad = content.Stocker != null
                 ? CreatePad(content.Stocker, Layout.Stocker, billPrefab, wallet, padMat)
                 : null;
+            if (stockerPad != null) ResizePad(stockerPad, 1.3f);
             Vector3[] baristaSpots = Layout.Baristas;
             var baristaPads = new UnlockPad[content.Baristas.Length];
             for (int i = baristaPads.Length - 1; i >= 0; i--)
@@ -993,14 +1054,13 @@ namespace BubbleTea.EditorTools
             seatingPad.gameObject.SetActive(false);
             cashierPad.gameObject.SetActive(false);
             cleanerPad.gameObject.SetActive(false);
-            moreSeatingPad.gameObject.SetActive(false);
             driveThruCashierPad.gameObject.SetActive(false);
             // The tea brewer reveals the first barista; each one reveals the next.
             for (int i = 0; i < baristaPads.Length; i++) baristaPads[i].gameObject.SetActive(false);
             var all = new System.Collections.Generic.List<UnlockPad>
             {
                 counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad,
-                expansionPad, driveThruPad, seatingPad, cashierPad, cleanerPad, moreSeatingPad, driveThruCashierPad,
+                expansionPad, driveThruPad, seatingPad, cashierPad, cleanerPad, driveThruCashierPad,
             };
             all.AddRange(baristaPads);
             if (extraPad != null)
@@ -1323,67 +1383,6 @@ namespace BubbleTea.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        // Measures how fast the shop earns and pays part of it for time away.
-        private static OfflineEarnings CreateOfflineEarnings(Wallet wallet)
-        {
-            var earnings = new GameObject("OfflineEarnings").AddComponent<OfflineEarnings>();
-            SetReference(earnings, "wallet", wallet);
-            return earnings;
-        }
-
-        // The "Welcome back!" panel. Built last so it draws on top of the other HUD panels.
-        private static void CreateWelcomeBackPopup(Transform hud, OfflineEarnings earnings)
-        {
-            Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
-            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-
-            RectTransform root = CreateUiObject("WelcomeBack", hud);
-            Stretch(root);
-            var popup = root.gameObject.AddComponent<WelcomeBackPopup>();
-
-            // A dark full-screen backdrop that also stops taps reaching the joystick.
-            RectTransform backdrop = CreateUiObject("Backdrop", root);
-            Stretch(backdrop);
-            backdrop.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);
-
-            RectTransform panel = CreateUiObject("Panel", backdrop);
-            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
-            panel.gameObject.AddComponent<FitToScreen>();
-            panel.sizeDelta = new Vector2(860f, 760f);
-            var panelImage = panel.gameObject.AddComponent<Image>();
-            panelImage.sprite = rounded;
-            panelImage.type = Image.Type.Sliced;
-            panelImage.color = new Color(0.15f, 0.15f, 0.2f, 0.97f);
-
-            Text title = CreateHudText("Title", panel, font, 64, TextAnchor.MiddleCenter);
-            SetTopRow(title.rectTransform, 30f, 110f, 0f, 0f);
-            title.text = "WELCOME BACK!";
-
-            Text subtitle = CreateHudText("Subtitle", panel, font, 40, TextAnchor.MiddleCenter);
-            SetTopRow(subtitle.rectTransform, 150f, 60f, 0f, 0f);
-            subtitle.text = "Your shop earned";
-
-            Text amount = CreateHudText("Amount", panel, font, 110, TextAnchor.MiddleCenter);
-            SetTopRow(amount.rectTransform, 220f, 150f, 0f, 0f);
-            amount.color = new Color(0.55f, 0.95f, 0.5f);
-            amount.text = "$0";
-
-            Text away = CreateHudText("Away", panel, font, 34, TextAnchor.MiddleCenter);
-            SetTopRow(away.rectTransform, 380f, 140f, 40f, 40f);
-            away.horizontalOverflow = HorizontalWrapMode.Wrap;
-            away.fontStyle = FontStyle.Normal;
-            away.color = new Color(0.85f, 0.85f, 0.9f);
-
-            Button collect = CreateMenuButton("Collect", panel, "COLLECT", rounded, font, new Color(0.35f, 0.78f, 0.38f), out _);
-            SetTopRow((RectTransform)collect.transform, 560f, 140f, 160f, 160f);
-
-            SetReference(popup, "panel", backdrop.gameObject);
-            SetReference(popup, "amountLabel", amount);
-            SetReference(popup, "awayLabel", away);
-            SetReference(popup, "collectButton", collect);
-            SetReference(popup, "earnings", earnings);
-        }
-
         // The shop clock (random customer traffic) and its display in the top-left corner.
         // Size and edge gap of the top-corner HUD widgets (clock, money, stars, MENU, GOALS).
         private const float HudScale = 0.82f; // bigger so money, time, stars and buttons are easy to read on a phone
@@ -1674,7 +1673,7 @@ namespace BubbleTea.EditorTools
             pallet.name = "Pallet";
             pallet.transform.SetParent(go.transform, false);
             pallet.transform.localPosition = new Vector3(0f, 0.08f, 0f);
-            pallet.transform.localScale = new Vector3(1.5f, 0.16f, 1.4f);
+            pallet.transform.localScale = new Vector3(1.95f, 0.16f, 1.45f);
             pallet.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial("Pallet", new Color(0.72f, 0.55f, 0.36f));
 
             Transform anchor = new GameObject("Crates").transform;
@@ -1685,32 +1684,21 @@ namespace BubbleTea.EditorTools
             spot.name = "Spot";
             Object.DestroyImmediate(spot.GetComponent<BoxCollider>());
             spot.transform.SetParent(go.transform, false);
-            spot.transform.localPosition = new Vector3(0f, 0.005f, 1.25f);
+            spot.transform.localPosition = new Vector3(0f, 0.005f, 1.45f);
             spot.transform.localScale = new Vector3(1.4f, 0.01f, 1.2f);
             spot.GetComponent<Renderer>().sharedMaterial = spotMaterial;
 
-            var label = new GameObject("Label").AddComponent<TextMesh>();
-            label.transform.SetParent(go.transform, false);
-            label.transform.localPosition = new Vector3(0f, 1.6f, 0f);
-            label.transform.rotation = Quaternion.Euler(45f, 0f, 0f); // faces the camera whichever way the dock turns
-            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            label.font = font;
-            label.GetComponent<MeshRenderer>().sharedMaterial = font.material;
-            label.text = "SUPPLIES";
-            label.characterSize = 0.04f;
-            label.fontSize = 64;
-            label.fontStyle = FontStyle.Bold;
-            label.anchor = TextAnchor.MiddleCenter;
-            label.color = Color.white;
+            NameTag.Add(go, "Supplies", 1.1f); // same yellow outlined label as the stations, above a full pallet
 
             var dock = go.AddComponent<SupplyDock>();
             var serialized = new SerializedObject(dock);
             serialized.FindProperty("crate").objectReferenceValue = crate;
             serialized.FindProperty("crates.anchor").objectReferenceValue = anchor;
-            serialized.FindProperty("crates.capacity").intValue = 6;
+            // Holds 20 crates: 4 x 3 on the pallet, a second layer on top.
+            serialized.FindProperty("crates.capacity").intValue = 20;
             serialized.FindProperty("crates.itemHeight").floatValue = 0.235f;
-            SetStackGrid(serialized, "crates", 2, 2, 0.62f, DrinkSize);
-            serialized.FindProperty("zone.offset").vector3Value = new Vector3(0f, 0f, 1.25f);
+            SetStackGrid(serialized, "crates", 4, 3, 0.48f, DrinkSize * 0.75f);
+            serialized.FindProperty("zone.offset").vector3Value = new Vector3(0f, 0f, 1.45f);
             serialized.FindProperty("zone.halfSize").floatValue = 0.7f;
             serialized.FindProperty("zone.secondsPerHandoff").floatValue = 0.25f;
             serialized.ApplyModifiedPropertiesWithoutUndo();
@@ -1808,18 +1796,7 @@ namespace BubbleTea.EditorTools
             spot.transform.localScale = new Vector3(1.4f, 0.01f, 1.2f);
             spot.GetComponent<Renderer>().sharedMaterial = spotMaterial;
 
-            var label = new GameObject("Label").AddComponent<TextMesh>();
-            label.transform.SetParent(go.transform, false);
-            label.transform.localPosition = new Vector3(0f, 1.3f, 0f);
-            label.transform.rotation = Quaternion.Euler(45f, 0f, 0f); // faces the camera whichever way the bin turns
-            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            label.font = font;
-            label.GetComponent<MeshRenderer>().sharedMaterial = font.material;
-            label.text = "TRASH";
-            label.characterSize = 0.04f;
-            label.fontSize = 64;
-            label.anchor = TextAnchor.MiddleCenter;
-            label.color = Color.white;
+            NameTag.Add(go, "Trash"); // same yellow outlined label as the stations
 
             var trash = go.AddComponent<TrashCan>();
             SetReference(trash, "opening", opening);
@@ -2199,6 +2176,19 @@ namespace BubbleTea.EditorTools
 
             CreatePadLabel(go.transform, pad);
             return pad;
+        }
+
+        // Makes a pad's tile, label and stand-on area a different size (pads are 2.4 m by default).
+        private static void ResizePad(UnlockPad pad, float size)
+        {
+            float factor = size / 2.4f;
+            Transform tile = pad.transform.Find("Tile");
+            if (tile != null) tile.localScale = new Vector3(size, tile.localScale.y, size);
+            Transform label = pad.transform.Find("Label");
+            if (label != null) label.localScale *= factor;
+            var serialized = new SerializedObject(pad);
+            serialized.FindProperty("halfSize").floatValue = size * 0.5f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // A world-space canvas lying flat on the pad, readable from the top-down camera.

@@ -21,8 +21,8 @@ namespace BubbleTea.Staff
     /// couldn't be handed over) goes in the nearest trash can.
     /// With nothing to carry, they stand behind the station customers need most and make it work
     /// faster (one barista per station). They swap items through the same floor zones the player
-    /// uses. The Walk Speed and Carry More upgrades apply to baristas too: they walk faster and
-    /// carry several of the same item per trip.
+    /// uses. The Carry More upgrade applies to baristas too: they carry several of the same item
+    /// per trip.
     /// </summary>
     [RequireComponent(typeof(ItemCarrier))]
     public class Barista : MonoBehaviour
@@ -463,7 +463,6 @@ namespace BubbleTea.Staff
         private static int CarryLimit() => 1 + UpgradeManager.LevelOfStat(StatId.CarryBonus);
 
         // Moves toward the target on the floor. Returns true once close enough to stand in a zone.
-        // The Walk Speed upgrade speeds runners up as well.
         private bool WalkTo(Vector3 target)
         {
             target.y = transform.position.y;
