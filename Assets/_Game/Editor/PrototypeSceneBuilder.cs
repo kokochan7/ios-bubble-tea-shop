@@ -164,17 +164,20 @@ namespace BubbleTea.EditorTools
             ScenePath = ScenePath,
             SaveFile = "save.json",
             FloorMaterial = "Floor",
-            FloorColor = new Color(0.86f, 0.66f, 0.50f),          // light honey planks
+            FloorColor = new Color(0.95f, 0.86f, 0.72f),          // light oak planks
             WallMaterial = "Wall",
-            WallColor = new Color(0.96f, 0.80f, 0.62f),           // pale warm wood boards
+            WallColor = new Color(0.98f, 0.97f, 0.95f),           // smooth white plaster
             ExpansionFloorMaterial = "ExpansionFloor",
-            ExpansionFloorColor = new Color(0.84f, 0.64f, 0.50f),
+            ExpansionFloorColor = new Color(0.94f, 0.85f, 0.71f),
             Look = new ShopDressing.Style
             {
+                // A fresh, bright café like a real-life Gong Cha or Chatime.
+                Theme = ShopDressing.Theme.FreshCafe,
                 ShopName = "Boba Shop",
                 Prefix = "Shop1",
-                Accent = new Color(0.78f, 0.24f, 0.20f),  // Taiwanese tea house red
-                Accent2 = new Color(0.95f, 0.75f, 0.32f), // and gold
+                Accent = new Color(0.72f, 0.50f, 0.32f),  // warm caramel (awning, drive-thru sign)
+                Accent2 = new Color(0.95f, 0.75f, 0.32f),
+                SignText = new Color(0.36f, 0.25f, 0.18f), // dark brown letters on the oak slats
                 Grass = new Color(0.46f, 0.70f, 0.34f),
             },
             Music = MusicMaker.Track.BobaShop,
@@ -187,13 +190,15 @@ namespace BubbleTea.EditorTools
             ScenePath = Shop2ScenePath,
             SaveFile = "save-shop2.json",
             FloorMaterial = "Shop2Floor",
-            FloorColor = new Color(0.90f, 0.74f, 0.54f),          // light oak planks
+            FloorColor = new Color(0.88f, 0.85f, 0.62f),          // tatami straw
             WallMaterial = "Shop2Wall",
-            WallColor = new Color(0.76f, 0.87f, 0.68f),           // pale sage boards
+            WallColor = new Color(1f, 1f, 1f),                    // shoji (colors are in the texture)
             ExpansionFloorMaterial = "Shop2ExpansionFloor",
-            ExpansionFloorColor = new Color(0.88f, 0.71f, 0.52f),
+            ExpansionFloorColor = new Color(0.88f, 0.85f, 0.62f),
             Look = new ShopDressing.Style
             {
+                // A Japanese tea room: tatami floor, shoji walls, slate kitchen.
+                Theme = ShopDressing.Theme.TeaHouse,
                 ShopName = "Matcha House",
                 Prefix = "Shop2",
                 Accent = new Color(0.30f, 0.48f, 0.26f),  // deep matcha green

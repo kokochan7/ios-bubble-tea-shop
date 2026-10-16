@@ -6,12 +6,16 @@ using UnityEngine.Rendering;
 namespace BubbleTea.EditorTools
 {
     /// <summary>
-    /// The look of a shop beyond its gameplay pieces, styled like a Taiwanese tea house: wood
-    /// floors and paneling, glass walls between the dining room and the kitchen, trim along the
-    /// walls, lattice windows, a red and gold shop sign, a noren curtain over the front door, a
-    /// gate with a tiled roof and couplet banners, paper-cut window flowers, shelves of tea tins and celadon cups, wall lamps,
-    /// swing doors on the staff entrance, the front door, the drive-thru lane, and a street with trees outside. Everything is
-    /// built from primitives and textures drawn in code, so nothing needs downloading.
+    /// The look of a shop beyond its gameplay pieces. Each shop has its own theme:
+    ///  - Fresh café (Boba Shop), like a real-life Gong Cha or Chatime: light oak floor, smooth
+    ///    white walls, a wooden slat feature wall with the shop's name, plain white-framed windows
+    ///    and white subway tiles in the kitchen.
+    ///  - Tea house (Matcha House), a Japanese tea room: tatami-mat floor, shoji walls (paper
+    ///    panels in a dark wood grid), lattice windows, a noren over the door and slate in the kitchen.
+    /// Both also get glass walls between the dining room and the kitchen, shelves of cups and tins,
+    /// wall lamps, swing doors on the staff entrance, sliding glass front doors, the drive-thru lane
+    /// and a street with trees outside. Everything is built from primitives and textures drawn in
+    /// code, so nothing needs downloading.
     /// Called by <see cref="PrototypeSceneBuilder"/> each time a shop scene is built.
     /// </summary>
     internal static class ShopDressing
@@ -19,9 +23,12 @@ namespace BubbleTea.EditorTools
         private const string TextureFolder = "Assets/_Game/Art/Generated";
         private const string MaterialFolder = "Assets/_Game/Materials";
 
+        internal enum Theme { FreshCafe, TeaHouse }
+
         /// <summary>What changes between shops.</summary>
         internal sealed class Style
         {
+            public Theme Theme;
             public string ShopName;
             public Color Accent;      // sign, bunting, rug
             public Color Accent2;     // second accent color
@@ -48,9 +55,11 @@ namespace BubbleTea.EditorTools
 
             // Textures are drawn in near-white, so each material's own color still tints them.
             // Wooden planks everywhere you walk (half-meter boards), wood paneling on the walls.
-            ApplyTexture(floor, PlankTexture(), new Vector2(w, d));
-            ApplyTexture(expansionFloor, PlankTexture(), new Vector2((layout.LaneOuterX - w) / 2f, d));
-            ApplyTexture(wall, PanelTexture(), new Vector2(w, 1f));
+            bool teaHouse = style.Theme == Theme.TeaHouse;
+            Texture2D floorTexture = teaHouse ? TatamiTexture() : PlankTexture(); // both cover 2 x 2 m
+            ApplyTexture(floor, floorTexture, new Vector2(w, d));
+            ApplyTexture(expansionFloor, floorTexture, new Vector2((layout.LaneOuterX - w) / 2f, d));
+            ApplyTexture(wall, teaHouse ? ShojiTexture() : PlasterTexture(), new Vector2(w, 1f));
 
             var root = new GameObject("Dressing").transform;
             CreateStreet(root, style, layout);
@@ -59,7 +68,8 @@ namespace BubbleTea.EditorTools
             CreateWallCaps(expansionArea);
             CreateShelves(root, layout.Lamps, d);
             CreateWindows(root, style, layout.Windows, d);
-            CreateSign(root, style, d);
+            if (teaHouse) CreateSign(root, style, d);
+            else CreateSlatWall(root, style, d);
             CreateLamps(root, style, layout.Lamps, d);
             CreateFrontDoor(root, style, layout);
             CreateFestiveDecor(root, style, layout);
@@ -127,9 +137,16 @@ namespace BubbleTea.EditorTools
         // A dark wood baseboard and a cream cap along the back wall, and caps on the low walls.
         private static void CreateTrim(Transform root, Style style, float length, float centerX, float wallZ, float height)
         {
+            float face = wallZ - 0.02f;
+            if (style.Theme == Theme.FreshCafe)
+            {
+                // Just a light oak baseboard on the clean white wall.
+                Material oak = Mat("OakTrim", new Color(0.86f, 0.70f, 0.50f), 0.3f);
+                Part(root, PrimitiveType.Cube, "Baseboard", new Vector3(centerX, 0.12f, face - 0.03f), new Vector3(length - 0.6f, 0.24f, 0.06f), oak);
+                return;
+            }
             Material wood = Mat("TrimWood", new Color(0.45f, 0.29f, 0.22f), 0.3f);
             Material cream = Mat("TrimRail", new Color(0.72f, 0.48f, 0.33f), 0.3f);
-            float face = wallZ - 0.02f;
             Part(root, PrimitiveType.Cube, "Baseboard", new Vector3(centerX, 0.15f, face - 0.03f), new Vector3(length - 0.6f, 0.3f, 0.08f), wood);
             Part(root, PrimitiveType.Cube, "Chair Rail", new Vector3(centerX, 1.05f, face - 0.03f), new Vector3(length - 0.6f, 0.08f, 0.06f), cream);
         }
@@ -138,7 +155,9 @@ namespace BubbleTea.EditorTools
         private static void CreateWallCaps(GameObject walls)
         {
             if (walls == null) return;
-            Material cap = Mat("WallCap", new Color(0.33f, 0.22f, 0.19f), 0.25f);
+            Material cap = current.Theme == Theme.FreshCafe
+                ? Mat("OakCap", new Color(0.86f, 0.70f, 0.50f), 0.3f)   // light oak
+                : Mat("WallCap", new Color(0.33f, 0.22f, 0.19f), 0.25f);
             foreach (Transform wall in walls.transform)
             {
                 if (wall.GetComponent<MeshRenderer>() == null || wall.name == "Floor") continue;
@@ -191,9 +210,10 @@ namespace BubbleTea.EditorTools
 
         private static void CreateWindows(Transform root, Style style, float[] xs, float wallZ)
         {
-            Material frame = Mat("WindowFrameWood", new Color(0.42f, 0.27f, 0.21f), 0.35f);
+            bool fresh = style.Theme == Theme.FreshCafe;
+            Material frame = fresh ? Mat("WhiteFrame", new Color(0.97f, 0.97f, 0.96f), 0.4f) : Mat("WindowFrameWood", new Color(0.42f, 0.27f, 0.21f), 0.35f);
             Material glass = Mat("WindowGlass", new Color(0.62f, 0.80f, 0.70f), 0.95f); // a hint of garden outside
-            Material sill = Mat("TrimWood", new Color(0.62f, 0.43f, 0.30f), 0.3f);
+            Material sill = fresh ? Mat("OakTrim", new Color(0.86f, 0.70f, 0.50f), 0.3f) : Mat("TrimWood", new Color(0.62f, 0.43f, 0.30f), 0.3f);
             const float width = 2.4f, height = 1.3f, centerY = 1.95f;
             float z = wallZ - 0.04f;
             foreach (float x in xs)
@@ -207,7 +227,10 @@ namespace BubbleTea.EditorTools
                 Part(window, PrimitiveType.Cube, "Left", new Vector3(-width / 2f, 0f, -0.03f), new Vector3(0.1f, height, 0.08f), frame);
                 Part(window, PrimitiveType.Cube, "Right", new Vector3(width / 2f, 0f, -0.03f), new Vector3(0.1f, height, 0.08f), frame);
                 Part(window, PrimitiveType.Cube, "Middle", new Vector3(0f, 0f, -0.03f), new Vector3(0.06f, height, 0.06f), frame);
-                // A Chinese-style lattice of thin wooden bars over the glass.
+                Part(window, PrimitiveType.Cube, "Sill", new Vector3(0f, -height / 2f - 0.08f, -0.12f), new Vector3(width + 0.3f, 0.07f, 0.25f), sill);
+                if (fresh) continue; // plain, modern windows
+
+                // A lattice of thin wooden bars over the glass, like shoji.
                 for (int i = 1; i < 4; i++)
                 {
                     float y = -height / 2f + i * height / 4f;
@@ -219,22 +242,23 @@ namespace BubbleTea.EditorTools
                     float x2 = -width / 2f + i * width / 8f;
                     Part(window, PrimitiveType.Cube, "Lattice", new Vector3(x2, 0f, -0.02f), new Vector3(0.025f, height, 0.025f), frame);
                 }
-                Part(window, PrimitiveType.Cube, "Sill", new Vector3(0f, -height / 2f - 0.08f, -0.12f), new Vector3(width + 0.3f, 0.07f, 0.25f), sill);
-
-                // Red paper-cut flowers on each pane, as at Chinese New Year.
-                foreach (float side in new[] { -0.6f, 0.6f })
-                {
-                    GameObject cut = Part(window, PrimitiveType.Cylinder, "Paper Cut", new Vector3(side, 0.05f, -0.04f),
-                        new Vector3(0.5f, 0.004f, 0.5f), PaperRed());
-                    cut.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                    GameObject petal = Part(window, PrimitiveType.Cube, "Paper Cut", new Vector3(side, 0.05f, -0.045f),
-                        new Vector3(0.36f, 0.36f, 0.004f), PaperRed());
-                    petal.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-                    GameObject heart = Part(window, PrimitiveType.Cylinder, "Paper Cut Center", new Vector3(side, 0.05f, -0.05f),
-                        new Vector3(0.16f, 0.004f, 0.16f), Gold());
-                    heart.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                }
             }
+        }
+
+        // A light wooden slat feature wall in the middle of the back wall, with the shop's name in
+        // dark brown letters across it, as in a modern bubble tea shop.
+        private static void CreateSlatWall(Transform root, Style style, float wallZ)
+        {
+            Transform wall = new GameObject("Slat Wall").transform;
+            wall.SetParent(root, false);
+            wall.localPosition = new Vector3(0f, 0f, wallZ - 0.06f);
+            Material oak = Mat("SlatOak", new Color(0.88f, 0.72f, 0.52f), 0.3f);
+            Material shadow = Mat("SlatShadow", new Color(0.62f, 0.48f, 0.34f), 0.2f);
+            const float half = 3.3f, bottom = 0.25f, top = 2.95f, step = 0.15f;
+            Part(wall, PrimitiveType.Cube, "Backing", new Vector3(0f, (bottom + top) / 2f, 0.02f), new Vector3(2f * half, top - bottom, 0.02f), shadow);
+            for (float x = -half + step / 2f; x < half; x += step)
+                Part(wall, PrimitiveType.Cube, "Slat", new Vector3(x, (bottom + top) / 2f, 0f), new Vector3(0.1f, top - bottom, 0.05f), oak);
+            Label(wall, style.ShopName.ToUpperInvariant(), new Vector3(0f, 2.15f, -0.05f), 0.08f, style.SignText);
         }
 
         // The shop's name on a board above the back wall, facing the camera.
@@ -297,7 +321,6 @@ namespace BubbleTea.EditorTools
 
         // ---------- Chinese decor ----------
 
-        private static Material PaperRed() => Mat("PaperRed", new Color(0.92f, 0.16f, 0.14f), 0.2f);
         private static Material Gold() => Mat("LanternGold", new Color(0.95f, 0.75f, 0.32f), 0.7f);
 
         // The shop front: automatic sliding glass doors across the front doorway.
@@ -423,8 +446,12 @@ namespace BubbleTea.EditorTools
             PrototypeSceneBuilder.ShopLayout layout)
         {
             float z0 = layout.PartitionZ, z1 = layout.HalfDepth;
-            Material kitchen = Mat(materialName, new Color(0.93f, 0.85f, 0.74f), 0.35f); // warm cream tiles
-            ApplyTexture(kitchen, TileTexture(), new Vector2((toX - fromX) / 2f, (z1 - z0) / 2f)); // 1 m tiles
+            // White subway tiles in the café, gray slate in the tea house (each texture covers 2 x 2 m).
+            bool teaHouse = current.Theme == Theme.TeaHouse;
+            Material kitchen = teaHouse
+                ? Mat(current.Prefix + materialName, new Color(0.62f, 0.65f, 0.67f), 0.3f)
+                : Mat(current.Prefix + materialName, new Color(0.98f, 0.98f, 0.97f), 0.55f);
+            ApplyTexture(kitchen, teaHouse ? SlateTexture() : SubwayTexture(), new Vector2((toX - fromX) / 2f, (z1 - z0) / 2f));
             Part(root, PrimitiveType.Cube, "Kitchen Floor", new Vector3((fromX + toX) / 2f, 0.003f, (z0 + z1) / 2f),
                 new Vector3(toX - fromX, 0.004f, z1 - z0), kitchen);
         }
@@ -439,6 +466,10 @@ namespace BubbleTea.EditorTools
             GameObject awning = Part(root, PrimitiveType.Cube, "Awning", new Vector3((from + to) / 2f, 2.3f, z - 0.6f),
                 new Vector3(to - from + 0.6f, 0.08f, 1.4f), Mat(style.Prefix + "Accent", style.Accent, 0.4f));
             awning.transform.localRotation = Quaternion.Euler(-15f, 0f, 0f);
+
+            Part(root, PrimitiveType.Cube, "Door Mat", new Vector3((from + to) / 2f, 0.005f, z + 0.95f),
+                new Vector3(4f, 0.01f, 1.2f), Mat("DoorMat", new Color(0.55f, 0.42f, 0.34f), 0.05f));
+            if (style.Theme == Theme.FreshCafe) return; // a clean, modern entrance
 
             // A noren: split fabric panels hanging over the doorway, and a lantern by each post.
             Material rod = Mat("WindowFrameWood", new Color(0.42f, 0.27f, 0.21f), 0.35f);
@@ -457,8 +488,6 @@ namespace BubbleTea.EditorTools
             }
             Lantern(root, new Vector3(from, 1.85f, z - 0.45f), 0.9f);
             Lantern(root, new Vector3(to, 1.85f, z - 0.45f), 0.9f);
-            Part(root, PrimitiveType.Cube, "Door Mat", new Vector3((from + to) / 2f, 0.005f, z + 0.95f),
-                new Vector3(4f, 0.01f, 1.2f), Mat("DoorMat", new Color(0.55f, 0.42f, 0.34f), 0.05f));
         }
 
         // The car lane outside the east wall: asphalt, edge lines, arrows, an awning over the
@@ -605,21 +634,6 @@ namespace BubbleTea.EditorTools
 
         // ---------- Textures drawn in code ----------
 
-        // Two by two soft tiles with thin grout lines.
-        private static Texture2D TileTexture() => SaveTexture("FloorTiles", 512, (x, y) =>
-        {
-            const int tile = 256, grout = 3;
-            int tx = x % tile, ty = y % tile;
-            if (tx < grout || ty < grout) return new Color(0.80f, 0.78f, 0.76f);
-            bool alternate = (x / tile + y / tile) % 2 == 0;
-            float shade = alternate ? 1f : 0.93f;
-            shade -= Noise(x, y) * 0.025f;
-            // A soft bevel near the grout.
-            float edge = Mathf.Min(Mathf.Min(tx, tile - tx), Mathf.Min(ty, tile - ty));
-            if (edge < 10) shade -= (10 - edge) * 0.004f;
-            return new Color(shade, shade, shade);
-        });
-
         // Planks running front to back, with staggered ends, dark seams, wavy grain and a few knots.
         private static Texture2D PlankTexture() => SaveTexture("WoodPlanks", 512, (x, y) =>
         {
@@ -640,17 +654,70 @@ namespace BubbleTea.EditorTools
             return new Color(shade, shade * 0.97f, shade * 0.95f);
         });
 
-        // Vertical wooden boards for the walls, with dark grooves between them.
-        private static Texture2D PanelTexture() => SaveTexture("WallBoards", 256, (x, y) =>
+        // Smooth painted plaster: almost flat, with a faint mottle so it doesn't look like plastic.
+        private static Texture2D PlasterTexture() => SaveTexture("WallPlaster", 256, (x, y) =>
         {
-            const int board = 64;
-            int across = x % board;
-            if (across < 3) return new Color(0.62f, 0.58f, 0.56f);
-            float shade = 0.9f + 0.07f * Mathf.Repeat((x / board) * 0.41f, 1f);
-            shade += Mathf.Sin(across * 0.4f + Mathf.Sin(y * 0.03f + x / board) * 3f) * 0.025f;
-            shade -= Noise(x, y) * 0.03f;
-            if (across < 8) shade -= (8 - across) * 0.01f;
-            return new Color(shade, shade * 0.98f, shade * 0.96f);
+            float shade = 0.97f - Noise(x / 4, y / 4) * 0.025f - Noise(x, y) * 0.012f;
+            return new Color(shade, shade, shade);
+        });
+
+        // Tatami mats, 1 x 2 m, laid lengthwise in staggered rows: fine woven straw lines across each
+        // mat and a dark cloth border (heri) down both long sides. 512 px = 2 m.
+        private static Texture2D TatamiTexture() => SaveTexture("Tatami", 512, (x, y) =>
+        {
+            const int matWidth = 256, matLength = 512, border = 14;
+            int column = x / matWidth;
+            int along = (y + column * matLength / 2) % matLength;
+            int across = x % matWidth;
+            if (along < 3 || along > matLength - 3) return new Color(0.42f, 0.40f, 0.30f);  // the seam where mats meet
+            if (across < border || across >= matWidth - border)
+            {
+                float cloth = 0.24f + Noise(x, y) * 0.03f;
+                return new Color(cloth, cloth * 1.05f, cloth * 0.8f);                           // dark green-brown heri
+            }
+            float weave = 0.92f + 0.05f * Mathf.Sin(along * 1.6f) - Noise(x, y) * 0.04f;      // rows of woven rush
+            weave -= (across % 32 == 0) ? 0.05f : 0f;                                          // the warp threads
+            return new Color(weave, weave * 0.98f, weave * 0.86f);
+        });
+
+        // Shoji: white paper panels in a dark wooden grid, with a heavier frame around each panel.
+        // Colors are baked in (the wall material stays near white). 256 px = 2 m wide.
+        private static Texture2D ShojiTexture() => SaveTexture("Shoji", 256, (x, y) =>
+        {
+            var wood = new Color(0.32f, 0.22f, 0.16f);
+            int panel = x % 128;
+            if (panel < 6 || panel > 121 || y < 8 || y > 247) return wood;                      // panel frame
+            if ((panel - 6) % 29 < 3 || y % 52 < 3) return wood * 1.15f;                       // the grid (kumiko)
+            float paper = 0.97f - Noise(x, y) * 0.03f;
+            return new Color(paper, paper * 0.98f, paper * 0.93f);
+        });
+
+        // White subway tiles: bricks half a meter by a quarter, staggered, with soft gray grout. 512 px = 2 m.
+        private static Texture2D SubwayTexture() => SaveTexture("SubwayTiles", 512, (x, y) =>
+        {
+            const int tileWidth = 128, tileHeight = 64, grout = 3;
+            int row = y / tileHeight;
+            int tx = (x + (row % 2) * tileWidth / 2) % tileWidth, ty = y % tileHeight;
+            if (tx < grout || ty < grout) return new Color(0.78f, 0.78f, 0.78f);
+            float edge = Mathf.Min(Mathf.Min(tx, tileWidth - tx), Mathf.Min(ty, tileHeight - ty));
+            float shade = 0.99f - Noise(x, y) * 0.015f - (edge < 7 ? (7 - edge) * 0.008f : 0f);
+            return new Color(shade, shade, shade);
+        });
+
+        // Gray slate flagstones in staggered courses of different lengths. 512 px = 2 m.
+        private static Texture2D SlateTexture() => SaveTexture("Slate", 512, (x, y) =>
+        {
+            const int courseHeight = 128;
+            int row = y / courseHeight;
+            int shift = (row * 173) % 512;
+            int[] widths = { 160, 192, 160 }; // three stones per course across 512 px
+            int u = (x + shift) % 512, start = 0, stone = 0;
+            while (stone < widths.Length - 1 && u >= start + widths[stone]) { start += widths[stone]; stone++; }
+            int sx = u - start, sy = y % courseHeight;
+            if (sx < 4 || sy < 4) return new Color(0.30f, 0.30f, 0.31f);
+            float shade = 0.82f + 0.14f * Mathf.Repeat((row * 3 + stone) * 0.618f, 1f);
+            shade += Mathf.Sin(x * 0.05f + y * 0.02f + stone) * 0.02f - Noise(x, y) * 0.06f;
+            return new Color(shade, shade, shade * 1.02f);
         });
 
         // Rounded paving stones in staggered rows.
