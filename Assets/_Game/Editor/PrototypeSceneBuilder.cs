@@ -110,8 +110,9 @@ namespace BubbleTea.EditorTools
             Expansion = new(7.6f, 0f, -3.4f),   // by the east wall it opens up, clear of the koi pond
             Cleaner = new(-6.4f, 0f, -4.6f),
             DriveThruCashier = new(10f, 0f, 1.4f), // small pad in the strip, south of the window
-            SecondShopPad = new(-6.4f, 0f, -1.6f), // both bus stops stand on the left of the dining room
-            TravelBack = new(-6.4f, 0f, -1.6f),
+            // Both travel stops stand outside on the sidewalk, just right of the gate's east pillar.
+            SecondShopPad = new(3.1f, 0f, -9f),
+            TravelBack = new(3.1f, 0f, -9f),
             // Matcha House: the supply dock against the west wall (its spot faces into the kitchen), the
             // stocker's small pad right beside it, and the specials chalkboard by the front door.
             SupplyDock = new(-8.1f, 0f, 3.5f),
@@ -589,15 +590,21 @@ namespace BubbleTea.EditorTools
             var root = new GameObject("Walls");
             float w = Layout.HalfWidth, d = Layout.HalfDepth, from = Layout.DoorFrom, to = Layout.DoorTo;
             // The back wall is tall (windows, sign); the others stay low so they never hide the shop.
-            // The front (south) wall has a wide doorway; an invisible bar across it keeps the
-            // player inside (customers don't use physics, so they walk through it).
+            // The front (south) wall has a wide doorway. The player can step out onto a patch of
+            // sidewalk in front of it (to reach the travel stop), fenced by invisible walls
+            // (customers don't use physics, so they walk through them).
             CreateWall(root.transform, "North", new Vector3(0f, 1.5f, d + 0.25f), new Vector3(2f * w + 0.5f, 3f, 0.5f), wallMat);
             CreateWall(root.transform, "South (west of door)", new Vector3((-w - 0.25f + from) / 2f, 0.5f, -d - 0.25f),
                 new Vector3(from + w + 0.25f, 1f, 0.5f), wallMat);
             CreateWall(root.transform, "South (east of door)", new Vector3((w + 0.25f + to) / 2f, 0.5f, -d - 0.25f),
                 new Vector3(w + 0.25f - to, 1f, 0.5f), wallMat);
-            CreateBlocker(root.transform, "Door (keeps the player in)", new Vector3((from + to) / 2f, 1f, -d - 0.25f),
-                new Vector3(to - from, 2f, 0.5f));
+            float yardEast = to + 2.6f, yardSouth = -d - 2.6f;
+            CreateBlocker(root.transform, "Front Yard (west)", new Vector3(from - 0.25f, 1f, (-d + yardSouth) / 2f),
+                new Vector3(0.5f, 2f, -d - yardSouth));
+            CreateBlocker(root.transform, "Front Yard (east)", new Vector3(yardEast + 0.25f, 1f, (-d + yardSouth) / 2f),
+                new Vector3(0.5f, 2f, -d - yardSouth));
+            CreateBlocker(root.transform, "Front Yard (south)", new Vector3((from + yardEast) / 2f, 1f, yardSouth - 0.25f),
+                new Vector3(yardEast - from + 1f, 2f, 0.5f));
             CreateWall(root.transform, "West", new Vector3(-w - 0.25f, 0.5f, 0f), new Vector3(0.5f, 1f, 2f * d + 0.5f), wallMat);
             return CreateWall(root.transform, "East (opens with Expand Shop)", new Vector3(w + 0.25f, 0.5f, 0f),
                 new Vector3(0.5f, 1f, 2f * d + 0.5f), wallMat);
@@ -974,6 +981,7 @@ namespace BubbleTea.EditorTools
             UnlockPad secondShopPad = content.SecondShop != null
                 ? CreatePad(content.SecondShop, Layout.SecondShopPad, billPrefab, wallet, padMat)
                 : null;
+            if (secondShopPad != null) ResizePad(secondShopPad, 1.6f); // small, to fit on the sidewalk by the gate
             // The drive-thru cashier's pad sits beside the drive-thru's cash pile, like the main one.
             UnlockPad driveThruCashierPad = CreatePad(content.DriveThruCashier, Layout.DriveThruCashier, billPrefab, wallet, padMat);
             ResizePad(driveThruCashierPad, 1.5f);

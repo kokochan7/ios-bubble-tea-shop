@@ -309,15 +309,14 @@ namespace BubbleTea.EditorTools
             CreateGate(root, style, layout);
         }
 
-        // A paifang-style gate over the front door: two red pillars on stone bases, a red beam
-        // with a gold plaque, and a glazed roof with upturned eaves.
+        // A paifang-style gate over the front door: two red pillars on stone bases joined by a
+        // red beam (no roof or name plaque, so it doesn't hide the shop).
         private static void CreateGate(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
         {
             float from = layout.DoorFrom - 0.5f, to = layout.DoorTo + 0.5f, z = -layout.HalfDepth - 1.1f;
             float center = (from + to) / 2f, span = to - from;
             Material red = Mat("GateRed", new Color(0.84f, 0.16f, 0.12f), 0.45f);
             Material stone = Mat("GateStone", new Color(0.88f, 0.86f, 0.82f), 0.2f);
-            Material tile = Mat(style.Prefix + "RoofTile", style.RoofTile, 0.6f);
             Material gold = Gold();
             Transform gate = new GameObject("Front Gate").transform;
             gate.SetParent(root, false);
@@ -338,21 +337,6 @@ namespace BubbleTea.EditorTools
             }
             Part(gate, PrimitiveType.Cube, "Beam", new Vector3(center, 2.95f, z), new Vector3(span + 0.6f, 0.3f, 0.4f), red);
             Part(gate, PrimitiveType.Cube, "Beam Trim", new Vector3(center, 2.78f, z), new Vector3(span + 0.4f, 0.05f, 0.42f), gold);
-            Part(gate, PrimitiveType.Cube, "Plaque", new Vector3(center, 2.95f, z - 0.22f), new Vector3(1.6f, 0.5f, 0.04f), gold);
-            Part(gate, PrimitiveType.Cube, "Plaque Face", new Vector3(center, 2.95f, z - 0.245f), new Vector3(1.4f, 0.36f, 0.02f), red);
-            Label(gate, style.ShopName.ToUpperInvariant(), new Vector3(center, 2.95f, z - 0.26f), 0.015f, style.SignText);
-
-            // Two layers of roof, the eaves curling up at each end.
-            Part(gate, PrimitiveType.Cube, "Roof", new Vector3(center, 3.22f, z), new Vector3(span + 1.4f, 0.16f, 1.1f), tile);
-            Part(gate, PrimitiveType.Cube, "Roof Ridge", new Vector3(center, 3.38f, z), new Vector3(span + 0.6f, 0.16f, 0.5f), tile);
-            Part(gate, PrimitiveType.Cube, "Ridge Trim", new Vector3(center, 3.48f, z), new Vector3(span + 0.4f, 0.04f, 0.2f), gold);
-            foreach (float side in new[] { -1f, 1f })
-            {
-                float x = center + side * (span / 2f + 0.95f);
-                GameObject eave = Part(gate, PrimitiveType.Cube, "Upturned Eave", new Vector3(x, 3.32f, z), new Vector3(0.6f, 0.14f, 1.1f), tile);
-                eave.transform.localRotation = Quaternion.Euler(0f, 0f, side * 25f);
-                Part(gate, PrimitiveType.Sphere, "Eave Tip", new Vector3(x + side * 0.28f, 3.48f, z), new Vector3(0.14f, 0.14f, 0.14f), gold);
-            }
         }
 
         // ---------- Floor plan ----------
