@@ -33,7 +33,7 @@ Transform:
   - {fileID: 2125205713201038119}
   - {fileID: 8538113699135682447}
   - {fileID: 2649970879853553245}
-  - {fileID: 4963223050675492379}
+  - {fileID: 8765899131644221897}
   m_Father: {fileID: 6723821323130308077}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2421873096857171937
@@ -49,10 +49,43 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BubbleTea.Cooking.WhiskMotion
   station: {fileID: 9196737344199605507}
-  whisk: {fileID: 4963223050675492379}
+  whisk: {fileID: 8765899131644221897}
   froth: {fileID: 2649970879853553245}
   strokes: 7
   swing: 0.06
+--- !u!1 &791537734364378932
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8765899131644221897}
+  m_Layer: 0
+  m_Name: Whisk
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8765899131644221897
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 791537734364378932}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.1, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 4754641209797316945}
+  - {fileID: 4836299632372069060}
+  m_Father: {fileID: 6590862736802958503}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1630181042231607501
 GameObject:
   m_ObjectHideFlags: 0
@@ -84,7 +117,7 @@ Transform:
   m_LocalScale: {x: 0.09, y: 0.07, z: 0.09}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 4963223050675492379}
+  m_Father: {fileID: 8765899131644221897}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &5952273137576412823
 MeshFilter:
@@ -437,7 +470,7 @@ Transform:
   m_LocalScale: {x: 0.035, y: 0.09, z: 0.035}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 4963223050675492379}
+  m_Father: {fileID: 8765899131644221897}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &1418673487643774475
 MeshFilter:
@@ -496,39 +529,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!1 &5474380856145839460
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 4963223050675492379}
-  m_Layer: 0
-  m_Name: Whisk
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &4963223050675492379
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5474380856145839460}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.1, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 4754641209797316945}
-  - {fileID: 4836299632372069060}
-  m_Father: {fileID: 6590862736802958503}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6550980522386352100
 GameObject:
   m_ObjectHideFlags: 0
