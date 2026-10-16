@@ -531,35 +531,33 @@ namespace BubbleTea.EditorTools
         // Size of the drinks on the bars and the counter: the same as everywhere else.
         private const float DrinkSizeOnBars = DrinkSize;
 
-        // A sign standing low on the customers' side of the counter, showing what the customer at
-        // the front still wants. Kept low so it doesn't hide the kitchen behind it.
+        // A floating high-tech screen low on the customers' side of the counter, showing what the
+        // customer at the front still wants: a dark glass screen with glowing cyan text in a metal
+        // bezel with a neon rim, a "NOW ORDERING" header, a sweeping scan line and a status light.
+        // Kept low so it doesn't hide the kitchen behind it.
         private static void AddOrderBoard(GameObject root, ServingCounter counter, float counterTop)
         {
             Transform board = AddAnchor(root.transform, "OrderBoard", new Vector3(0f, counterTop - 0.1f, -0.35f));
             board.localScale = Vector3.one * 0.95f;
-            GameObject backing = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            backing.name = "Backing";
-            Object.DestroyImmediate(backing.GetComponent<Collider>());
-            backing.transform.SetParent(board, false);
-            backing.transform.localPosition = new Vector3(0f, 0.42f, 0.08f);
-            backing.transform.localScale = new Vector3(1f, 1.1f, 0.04f);
-            backing.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial("OrderBoard", new Color(1f, 0.95f, 0.84f));
+            Color cyan = new Color(0.45f, 0.95f, 1f);
+            Transform screen = AddScreenPart(board, "Screen", new Vector3(0f, 0.42f, 0.08f), new Vector3(1f, 1.1f, 0.04f),
+                ScreenMaterial("OrderScreen", new Color(0.03f, 0.06f, 0.13f), new Color(0.02f, 0.06f, 0.12f)));
+            Transform bezel = AddScreenPart(board, "Bezel", new Vector3(0f, 0.42f, 0.11f), new Vector3(1.1f, 1.2f, 0.05f),
+                ScreenMaterial("OrderScreenBezel", new Color(0.13f, 0.14f, 0.18f), Color.black));
+            Transform rim = AddScreenPart(board, "NeonRim", new Vector3(0f, 0.42f, 0.13f), new Vector3(1.16f, 1.26f, 0.02f),
+                ScreenMaterial("OrderScreenRim", cyan, cyan * 1.4f));
+            Transform scan = AddScreenPart(board, "ScanLine", new Vector3(0f, 0.42f, 0.055f), new Vector3(1f, 0.018f, 0.005f),
+                ScreenMaterial("OrderScreenScan", cyan, cyan * 0.9f));
+            Transform led = AddScreenPart(board, "StatusLight", new Vector3(0f, 0f, 0.08f), new Vector3(0.05f, 0.05f, 0.02f),
+                ScreenMaterial("OrderScreenLed", new Color(0.3f, 1f, 0.45f), new Color(0.3f, 1f, 0.45f) * 1.5f));
             Transform icons = AddAnchor(board, "Icons", Vector3.zero);
 
-            // The order in words above the pictures.
-            var labelGo = new GameObject("OrderText");
-            labelGo.transform.SetParent(board, false);
-            labelGo.transform.localPosition = new Vector3(0f, 0.7f, 0f); // right on top of the pictures
-            var label = labelGo.AddComponent<TextMesh>();
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            label.font = font;
-            labelGo.GetComponent<MeshRenderer>().sharedMaterial = font.material;
-            label.fontSize = 64;
-            label.characterSize = 0.035f;
-            label.fontStyle = FontStyle.Bold;
-            label.anchor = TextAnchor.LowerCenter;
-            label.alignment = TextAlignment.Center;
-            label.color = new Color(0.35f, 0.18f, 0.1f);
+            // The order in words above the pictures.
+            TextMesh label = AddScreenText(board, "OrderText", font, new Vector3(0f, 0.7f, 0f), 64, 0.035f, cyan);
+            // A small header along the top of the screen.
+            TextMesh header = AddScreenText(board, "Header", font, new Vector3(0f, 1f, 0f), 48, 0.022f, new Color(1f, 0.55f, 0.85f));
+            header.text = "NOW ORDERING";
             board.gameObject.SetActive(false);
 
             var view = root.AddComponent<OrderBoard>();
@@ -567,9 +565,63 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("counter").objectReferenceValue = counter;
             serialized.FindProperty("board").objectReferenceValue = board;
             serialized.FindProperty("iconRow").objectReferenceValue = icons;
-            serialized.FindProperty("backing").objectReferenceValue = backing.transform;
+            serialized.FindProperty("backing").objectReferenceValue = screen;
             serialized.FindProperty("label").objectReferenceValue = label;
+            serialized.FindProperty("header").objectReferenceValue = header;
+            serialized.FindProperty("bezel").objectReferenceValue = bezel;
+            serialized.FindProperty("rim").objectReferenceValue = rim;
+            serialized.FindProperty("scanLine").objectReferenceValue = scan;
+            serialized.FindProperty("statusLight").objectReferenceValue = led;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static Transform AddScreenPart(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
+        {
+            GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            part.name = name;
+            Object.DestroyImmediate(part.GetComponent<Collider>());
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = position;
+            part.transform.localScale = scale;
+            var renderer = part.GetComponent<Renderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return part.transform;
+        }
+
+        private static TextMesh AddScreenText(Transform parent, string name, Font font, Vector3 position, int size, float characterSize, Color color)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = position;
+            var text = go.AddComponent<TextMesh>();
+            text.font = font;
+            go.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+            text.fontSize = size;
+            text.characterSize = characterSize;
+            text.fontStyle = FontStyle.Bold;
+            text.anchor = TextAnchor.LowerCenter;
+            text.alignment = TextAlignment.Center;
+            text.color = color;
+            return text;
+        }
+
+        // A glowing material (set every build, so older materials pick up the new look).
+        private static Material ScreenMaterial(string name, Color color, Color emission)
+        {
+            Material material = GetOrCreateMaterial(name, color);
+            material.color = color;
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.85f);
+            if (material.HasProperty("_EmissionColor"))
+            {
+                if (emission.maxColorComponent > 0f) material.EnableKeyword("_EMISSION");
+                else material.DisableKeyword("_EMISSION");
+                material.SetColor("_EmissionColor", emission);
+                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            }
+            EditorUtility.SetDirty(material);
+            return material;
         }
 
         // supply: a crate the bar uses up (one scoop per drink). handMade: only works while the player stands at it.

@@ -163,6 +163,19 @@ namespace BubbleTea.Extras
             }
         }
 
+        private static readonly float[] partialXp = new float[4];
+
+        /// <summary>Gives a fraction of experience (e.g. 0.5 per drink); whole points land as they add up.</summary>
+        public static void AddXp(Role role, float amount)
+        {
+            if (teams[(int)role].Workers <= 0 || amount <= 0f) return;
+            partialXp[(int)role] += amount;
+            int whole = Mathf.FloorToInt(partialXp[(int)role]);
+            if (whole <= 0) return;
+            partialXp[(int)role] -= whole;
+            AddXp(role, whole);
+        }
+
         /// <summary>Spends a skill point on a perk. False if there's no point left or it's maxed.</summary>
         public static bool Learn(Role role, int perk)
         {

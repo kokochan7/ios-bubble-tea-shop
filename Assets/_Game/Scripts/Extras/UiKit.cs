@@ -179,6 +179,35 @@ namespace BubbleTea.Extras
             return pearl;
         }
 
+        private static Sprite triangle;
+
+        /// <summary>A white play triangle pointing right.</summary>
+        public static Sprite Triangle
+        {
+            get
+            {
+                if (triangle != null) return triangle;
+                const int size = 128;
+                var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+                var pixels = new Color32[size * size];
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        // Inside the left edge and the two slanted edges meeting at the right middle.
+                        float left = x - 12f;
+                        float half = (size - 24f) * 0.5f * (1f - (x - 12f) / (size - 20f));
+                        float slant = half - Mathf.Abs(y - (size - 1) * 0.5f);
+                        float alpha = Mathf.Clamp01(Mathf.Min(left, slant * 0.9f) + 0.5f);
+                        pixels[y * size + x] = new Color32(255, 255, 255, (byte)(alpha * 255f));
+                    }
+                }
+                texture.SetPixels32(pixels);
+                texture.Apply();
+                return triangle = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 100f);
+            }
+        }
+
         // A white rounded square (stretches without blurring its corners) or a disc.
         private static Sprite MakeSprite(int size, float radius, bool sliced)
         {

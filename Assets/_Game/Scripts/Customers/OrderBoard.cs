@@ -6,9 +6,10 @@ using UnityEngine;
 namespace BubbleTea.Customers
 {
     /// <summary>
-    /// A sign over the counter showing the drinks the customer at the front of the line still
-    /// wants, with the order written above the pictures (like "1x Milk Tea, 3x Taro Boba"). Each
-    /// drink disappears as it's handed over, and the sign hides when nobody is waiting.
+    /// A high-tech screen over the counter showing the drinks the customer at the front of the line
+    /// still wants, with the order written above the pictures (like "1x Milk Tea, 3x Taro Boba").
+    /// Each drink disappears as it's handed over, and the screen hides when nobody is waiting. The
+    /// bezel and neon rim stretch with the screen, a scan line sweeps down it and a light blinks.
     /// </summary>
     public class OrderBoard : MonoBehaviour
     {
@@ -26,6 +27,21 @@ namespace BubbleTea.Customers
 
         [SerializeField, Tooltip("Text above the pictures listing the order. Optional.")]
         private TextMesh label;
+
+        [SerializeField, Tooltip("Header text along the top of the screen. Optional.")]
+        private TextMesh header;
+
+        [SerializeField, Tooltip("The frame around the screen, stretched with it. Optional.")]
+        private Transform bezel;
+
+        [SerializeField, Tooltip("The glowing outline behind the frame, stretched with it. Optional.")]
+        private Transform rim;
+
+        [SerializeField, Tooltip("A thin glowing line that sweeps down the screen. Optional.")]
+        private Transform scanLine;
+
+        [SerializeField, Tooltip("A small blinking light in the frame's corner. Optional.")]
+        private Transform statusLight;
 
         [SerializeField, Tooltip("Size of the drink models.")]
         private float iconScale = 2f;
@@ -55,6 +71,23 @@ namespace BubbleTea.Customers
             }
 
             if (count > 0 && Camera.main != null) board.rotation = Camera.main.transform.rotation;
+            if (count > 0) Animate();
+        }
+
+        // The scan line sweeps top to bottom; the status light blinks.
+        private void Animate()
+        {
+            if (backing == null) return;
+            float top = backing.localPosition.y + backing.localScale.y * 0.5f - 0.02f;
+            float bottom = backing.localPosition.y - backing.localScale.y * 0.5f + 0.02f;
+            if (scanLine != null)
+            {
+                float t = Mathf.Repeat(Time.time * 0.45f, 1f);
+                Vector3 position = scanLine.localPosition;
+                scanLine.localPosition = new Vector3(backing.localPosition.x, Mathf.Lerp(top, bottom, t), position.z);
+                scanLine.localScale = new Vector3(backing.localScale.x - 0.02f, scanLine.localScale.y, scanLine.localScale.z);
+            }
+            if (statusLight != null) statusLight.gameObject.SetActive(Mathf.Repeat(Time.time, 1.2f) < 0.8f);
         }
 
         // Stretches the sign to fit the pictures and, above them, the lines of text.
@@ -71,9 +104,28 @@ namespace BubbleTea.Customers
                 width = Mathf.Max(width, longest * lineHeight * 0.5f + 0.3f);
                 height = label.transform.localPosition.y + lines.Length * lineHeight + 0.08f + BackingBottom;
             }
+            if (header != null)
+            {
+                float headerHeight = header.fontSize * header.characterSize * 0.1f;
+                header.transform.localPosition = new Vector3(0f, height - BackingBottom + 0.02f, header.transform.localPosition.z);
+                width = Mathf.Max(width, header.text.Length * headerHeight * 0.55f + 0.3f);
+                height += headerHeight + 0.06f;
+            }
             Vector3 position = backing.localPosition;
             backing.localScale = new Vector3(width, height, backing.localScale.z);
-            backing.localPosition = new Vector3(position.x, height * 0.5f - BackingBottom, position.z);
+            float middle = height * 0.5f - BackingBottom;
+            backing.localPosition = new Vector3(position.x, middle, position.z);
+            Frame(bezel, width + 0.1f, height + 0.1f, middle);
+            Frame(rim, width + 0.16f, height + 0.16f, middle);
+            if (statusLight != null)
+                statusLight.localPosition = new Vector3(width * 0.5f + 0.02f, middle - height * 0.5f - 0.02f, statusLight.localPosition.z);
+        }
+
+        private static void Frame(Transform part, float width, float height, float middle)
+        {
+            if (part == null) return;
+            part.localScale = new Vector3(width, height, part.localScale.z);
+            part.localPosition = new Vector3(0f, middle, part.localPosition.z);
         }
 
         private const float BackingBottom = 0.13f; // how far the sign reaches below the pictures

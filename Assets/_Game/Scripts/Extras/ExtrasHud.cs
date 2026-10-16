@@ -9,7 +9,7 @@ namespace BubbleTea.Extras
     /// The pearl counter and the SHOP, TEAM, PETS and PLAY buttons down the right side of the screen,
     /// with their pop-ups: the decor shop and collections, the staff skill trees, pets, and the
     /// mini-games (only once the whole shop is built). Built in code when a shop opens (the save manager asks for it), so the
-    /// scenes don't need anything extra. The game is paused while a pop-up is open.
+    /// scenes don't need anything extra. The game keeps running behind SHOP, TEAM and PETS; PLAY pauses it.
     /// </summary>
     public class ExtrasHud : MonoBehaviour
     {
@@ -18,6 +18,13 @@ namespace BubbleTea.Extras
         private const float Step = 110f * Scale + 10f;
 
         private static ExtrasHud instance;
+
+        /// <summary>True while the player has paused the game with the pause button.</summary>
+        public static bool Paused { get; private set; }
+
+        private GameObject pauseBars;      // the "II" shown while running
+        private GameObject playTriangle;   // the play arrow shown while paused
+        private GameObject pausedBanner;
 
         private RectTransform canvas;
         private RectTransform column;
@@ -29,6 +36,7 @@ namespace BubbleTea.Extras
         private GameObject popup;     // the open pop-up, if any
         private Action refresh;       // redraws the open pop-up
         private int tab;
+        private bool paused;          // whether the open pop-up paused the game
 
         /// <summary>Called by the save manager as a shop opens.</summary>
         public static void Ensure()
@@ -69,7 +77,8 @@ namespace BubbleTea.Extras
         private void OnDestroy()
         {
             if (instance == this) instance = null;
-            if (popup != null) Time.timeScale = 1f;
+            if ((popup != null && paused) || Paused) Time.timeScale = 1f;
+            Paused = false;
         }
 
         private void OnChanged()
@@ -82,6 +91,8 @@ namespace BubbleTea.Extras
         {
             bool show = !MoveMode.Busy;
             if (column.gameObject.activeSelf != show) column.gameObject.SetActive(show);
+            // Other pop-ups (game over, mini-games) un-pause as they close; keep the player's pause.
+            if (Paused && Time.timeScale != 0f) Time.timeScale = 0f;
             int wait = MiniGames.SecondsUntilReady;
             playLabel.text = wait > 0 ? $"{wait / 60}:{wait % 60:00}" : "PLAY";
 
@@ -135,11 +146,73 @@ namespace BubbleTea.Extras
             Place((RectTransform)UiKit.Button(column, "SHOP", new Color(0.95f, 0.66f, 0.3f, 0.92f), Vector2.zero, () => Open(DecorShop), 50).transform, 3);
             Place((RectTransform)UiKit.Button(column, "TEAM", new Color(0.62f, 0.45f, 0.88f, 0.92f), Vector2.zero, () => Open(Team), 50).transform, 4);
             Place((RectTransform)UiKit.Button(column, "PETS", new Color(0.4f, 0.75f, 0.7f, 0.92f), Vector2.zero, () => Open(Pets), 50).transform, 5);
-            Button play = UiKit.Button(column, "PLAY", new Color(0.35f, 0.7f, 0.95f, 0.92f), Vector2.zero, () => Open(Play), 50);
+            Button play = UiKit.Button(column, "PLAY", new Color(0.35f, 0.7f, 0.95f, 0.92f), Vector2.zero, () => Open(Play, true), 50);
             playLabel = UiKit.TextOf(play);
             playButton = play.gameObject;
             Place((RectTransform)play.transform, 6);
             playButton.SetActive(false); // shows up once the whole shop is built
+
+            BuildPauseButton();
+        }
+
+        // A square pause button just right of the clock in the top-left corner, and a banner while paused.
+        private void BuildPauseButton()
+        {
+            Button button = UiKit.Button(column, "", new Color(0.15f, 0.15f, 0.2f, 0.75f), Vector2.zero, TogglePause);
+            RectTransform rect = (RectTransform)button.transform;
+            UiKit.Pin(rect, new Vector2(0f, 1f), new Vector2(Margin + 250f * Scale + 10f, -Margin), new Vector2(120f, 120f));
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(Margin + 250f * Scale + 10f, -Margin);
+            rect.localScale = Vector3.one * Scale;
+
+            RectTransform bars = UiKit.Group(rect, "Pause");
+            UiKit.Fill(bars);
+            for (int i = 0; i < 2; i++)
+            {
+                RectTransform bar = UiKit.Box(bars, "Bar", Color.white);
+                UiKit.Pin(bar, new Vector2(0.5f, 0.5f), new Vector2(i == 0 ? -18f : 18f, 0f), new Vector2(22f, 64f));
+                bar.pivot = new Vector2(0.5f, 0.5f);
+                bar.anchoredPosition = new Vector2(i == 0 ? -18f : 18f, 0f);
+                bar.GetComponent<Image>().raycastTarget = false;
+            }
+            pauseBars = bars.gameObject;
+
+            RectTransform arrow = UiKit.Box(rect, "Play", UiKit.Green, UiKit.Triangle);
+            UiKit.Pin(arrow, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(70f, 70f));
+            arrow.pivot = new Vector2(0.5f, 0.5f);
+            arrow.anchoredPosition = new Vector2(6f, 0f);
+            arrow.GetComponent<Image>().raycastTarget = false;
+            playTriangle = arrow.gameObject;
+            playTriangle.SetActive(false);
+
+            RectTransform banner = UiKit.Box(column, "Paused Banner", new Color(0.15f, 0.15f, 0.2f, 0.85f));
+            UiKit.Pin(banner, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(560f, 200f));
+            banner.pivot = new Vector2(0.5f, 0.5f);
+            banner.anchoredPosition = new Vector2(0f, 200f);
+            banner.GetComponent<Image>().raycastTarget = false;
+            Text title = UiKit.Label(banner, "PAUSED", 80, Color.white);
+            UiKit.Fill(title.rectTransform);
+            title.rectTransform.offsetMax = new Vector2(0f, -10f);
+            title.rectTransform.offsetMin = new Vector2(0f, 60f);
+            title.raycastTarget = false;
+            Text hint = UiKit.Label(banner, "Tap the play button to resume", 36, new Color(0.8f, 0.8f, 0.88f));
+            UiKit.Fill(hint.rectTransform);
+            hint.rectTransform.offsetMin = new Vector2(0f, 14f);
+            hint.rectTransform.offsetMax = new Vector2(0f, -130f);
+            hint.raycastTarget = false;
+            pausedBanner = banner.gameObject;
+            pausedBanner.SetActive(false);
+        }
+
+        private void TogglePause()
+        {
+            Paused = !Paused;
+            if (Paused && popup != null) Close();
+            Time.timeScale = Paused ? 0f : 1f;
+            pauseBars.SetActive(!Paused);
+            playTriangle.SetActive(Paused);
+            pausedBanner.SetActive(Paused);
+            if (Paused) saveManager?.Save();
         }
 
         // Top-right, in the same column as the MENU, GOALS and STATS buttons.
@@ -151,7 +224,8 @@ namespace BubbleTea.Extras
 
         // ---------------------------------------------------------------- pop-ups
 
-        private void Open(Action<RectTransform, Text> draw)
+        // SHOP, TEAM and PETS leave the shop running (Kenny); only the mini-games pause it.
+        private void Open(Action<RectTransform, Text> draw, bool pause = false)
         {
             Close();
             tab = 0;
@@ -162,7 +236,8 @@ namespace BubbleTea.Extras
                 draw(body, title);
             };
             refresh();
-            Time.timeScale = 0f;
+            paused = pause;
+            if (pause) Time.timeScale = 0f;
         }
 
         private void Close()
@@ -171,7 +246,8 @@ namespace BubbleTea.Extras
             if (popup == null) return;
             Destroy(popup);
             popup = null;
-            Time.timeScale = 1f;
+            if (paused) Time.timeScale = 1f;
+            paused = false;
         }
 
         private void Redraw() => refresh?.Invoke();
@@ -468,6 +544,10 @@ namespace BubbleTea.Extras
         private static int PearlPrize(float score) => score >= 0.9f ? 5 : score >= 0.6f ? 3 : score >= 0.3f ? 2 : 1;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetOnPlay() => instance = null;
+        private static void ResetOnPlay()
+        {
+            instance = null;
+            Paused = false;
+        }
     }
 }
