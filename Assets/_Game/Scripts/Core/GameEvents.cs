@@ -37,6 +37,9 @@ namespace BubbleTea.Core
         /// <summary>A customer thought their drink cost too much and left without buying.</summary>
         public static event Action<Vector3> CustomerRefusedPrice;
 
+        /// <summary>The name of the drink a customer just found too pricey (raised with <see cref="CustomerRefusedPrice"/>).</summary>
+        public static event Action<string> DrinkTooPricey;
+
         /// <summary>The number of messy café seats changed.</summary>
         public static event Action<int> MessChanged;
 
@@ -64,6 +67,7 @@ namespace BubbleTea.Core
         public static void RaiseTipped(Vector3 position, int amount) => Tipped?.Invoke(position, amount);
         public static void RaiseCustomerLeftUpset(Vector3 position) => CustomerLeftUpset?.Invoke(position);
         public static void RaiseCustomerRefusedPrice(Vector3 position) => CustomerRefusedPrice?.Invoke(position);
+        public static void RaiseDrinkTooPricey(string drinkName) => DrinkTooPricey?.Invoke(drinkName);
         public static void RaiseMessChanged(int messes) => MessChanged?.Invoke(messes);
         public static void RaiseTableCleaned(Vector3 position) => TableCleaned?.Invoke(position);
         public static void RaiseUpgradeBought() => UpgradeBought?.Invoke();
@@ -90,6 +94,7 @@ namespace BubbleTea.Core
             TableCleaned = null;
             CustomerLeftUpset = null;
             CustomerRefusedPrice = null;
+            DrinkTooPricey = null;
             StationJammed = null;
             UpgradeBought = null;
             BonusCollected = null;

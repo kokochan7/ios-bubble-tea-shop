@@ -79,6 +79,9 @@ namespace BubbleTea.Customers
 
         public void LeaveQueue(Customer customer) => queue.Remove(customer);
 
+        /// <summary>How many customers are waiting at this counter.</summary>
+        public int QueueCount => queue.Count;
+
         public int QueueIndexOf(Customer customer) => queue.IndexOf(customer);
 
         /// <summary>Where a worker stands to drop drinks off.</summary>

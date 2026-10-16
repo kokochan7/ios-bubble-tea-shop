@@ -64,7 +64,7 @@ namespace BubbleTea.EditorTools
             public float StaffDoorFrom, StaffDoorTo;    // the gap in the glass wall beside the counter
             public float LaneWallX;                     // the east end of the expansion
             public Vector3 Counter, Seating, DriveThru, TrashCan, FloorCash, PlayerStart;
-            public Vector3 TeaBrewer, ToppingBar, TaroStation, FruitBar, ExtraBar, UpgradeDesk, Cashier;
+            public Vector3 TeaBrewer, TaroStation, FruitBar, ExtraBar, UpgradeDesk, Cashier;
             public Vector3 Expansion, Cleaner, DriveThruCashier, SecondShopPad, TravelBack;
             public Vector3 Stocker, SupplyDock, Chalkboard;      // Matcha House only
             public Vector3 StaffSofa;                            // where baristas take their breaks
@@ -102,13 +102,12 @@ namespace BubbleTea.EditorTools
             FloorCash = new(-4.6f, 0f, 0.9f),  // in the kitchen, just left of the counter
             PlayerStart = new(-4.4f, 1f, 1.9f), // clear of the Matcha House's stocker pad
             TeaBrewer = bars[0],
-            ToppingBar = bars[1],
-            TaroStation = bars[2],
-            FruitBar = bars[3],
+            TaroStation = bars[1],
+            FruitBar = bars[2],
             ExtraBar = extraBar,
             UpgradeDesk = new(3f, 0f, 0.55f),  // right of the counter, its back to the glass wall
             Cashier = new(0.6f, 0f, 1.8f),
-            Expansion = new(7.6f, 0f, -5.8f),   // by the east wall it opens up
+            Expansion = new(7.6f, 0f, -3.4f),   // by the east wall it opens up, clear of the koi pond
             Cleaner = new(-6.4f, 0f, -4.6f),
             DriveThruCashier = new(10f, 0f, 1.4f), // small pad in the strip, south of the window
             SecondShopPad = new(-6.4f, 0f, -1.6f), // both bus stops stand on the left of the dining room
@@ -122,11 +121,11 @@ namespace BubbleTea.EditorTools
             // The third sits a little further forward, clear of the drive-thru window's spot.
             Baristas = new Vector3[] { new(3f, 0f, 2.75f), new(5.4f, 0f, 2.75f), new(7.8f, 0f, 2.2f) },
             StaffSofa = new(7.25f, 0f, 6.95f),  // against the back wall, east of the bars, clear of the drive-thru cash
-            // Decor pads in the dining room: down the west wall, and the koi pond in the east.
+            // Decor pads in the dining room: down the west wall, and the koi pond in the front-east corner.
             // Order: bamboo plants, paper lanterns, lucky cat, koi pond, cherry blossom tree.
             Decor = new Vector3[]
             {
-                new(-8.3f, 0f, -6.8f), new(-8.3f, 0f, -0.8f), new(-8.35f, 0f, -5.2f), new(7.5f, 0f, -2.6f), new(-8.3f, 0f, -3.0f),
+                new(-8.3f, 0f, -6.8f), new(-8.3f, 0f, -0.8f), new(-8.35f, 0f, -5.2f), new(7.8f, 0f, -6.6f), new(-8.3f, 0f, -3.0f),
             },
             Windows = new[] { -6.2f, 6.2f },
             Lamps = new[] { -4.4f, 4.4f },
@@ -143,14 +142,14 @@ namespace BubbleTea.EditorTools
         // Bars sit with their backs 0.5 m off the back wall.
         private const float BarRowZ = 6.4f;
 
-        // Boba Shop: four bars (the topping bar is the wide one).
+        // Boba Shop: three bars, evenly spread along the back wall.
         private static readonly ShopLayout Small = CompactLayout(
-            new Vector3[] { new(-6.6f, 0f, BarRowZ), new(-3.6f, 0f, BarRowZ), new(-0.6f, 0f, BarRowZ), new(2.4f, 0f, BarRowZ) },
+            new Vector3[] { new(-6.6f, 0f, BarRowZ), new(-2.1f, 0f, BarRowZ), new(2.4f, 0f, BarRowZ) },
             Vector3.zero);
 
-        // Matcha House: the same room with a fifth bar (the Tenju Bar) at the east end of the row.
+        // Matcha House: the same room with a fourth bar (the Tenju Bar) at the east end of the row.
         private static readonly ShopLayout Large = CompactLayout(
-            new Vector3[] { new(-6.6f, 0f, BarRowZ), new(-3.7f, 0f, BarRowZ), new(-0.8f, 0f, BarRowZ), new(2.1f, 0f, BarRowZ) },
+            new Vector3[] { new(-6.6f, 0f, BarRowZ), new(-2.73f, 0f, BarRowZ), new(1.13f, 0f, BarRowZ) },
             new Vector3(5f, 0f, BarRowZ));
 
         /// <summary>The layout of the shop being built (read by <see cref="ShopDressing"/>).</summary>
@@ -1006,11 +1005,8 @@ namespace BubbleTea.EditorTools
             UnlockPad seatingPad = CreatePad(content.Seating, Layout.Seating, billPrefab, wallet, padMat, cleanerPad);
             // The cashier stands behind the counter beside its cash pile.
             UnlockPad cashierPad = CreatePad(content.Cashier, Layout.Cashier, billPrefab, wallet, padMat);
-            UnlockPad toppingPad = CreatePad(content.ToppingBar, Layout.ToppingBar, billPrefab, wallet, padMat,
-                taroPad, seatingPad, cashierPad);
-            Turn(toppingPad, 180f);
             // Baristas in the row of staff pads in front of the bars, each pad revealing the next. Hiring
-            // the first one also brings out the topping bar.
+            // the first one also brings out the next bar, the café tables and the cashier.
             // Matcha House: hiring the first barista also brings out the stocker's pad.
             // A smaller pad than the rest, right beside the supply dock.
             UnlockPad stockerPad = content.Stocker != null
@@ -1023,7 +1019,7 @@ namespace BubbleTea.EditorTools
             {
                 var reveals = new System.Collections.Generic.List<UnlockPad>();
                 if (i + 1 < baristaPads.Length) reveals.Add(baristaPads[i + 1]);
-                if (i == 0) reveals.Add(toppingPad);
+                if (i == 0) reveals.AddRange(new[] { taroPad, seatingPad, cashierPad });
                 if (i == 0 && stockerPad != null) reveals.Add(stockerPad);
                 baristaPads[i] = CreatePad(content.Baristas[i], baristaSpots[i], billPrefab, wallet, padMat, reveals.ToArray());
             }
@@ -1034,7 +1030,6 @@ namespace BubbleTea.EditorTools
             UnlockPad counterPad = CreatePad(content.Counter, Layout.Counter, billPrefab, wallet, padMat, brewerPad);
 
             // Only the first pad is visible at the start.
-            toppingPad.gameObject.SetActive(false);
             brewerPad.gameObject.SetActive(false);
             upgradePad.gameObject.SetActive(false);
             taroPad.gameObject.SetActive(false);
@@ -1049,7 +1044,7 @@ namespace BubbleTea.EditorTools
             for (int i = 0; i < baristaPads.Length; i++) baristaPads[i].gameObject.SetActive(false);
             var all = new System.Collections.Generic.List<UnlockPad>
             {
-                counterPad, brewerPad, toppingPad, upgradePad, taroPad, fruitPad,
+                counterPad, brewerPad, upgradePad, taroPad, fruitPad,
                 expansionPad, driveThruPad, seatingPad, cashierPad, cleanerPad, driveThruCashierPad,
             };
             all.AddRange(baristaPads);

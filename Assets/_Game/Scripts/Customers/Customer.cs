@@ -76,6 +76,9 @@ namespace BubbleTea.Customers
         [SerializeField, Min(1), Tooltip("The most drinks a tourist orders.")]
         private int touristMaxDrinks = 2;
 
+        [SerializeField, Tooltip("A shop's first customers each order just one drink (an easy start).")]
+        private int oneDrinkStarters = 10;
+
         [SerializeField, Min(0.1f), Tooltip("A tea critic waits this many times longer than other customers (they order a lot).")]
         private float criticPatience = 1.5f;
 
@@ -162,7 +165,8 @@ namespace BubbleTea.Customers
             checkedPrice = false;
             tipShare = -1f;
             OrderStarted = false;
-            if (kind == Visit.Tourist) counter.PickOrders(orders, maxCount: touristMaxDrinks);
+            if (IsStarter()) counter.PickOrders(orders, maxCount: 1);
+            else if (kind == Visit.Tourist) counter.PickOrders(orders, maxCount: touristMaxDrinks);
             else if (kind == Visit.Critic) counter.PickOrders(orders, exactCount: counter.MaxDrinks);
             else counter.PickOrders(orders);
             patience = patienceSeconds * (1f + patiencePerExtraDrink * Mathf.Max(0, orders.Count - 1));
@@ -282,7 +286,7 @@ namespace BubbleTea.Customers
                 foreach (DrinkRecipe order in orders)
                 {
                     if (!TooExpensive(order)) continue;
-                    RefusePrice();
+                    RefusePrice(order);
                     return;
                 }
             }
@@ -321,7 +325,7 @@ namespace BubbleTea.Customers
             if (order == null) return false;
             if (TooExpensive(order))
             {
-                RefusePrice();
+                RefusePrice(order);
                 return false;
             }
             counter.Bank(order, TipShare());
@@ -373,11 +377,21 @@ namespace BubbleTea.Customers
             return tipShare;
         }
 
+        // One of the shop's first customers: everyone who has come and gone, plus those already in line.
+        private bool IsStarter()
+        {
+            Goals.ShopRecords records = Goals.ShopRecords.Instance;
+            if (records == null) return false;
+            int seen = records.CustomersServed + records.Walkouts + records.TooPricey + counter.QueueCount;
+            return seen < oneDrinkStarters;
+        }
+
         private bool TooExpensive(DrinkRecipe order) => counter.PriceOf(order) > counter.FairPriceOf(order) * tolerance + 0.01f;
 
         // The price is more than this customer will pay: they leave without buying (costs half a star).
-        private void RefusePrice()
+        private void RefusePrice(DrinkRecipe order)
         {
+            if (order != null && order.Drink != null) GameEvents.RaiseDrinkTooPricey(order.Drink.DisplayName);
             GameEvents.RaiseCustomerRefusedPrice(transform.position);
             CriticWalkedOut();
             StopWaiting();

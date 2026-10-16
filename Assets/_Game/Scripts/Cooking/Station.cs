@@ -60,6 +60,9 @@ namespace BubbleTea.Cooking
         [SerializeField, Tooltip("Seconds between jams anywhere in the shop, picked at random in this range (0 = never jams).")]
         private Vector2 secondsBetweenJams = new(60f, 120f);
 
+        [SerializeField, Tooltip("How many times faster a hand-whisked bar works while the player whisks it.")]
+        private float handWhiskSpeed = 3f;
+
         [SerializeField, Tooltip("How close the player must be (meters) to fix a jam by tapping.")]
         private float fixDistance = 3.5f;
 
@@ -85,6 +88,9 @@ namespace BubbleTea.Cooking
 
         /// <summary>True while the bar is jammed and waiting for the player to tap it.</summary>
         public bool Jammed { get; private set; }
+
+        /// <summary>True while a hand-whisked bar is whisking a drink (for the whisk animation).</summary>
+        public bool Whisking => needsPlayer && current != null && !Jammed && (!NeedsHands || PlayerHere);
 
         /// <summary>0 to 1 progress on the current item (for a future progress bar).</summary>
         public float Progress => current != null ? Mathf.Clamp01(workTimer / current.Seconds) : 0f;
@@ -344,7 +350,9 @@ namespace BubbleTea.Cooking
                 return;
             }
 
-            workTimer += Time.deltaTime * Stats.Get(StatId.BrewSpeed, 1f) * (1f + baristaSpeedBonus * baristas);
+            float speed = Stats.Get(StatId.BrewSpeed, 1f) * (1f + baristaSpeedBonus * baristas);
+            if (NeedsHands) speed *= handWhiskSpeed; // the player whisks fast
+            workTimer += Time.deltaTime * speed;
             if (workTimer < current.Seconds) return;
 
             if (current.Output != null)
