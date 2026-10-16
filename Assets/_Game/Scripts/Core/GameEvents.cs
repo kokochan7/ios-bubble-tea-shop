@@ -71,6 +71,10 @@ namespace BubbleTea.Core
         public static void RaiseStarsAwarded(float stars) => StarsAwarded?.Invoke(stars);
         public static void RaiseAnnouncement(string message, Color color) => Announced?.Invoke(message, color);
 
+        /// <summary>A bar jammed (true) or the player fixed it (false).</summary>
+        public static event Action<Vector3, bool> StationJammed;
+        public static void RaiseStationJammed(Vector3 position, bool jammed) => StationJammed?.Invoke(position, jammed);
+
         // Domain reload is off, so clear listeners left over from the last Play session.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay()
@@ -86,6 +90,7 @@ namespace BubbleTea.Core
             TableCleaned = null;
             CustomerLeftUpset = null;
             CustomerRefusedPrice = null;
+            StationJammed = null;
             UpgradeBought = null;
             BonusCollected = null;
             StarsAwarded = null;

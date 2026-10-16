@@ -19,7 +19,17 @@ namespace BubbleTea.Cooking
         [SerializeField, Tooltip("Seconds between item hand-offs.")]
         private float secondsPerHandoff = 0.15f;
 
+        [SerializeField, Tooltip("Seconds someone has to stand in the zone before the first hand-off.")]
+        private float firstHandoffDelay;
+
         private float timer;
+
+        /// <summary>Changes how quickly items change hands here (bars use a slower pace than counters).</summary>
+        public void SetPace(float firstDelay, float between)
+        {
+            firstHandoffDelay = Mathf.Max(0f, firstDelay);
+            secondsPerHandoff = Mathf.Max(0.01f, between);
+        }
 
         /// <summary>Middle of the zone in world space, where a worker should stand.</summary>
         public Vector3 Center(Transform owner) => owner.TransformPoint(offset);
@@ -34,11 +44,27 @@ namespace BubbleTea.Cooking
         /// <summary>Calls <paramref name="handoff"/> for the first carrier in the zone when it's time.</summary>
         public void Tick(Transform owner, Func<ItemCarrier, bool> handoff)
         {
+            Vector3 center = owner.TransformPoint(offset);
+            var carriers = ItemCarrier.All;
+            if (firstHandoffDelay > 0f)
+            {
+                // Nobody here: the next arrival waits the full delay before anything changes hands.
+                bool anyone = false;
+                for (int i = 0; i < carriers.Count && !anyone; i++)
+                {
+                    Vector3 d = carriers[i].transform.position - center;
+                    anyone = Mathf.Abs(d.x) <= halfSize && Mathf.Abs(d.z) <= halfSize;
+                }
+                if (!anyone)
+                {
+                    timer = Mathf.Max(timer, firstHandoffDelay);
+                    return;
+                }
+            }
+
             timer -= Time.deltaTime;
             if (timer > 0f) return;
 
-            Vector3 center = owner.TransformPoint(offset);
-            var carriers = ItemCarrier.All;
             for (int i = 0; i < carriers.Count; i++)
             {
                 Vector3 delta = carriers[i].transform.position - center;

@@ -7,7 +7,8 @@ namespace BubbleTea.Core
     /// characters), the feet step forward and back while the arms swing, and the body only lifts a
     /// little with each step. While the character holds something (drinks, a tray, a crate) both
     /// arms reach forward to hold it. Models without joints get a cheerful waddle instead: the
-    /// whole model hops and rocks side to side.
+    /// whole model hops and rocks side to side. While <see cref="Sitting"/> is set the legs bend
+    /// forward, as on a chair or sofa.
     /// </summary>
     public class WalkBob : MonoBehaviour
     {
@@ -41,10 +42,14 @@ namespace BubbleTea.Core
         private float phase;
         private float amount;
         private float hold;
+        private float sit;
         private Transform legL, legR, shoulderL, shoulderR;
         private IHoldsItems holder;
 
         private bool HasLegs => legL != null && legR != null;
+
+        /// <summary>Set while the character sits (customers at a table, baristas on a break).</summary>
+        public bool Sitting { get; set; }
 
         private void Awake()
         {
@@ -82,8 +87,10 @@ namespace BubbleTea.Core
 
             // The feet step: one leg forward while the other goes back, settling together when stopped.
             visual.localPosition = restPosition + Vector3.up * (Mathf.Abs(step) * stepLift * amount);
-            legL.localRotation = Quaternion.Euler(-step * legSwing * amount, 0f, 0f);
-            legR.localRotation = Quaternion.Euler(step * legSwing * amount, 0f, 0f);
+            sit = Mathf.MoveTowards(sit, Sitting ? 1f : 0f, Time.deltaTime * 6f);
+            const float SitAngle = -80f; // thighs forward, as on a seat
+            legL.localRotation = Quaternion.Euler(-step * legSwing * amount + SitAngle * sit, 0f, 0f);
+            legR.localRotation = Quaternion.Euler(step * legSwing * amount + SitAngle * sit, 0f, 0f);
 
             // Arms: swing opposite the legs, or reach forward together while holding something.
             bool holding = holder != null && holder.IsHolding;

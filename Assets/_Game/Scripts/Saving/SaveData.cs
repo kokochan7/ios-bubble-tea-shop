@@ -12,7 +12,7 @@ namespace BubbleTea.Saving
     public class SaveData
     {
         /// <summary>Bumped when the layout changes, so old saves can be upgraded instead of lost.</summary>
-        public int version = 10;
+        public int version = 11;
 
         public int money;
         public List<PadSave> pads = new();
@@ -52,6 +52,9 @@ namespace BubbleTea.Saving
 
         /// <summary>Added in version 10: supplies left in each bar that uses them (Matcha House). Missing = full.</summary>
         public List<SupplySave> supplies = new();
+
+        /// <summary>Added in version 11: each VIP regular's favorite drink and how many quick visits they've had.</summary>
+        public List<BubbleTea.Customers.VipSave> vips = new();
     }
 
     /// <summary>One bar's supplies, by the bar's name.</summary>

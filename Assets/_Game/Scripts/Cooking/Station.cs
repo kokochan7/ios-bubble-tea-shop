@@ -13,6 +13,8 @@ namespace BubbleTea.Cooking
     /// In the Matcha House some bars use supplies: each drink uses one scoop of matcha, and an
     /// empty bar stops until someone brings a crate from the supply dock. The Whisk Bar is
     /// whisked by hand: it only works while the player stands at it, until Whisk Master is bought.
+    /// Now and then a working bar jams: a red "!" pops up over it and it stops until the player
+    /// walks over and taps it.
     /// </summary>
     public class Station : MonoBehaviour
     {
@@ -49,6 +51,18 @@ namespace BubbleTea.Cooking
         [SerializeField, Min(1), Tooltip("Most drinks' worth of supplies the bar holds (a full bar to start).")]
         private int maxSupplies = 20;
 
+        [SerializeField, Tooltip("Seconds standing at the bar before the first drink goes onto the tray.")]
+        private float pickupDelay = 0.6f;
+
+        [SerializeField, Tooltip("Seconds between drinks going onto (or off) the tray here.")]
+        private float secondsPerItem = 0.7f;
+
+        [SerializeField, Tooltip("Seconds of work between jams, picked at random in this range (0 = never jams).")]
+        private Vector2 secondsBetweenJams = new(150f, 300f);
+
+        [SerializeField, Tooltip("How close the player must be (meters) to fix a jam by tapping.")]
+        private float fixDistance = 3.5f;
+
         private static readonly Color LabelWhite = new(1f, 0.97f, 0.88f);
         private static readonly Color LabelOrange = new(1f, 0.65f, 0.25f);
         private static readonly Color LabelRed = new(1f, 0.38f, 0.32f);
@@ -57,11 +71,18 @@ namespace BubbleTea.Cooking
         private int supplies;
         private FloatingText supplyLabel;
         private FloatingText handLabel;
+        private FloatingText jamMark;
+        private FloatingText jamHint;
+        private float untilJam;
+        private float hintTimer;
 
         private int baristas;
 
         private RecipeStep current;
         private float workTimer;
+
+        /// <summary>True while the bar is jammed and waiting for the player to tap it.</summary>
+        public bool Jammed { get; private set; }
 
         /// <summary>0 to 1 progress on the current item (for a future progress bar).</summary>
         public float Progress => current != null ? Mathf.Clamp01(workTimer / current.Seconds) : 0f;
@@ -99,7 +120,11 @@ namespace BubbleTea.Cooking
 
         private bool PlayerHere => PlayerMovement.Current != null && zone.Contains(transform, PlayerMovement.Current.position);
 
-        private void Awake() => supplies = maxSupplies;
+        private void Awake()
+        {
+            supplies = maxSupplies;
+            zone.SetPace(pickupDelay, secondsPerItem); // drinks go onto a tray one at a time, not all at once
+        }
 
         private void Start()
         {
@@ -108,11 +133,53 @@ namespace BubbleTea.Cooking
             front.y = 0f;
             if (UsesSupplies) supplyLabel = FloatingText.Create(transform, Vector3.up * 1.7f + front.normalized * 0.35f);
             if (needsPlayer) handLabel = FloatingText.Create(transform, front + Vector3.up * 1.1f, 0.05f);
+            jamMark = FloatingText.Create(transform, Vector3.up * 2.4f, 0.16f);
+            jamHint = FloatingText.Create(transform, Vector3.up * 1.95f, 0.04f);
+            PlanNextJam();
+        }
+
+        private void PlanNextJam() =>
+            untilJam = secondsBetweenJams.y > 0f ? Random.Range(secondsBetweenJams.x, secondsBetweenJams.y) : float.PositiveInfinity;
+
+        private void Jam()
+        {
+            Jammed = true;
+            GameEvents.RaiseStationJammed(transform.position, true);
+        }
+
+        // A tap near the bar (or its "!") fixes a jam, once the player has walked over to it.
+        private void OnTapped(Vector2 screenPosition)
+        {
+            if (!Jammed) return;
+            Camera camera = Camera.main;
+            if (camera == null) return;
+            if (!TappedOnMe(camera, screenPosition)) return;
+            if (PlayerMovement.Current == null || Vector3.Distance(PlayerMovement.Current.position, transform.position) > fixDistance)
+            {
+                hintTimer = 2f; // shows "WALK CLOSER!" for a moment
+                return;
+            }
+            Jammed = false;
+            PlanNextJam();
+            GameEvents.RaiseStationJammed(transform.position, false);
+        }
+
+        private bool TappedOnMe(Camera camera, Vector2 screenPosition)
+        {
+            Ray ray = camera.ScreenPointToRay(screenPosition);
+            foreach (RaycastHit hit in Physics.RaycastAll(ray, 200f))
+            {
+                if (hit.collider.GetComponentInParent<Station>() == this) return true;
+            }
+            // Or close to the "!" on screen.
+            Vector3 mark = camera.WorldToScreenPoint(transform.position + Vector3.up * 2.4f);
+            return mark.z > 0f && Vector2.Distance(screenPosition, mark) < Screen.height * 0.07f;
         }
 
         private void OnEnable()
         {
             active.Add(this);
+            VirtualJoystick.Tapped += OnTapped;
             Stats.Changed += OnStatChanged;
             ApplyCapacityBonus();
         }
@@ -120,6 +187,7 @@ namespace BubbleTea.Cooking
         private void OnDisable()
         {
             active.Remove(this);
+            VirtualJoystick.Tapped -= OnTapped;
             Stats.Changed -= OnStatChanged;
         }
 
@@ -246,8 +314,15 @@ namespace BubbleTea.Cooking
                 current = StartNextStep();
                 if (current != null && UsesSupplies) supplies--; // one scoop per drink
             }
-            if (current == null) return;
+            if (current == null || Jammed) return;
             if (NeedsHands && !PlayerHere) return; // waits for the player to whisk
+
+            untilJam -= Time.deltaTime;
+            if (untilJam <= 0f)
+            {
+                Jam();
+                return;
+            }
 
             workTimer += Time.deltaTime * Stats.Get(StatId.BrewSpeed, 1f) * (1f + baristaSpeedBonus * baristas);
             if (workTimer < current.Seconds) return;
@@ -285,6 +360,22 @@ namespace BubbleTea.Cooking
 
         private void UpdateLabels()
         {
+            if (jamMark != null)
+            {
+                if (!Jammed)
+                {
+                    jamMark.Hide();
+                    jamHint.Hide();
+                }
+                else
+                {
+                    // A blinking red "!" until it's fixed.
+                    if (Mathf.Repeat(Time.time * 2f, 1f) < 0.75f) jamMark.Show("!", LabelRed);
+                    else jamMark.Hide();
+                    hintTimer -= Time.deltaTime;
+                    jamHint.Show(hintTimer > 0f ? "WALK CLOSER!" : "JAMMED! TAP TO FIX", hintTimer > 0f ? LabelOrange : LabelRed);
+                }
+            }
             if (supplyLabel != null)
             {
                 if (supplies <= 0) supplyLabel.Show($"OUT OF {supplyName}!\nBring a crate", LabelRed);

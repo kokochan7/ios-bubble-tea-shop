@@ -54,6 +54,8 @@ namespace BubbleTea.EditorTools
             public Customer CustomerPrefab;
             public DrinkRecipe[] Menu;
             public BuildableDefinition Planter;
+            /// <summary>Decor bought on pads, in the order the pads appear (each makes the shop nicer, see ShopDecor).</summary>
+            public BuildableDefinition[] Decor;
             public BuildableDefinition MenuBoard;
             public BuildableDefinition Statue;
             /// <summary>Hire Barista pads in the order they unlock.</summary>
@@ -189,6 +191,25 @@ namespace BubbleTea.EditorTools
                 Cashier = GetOrCreateBuildable("Hire Cashier", 150, BuildCashierPrefab("Cashier", "Main")),
                 DriveThruCashier = GetOrCreateBuildable("Hire Drive-Thru Cashier", 400,
                     BuildCashierPrefab("DriveThruCashier", "DriveThru")),
+                // Decor that pays: patience, customer flow and happiness (prices x3 in the Matcha House).
+                Decor = new[]
+                {
+                    GetOrCreateBuildable("Bamboo Plants", 150, BuildShopDecorPrefab("BambooPlant", "Bamboo Plants",
+                        new Color(0.49f, 0.71f, 0.35f), new Vector3(0.55f, 1.8f, 0.55f), new Vector3(0.6f, 1.9f, 0.6f), ArtLibrary.Fit.Height,
+                        patience: 0.05f, flow: 0f, happiness: 0f)),
+                    GetOrCreateBuildable("Paper Lanterns", 300, BuildShopDecorPrefab("PaperLanterns", "Paper Lanterns",
+                        new Color(0.9f, 0.28f, 0.23f), new Vector3(0.45f, 2.3f, 0.45f), new Vector3(1f, 2.35f, 0.5f), ArtLibrary.Fit.Height,
+                        patience: 0f, flow: 0f, happiness: 0.05f)),
+                    GetOrCreateBuildable("Lucky Cat", 500, BuildShopDecorPrefab("LuckyCat", "Lucky Cat",
+                        new Color(0.97f, 0.97f, 0.95f), new Vector3(0.6f, 1.1f, 0.6f), new Vector3(0.6f, 1.15f, 0.6f), ArtLibrary.Fit.Height,
+                        patience: 0f, flow: 0.05f, happiness: 0.05f)),
+                    GetOrCreateBuildable("Koi Pond", 900, BuildShopDecorPrefab("KoiPond", "Koi Pond",
+                        new Color(0.44f, 0.76f, 0.85f), new Vector3(1.9f, 0.25f, 1.25f), new Vector3(2f, 0.3f, 1.3f), ArtLibrary.Fit.Footprint,
+                        patience: 0.1f, flow: 0.05f, happiness: 0f)),
+                    GetOrCreateBuildable("Cherry Blossom Tree", 1400, BuildShopDecorPrefab("SakuraTree", "Cherry Blossom Tree",
+                        new Color(1f, 0.72f, 0.81f), new Vector3(0.7f, 2.6f, 0.7f), new Vector3(1.6f, 2.7f, 1.6f), ArtLibrary.Fit.Height,
+                        patience: 0.05f, flow: 0.1f, happiness: 0.1f)),
+                },
                 Planter = GetOrCreateBuildable("Planter", 120,
                     BuildDecorPrefab("Planter", new Color(0.42f, 0.73f, 0.47f), new Vector3(1.2f, 1.3f, 1.2f))),
                 MenuBoard = GetOrCreateBuildable("Menu Board", 200,
@@ -703,6 +724,30 @@ namespace BubbleTea.EditorTools
 
         // A decoration you can buy: it only makes the shop nicer (and raises the rating).
         // Solid, so the player walks around it; the art slot of the same name replaces the gray box.
+        // Decor bought on a pad: a solid box you can't walk through (the gray box until the art kit
+        // gives it a model) and a ShopDecor with its bonuses.
+        private static GameObject BuildShopDecorPrefab(string name, string shownName, Color color, Vector3 solidSize,
+            Vector3 artSize, ArtLibrary.Fit fit, float patience, float flow, float happiness)
+        {
+            var root = new GameObject(name);
+            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.name = "Body";
+            body.transform.SetParent(root.transform, false);
+            body.transform.localPosition = new Vector3(0f, solidSize.y * 0.5f, 0f);
+            body.transform.localScale = solidSize;
+            body.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial(name, color);
+            if (ArtLibrary.Attach(name, root.transform, artSize, fit) != null) ArtLibrary.HideGrayBox(body);
+
+            var decor = root.AddComponent<ShopDecor>();
+            var serialized = new SerializedObject(decor);
+            serialized.FindProperty("shownName").stringValue = shownName;
+            serialized.FindProperty("patience").floatValue = patience;
+            serialized.FindProperty("flow").floatValue = flow;
+            serialized.FindProperty("happiness").floatValue = happiness;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return SavePrefab(root, $"{PrefabFolder}/Decor/{name}.prefab");
+        }
+
         private static GameObject BuildDecorPrefab(string name, Color color, Vector3 size)
         {
             GameObject root = BuildStationBody(name, color, size, null);

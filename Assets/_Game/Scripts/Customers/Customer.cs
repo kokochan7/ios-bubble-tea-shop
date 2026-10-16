@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BubbleTea.Building;
 using BubbleTea.Cooking;
 using BubbleTea.Core;
 using UnityEngine;
@@ -19,7 +20,7 @@ namespace BubbleTea.Customers
     public class Customer : MonoBehaviour, IHoldsItems
     {
         /// <summary>What kind of customer this is.</summary>
-        public enum Visit { Regular, Tourist, Critic }
+        public enum Visit { Regular, Tourist, Critic, Vip }
 
         [SerializeField, Tooltip("Walking speed in meters per second.")]
         private float speed = 3f;
@@ -113,7 +114,13 @@ namespace BubbleTea.Customers
         private float patience;
         private Visit visit;
 
-        /// <summary>Regular customer, tourist or tea critic.</summary>
+        /// <summary>How happy they were (0 to 1) when they got their last drink.</summary>
+        public float ServedMood { get; private set; }
+
+        /// <summary>The VIP's name, or null for everyone else.</summary>
+        public string VipName { get; private set; }
+
+        /// <summary>Regular customer, tourist, tea critic or VIP regular.</summary>
         public Visit Kind => visit;
 
         /// <summary>True while they carry drinks they bought (their arms hold them).</summary>
@@ -161,7 +168,8 @@ namespace BubbleTea.Customers
             patience = patienceSeconds * (1f + patiencePerExtraDrink * Mathf.Max(0, orders.Count - 1));
             if (kind == Visit.Tourist) patience *= touristPatience;
             else if (kind == Visit.Critic) patience *= criticPatience;
-            if (kind != Visit.Regular) AddHat(kind == Visit.Critic);
+            patience *= 1f + ShopDecor.Patience; // a nicely decorated shop is worth the wait
+            if (kind == Visit.Tourist || kind == Visit.Critic) AddHat(kind == Visit.Critic);
             ShowOrder();
             // The order stays hidden until they reach the counter.
             if (orderBubble != null) orderBubble.gameObject.SetActive(false);
@@ -216,6 +224,7 @@ namespace BubbleTea.Customers
             if (!WalkTo(spot.position)) return;
 
             transform.SetPositionAndRotation(spot.position + Vector3.down * sitDrop, spot.rotation);
+            if (TryGetComponent(out WalkBob bob)) bob.Sitting = true;
             sitTimer = UnityEngine.Random.Range(sitSeconds.x, sitSeconds.y);
             state = State.Sitting;
         }
@@ -226,6 +235,7 @@ namespace BubbleTea.Customers
             if (sitTimer > 0f) return;
 
             transform.position += Vector3.up * sitDrop;
+            if (TryGetComponent(out WalkBob bob)) bob.Sitting = false;
             StandUp(true);
             state = State.Leaving;
         }
@@ -334,6 +344,7 @@ namespace BubbleTea.Customers
             if (orders.Count > 0) return;
 
             GameEvents.RaiseCustomerServed(transform.position, Mood);
+            ServedMood = Mood;
             WasServed = true;
             if (visit == Visit.Critic)
             {
@@ -351,12 +362,14 @@ namespace BubbleTea.Customers
         {
             if (tipShare >= 0f) return tipShare;
             float mood = Mood;
-            if (visit == Visit.Critic)
+            if (visit == Visit.Critic || visit == Visit.Vip)
                 tipShare = UnityEngine.Random.Range(Mathf.Lerp(tipRange.x, tipRange.y, 0.5f), tipRange.y);
-            else if (UnityEngine.Random.value < Mathf.Lerp(tipChance.x, tipChance.y, mood))
-                tipShare = UnityEngine.Random.Range(tipRange.x, Mathf.Lerp(tipRange.x, tipRange.y, Mathf.Max(mood, 0.2f)));
+            else if (UnityEngine.Random.value < Mathf.Lerp(tipChance.x, tipChance.y, mood) + ShopDecor.Happiness)
+                tipShare = UnityEngine.Random.Range(tipRange.x, Mathf.Lerp(tipRange.x, tipRange.y, Mathf.Max(mood, 0.2f)))
+                    * (1f + ShopDecor.Happiness); // decor makes customers happier, so they tip a bit more
             else
                 tipShare = 0f;
+            tipShare *= 1f + VipRegulars.TipBonus; // VIPs won over make every tip a little bigger
             return tipShare;
         }
 
@@ -376,6 +389,41 @@ namespace BubbleTea.Customers
             GameEvents.RaiseCustomerLeftUpset(transform.position);
             CriticWalkedOut();
             StopWaiting();
+        }
+
+        /// <summary>
+        /// Turns this customer into a named VIP regular who orders just their favorite drink and
+        /// wears a pink bow. Called right after they're spawned.
+        /// </summary>
+        public void MakeVip(string vipName, DrinkRecipe favorite)
+        {
+            VipName = vipName;
+            orders.Clear();
+            if (favorite != null) orders.Add(favorite);
+            patience = patienceSeconds * (1f + ShopDecor.Patience);
+            ShowOrder();
+            if (!OrderStarted && orderBubble != null) orderBubble.gameObject.SetActive(false);
+            AddBow();
+        }
+
+        private void AddBow()
+        {
+            var bowColor = new Color(1f, 0.45f, 0.68f);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                GameObject loop = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                loop.name = "VIP Bow";
+                Destroy(loop.GetComponent<Collider>());
+                loop.transform.SetParent(transform, false);
+                loop.transform.localPosition = new Vector3(side * 0.1f, 1.72f, -0.05f);
+                loop.transform.localScale = new Vector3(0.16f, 0.11f, 0.06f);
+                var bowRenderer = loop.GetComponent<Renderer>();
+                if (moodLight != null) bowRenderer.sharedMaterial = moodLight.sharedMaterial;
+                var block = new MaterialPropertyBlock();
+                block.SetColor(BaseColorId, bowColor);
+                block.SetColor(ColorId, bowColor);
+                bowRenderer.SetPropertyBlock(block);
+            }
         }
 
         // A critic who walks out costs a whole star more than other customers.

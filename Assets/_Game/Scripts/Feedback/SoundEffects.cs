@@ -64,6 +64,7 @@ namespace BubbleTea.Feedback
             GameEvents.Tipped += OnTip;
             GameEvents.CustomerLeftUpset += OnUpset;
             GameEvents.TableCleaned += OnCleaned;
+            GameEvents.StationJammed += OnJam;
         }
 
         private void OnDisable()
@@ -76,6 +77,7 @@ namespace BubbleTea.Feedback
             GameEvents.Tipped -= OnTip;
             GameEvents.CustomerLeftUpset -= OnUpset;
             GameEvents.TableCleaned -= OnCleaned;
+            GameEvents.StationJammed -= OnJam;
         }
 
         // A soft tick, at most about 8 a second, so grabbing a big pile isn't a drum roll.
@@ -102,6 +104,7 @@ namespace BubbleTea.Feedback
         private void OnTip(Vector3 _, int amount) => Play(tipClip, 1f, 0.7f);
         private void OnUpset(Vector3 _) => Play(upsetClip, 1f, 0.8f);
         private void OnCleaned(Vector3 _) => Play(tipClip, 0.8f, 0.6f);
+        private void OnJam(Vector3 _, bool jammed) => Play(jammed ? upsetClip : upgradeClip, jammed ? 0.8f : 1.1f, 0.8f);
 
         private void Play(AudioClip clip, float pitch, float loudness)
         {

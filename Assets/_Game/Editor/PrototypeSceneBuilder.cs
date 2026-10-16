@@ -67,6 +67,8 @@ namespace BubbleTea.EditorTools
             public Vector3 TeaBrewer, ToppingBar, TaroStation, FruitBar, ExtraBar, UpgradeDesk, Cashier;
             public Vector3 Expansion, Cleaner, DriveThruCashier, SecondShopPad, TravelBack;
             public Vector3 Stocker, SupplyDock, Chalkboard;      // Matcha House only
+            public Vector3 StaffSofa;                            // where baristas take their breaks
+            public Vector3[] Decor;                              // decor pads, in the order they appear
             public Vector3[] Baristas;
             public float[] Windows, Lamps, ExpansionWindows, ExpansionLamps; // x positions on the back wall
             public Vector3[] Trees;
@@ -75,12 +77,6 @@ namespace BubbleTea.EditorTools
             public float LaneX => LaneWallX + 2.5f;      // middle of the drive-thru lane
             public float LaneOuterX => LaneWallX + 6f;   // far edge of the lane
             public float SidewalkZ => -HalfDepth - 3f;
-
-            // Plants (or whatever the Art Set lists as decorations), tucked against the walls clear of the pads.
-            public Vector3[] DecorationSpots => new Vector3[]
-            {
-                new(-HalfWidth + 1f, 0f, HalfDepth - 0.9f), new(-HalfWidth + 0.8f, 0f, -2.6f), new(HalfWidth - 0.7f, 0f, -3.3f),
-            };
         }
 
         // Both shops share one compact floor plan, 18 x 15 meters, so nobody walks far:
@@ -98,10 +94,10 @@ namespace BubbleTea.EditorTools
             HalfWidth = 9f, HalfDepth = 7.5f,
             DoorFrom = -4.5f, DoorTo = 1.5f,
             StaffDoorFrom = 6.2f, StaffDoorTo = 8.6f,
-            LaneWallX = 12.5f,                 // the expansion adds a 3.5 m strip on the east side
+            LaneWallX = 11f,                   // the expansion adds just a 2 m strip on the east side
             Counter = new(-2f, 0f, 0f),
             Seating = new(3f, 0f, -4.6f),      // east of the queue, clear of the staff door
-            DriveThru = new(11.5f, 0f, 3.5f),
+            DriveThru = new(10f, 0f, 4.6f),     // in the 2 m strip; you serve it from the kitchen side
             TrashCan = new(-8.3f, 0f, 0.8f),   // front-west corner of the kitchen, away from the bars
             FloorCash = new(-4.6f, 0f, 0.9f),  // in the kitchen, just left of the counter
             PlayerStart = new(-4.4f, 1f, 1.9f), // clear of the Matcha House's stocker pad
@@ -114,7 +110,7 @@ namespace BubbleTea.EditorTools
             Cashier = new(0.6f, 0f, 1.8f),
             Expansion = new(7.6f, 0f, -5.8f),   // by the east wall it opens up
             Cleaner = new(-6.4f, 0f, -4.6f),
-            DriveThruCashier = new(8.6f, 0f, 6f),
+            DriveThruCashier = new(10f, 0f, 1.4f), // small pad in the strip, south of the window
             SecondShopPad = new(-6.4f, 0f, -1.6f), // both bus stops stand on the left of the dining room
             TravelBack = new(-6.4f, 0f, -1.6f),
             // Matcha House: the supply dock against the west wall (its spot faces into the kitchen), the
@@ -123,11 +119,19 @@ namespace BubbleTea.EditorTools
             Stocker = new(-8.25f, 0f, 1.95f),  // just south of the dock, against the west wall
             Chalkboard = new(-4.2f, 0f, -3.4f),
             // A little back from the glass wall, so the first one clears the upgrade desk's pad.
-            Baristas = new Vector3[] { new(3f, 0f, 2.75f), new(5.4f, 0f, 2.75f), new(7.8f, 0f, 2.75f), new(7.6f, 0f, 6.2f) },
+            // The third sits a little further forward, clear of the drive-thru window's spot.
+            Baristas = new Vector3[] { new(3f, 0f, 2.75f), new(5.4f, 0f, 2.75f), new(7.8f, 0f, 2.2f) },
+            StaffSofa = new(7.25f, 0f, 6.95f),  // against the back wall, east of the bars, clear of the drive-thru cash
+            // Decor pads in the dining room: down the west wall, and the koi pond in the east.
+            // Order: bamboo plants, paper lanterns, lucky cat, koi pond, cherry blossom tree.
+            Decor = new Vector3[]
+            {
+                new(-8.3f, 0f, -6.8f), new(-8.3f, 0f, -0.8f), new(-8.35f, 0f, -5.2f), new(7.5f, 0f, -2.6f), new(-8.3f, 0f, -3.0f),
+            },
             Windows = new[] { -6.2f, 6.2f },
             Lamps = new[] { -4.4f, 4.4f },
-            ExpansionWindows = new[] { 10.6f },
-            ExpansionLamps = new[] { 11.6f },
+            ExpansionWindows = new float[0],
+            ExpansionLamps = new[] { 10f },
             Trees = new Vector3[]
             {
                 new(-12f, 0f, -9.5f), new(-12f, 0f, -2f), new(-12f, 0f, 5f), new(-12f, 0f, 10f),
@@ -450,7 +454,6 @@ namespace BubbleTea.EditorTools
             GameObject eastWall = CreateWalls(wallMat);
             GameObject expansionArea = CreateExpansionArea(wallMat,
                 GetOrCreateMaterial(plan.ExpansionFloorMaterial, plan.ExpansionFloorColor));
-            CreateDecorations();
             ShopDressing.Dress(plan.Look, floorMat, GetOrCreateMaterial(plan.ExpansionFloorMaterial, plan.ExpansionFloorColor),
                 wallMat, expansionArea);
             CreateMusic(plan.Music);
@@ -485,6 +488,18 @@ namespace BubbleTea.EditorTools
             doorSettings.FindProperty("startOrdersAtDoor").boolValue = true;
             doorSettings.FindProperty("doorZ").floatValue = -Layout.HalfDepth;
             doorSettings.ApplyModifiedPropertiesWithoutUndo();
+            // Named VIP regulars who drop by once a shop day for their favorite drink.
+            var vips = new GameObject("VipRegulars").AddComponent<VipRegulars>();
+            SetReference(vips, "spawner", mainSpawner);
+            if (plan.Number > 1)
+            {
+                var vipSettings = new SerializedObject(vips);
+                SerializedProperty vipNames = vipSettings.FindProperty("names");
+                string[] matchaRegulars = { "Yui", "Ren", "Sakura", "Haru", "Nana" };
+                vipNames.arraySize = matchaRegulars.Length;
+                for (int i = 0; i < matchaRegulars.Length; i++) vipNames.GetArrayElementAtIndex(i).stringValue = matchaRegulars[i];
+                vipSettings.ApplyModifiedPropertiesWithoutUndo();
+            }
             // The Matcha House's own events: tea critics, tour buses, the daily special and supply deliveries.
             if (plan.Number > 1)
             {
@@ -495,6 +510,7 @@ namespace BubbleTea.EditorTools
                 CreateDailySpecialBoard();
             }
             if (content.Crate != null) CreateSupplyDelivery(content.Crate, padMat);
+            CreateStaffSofa();
             // Cars turn in from the road, drive up the lane past the window and out the far end.
             CreateCustomerSpawner("CarSpawner", "DriveThru", content.CarPrefab,
                 new Vector3(Layout.LaneX, 0f, street - 4f), new Vector3(Layout.LaneX, 0f, Layout.HalfDepth + 9f),
@@ -617,38 +633,6 @@ namespace BubbleTea.EditorTools
 
             root.SetActive(false);
             return root;
-        }
-
-        private static void CreateDecorations()
-        {
-            ArtSet art = ArtLibrary.Load();
-            if (art.Decorations.Count == 0) return;
-
-            var root = new GameObject("Decorations").transform;
-            Vector3[] spots = Layout.DecorationSpots;
-            for (int i = 0; i < spots.Length; i++)
-            {
-                GameObject model = art.Decorations[i % art.Decorations.Count];
-                if (model == null) continue;
-                var spot = new GameObject(model.name).transform;
-                spot.SetParent(root, false);
-                spot.localPosition = spots[i];
-                AttachLoose(model, spot, 1.9f); // potted bamboo stands a little taller than a person's shoulder
-            }
-        }
-
-        // Places a model (not tied to a slot) standing on the spot, about this tall.
-        private static void AttachLoose(GameObject model, Transform spot, float height)
-        {
-            var instance = (GameObject)PrefabUtility.InstantiatePrefab(model);
-            instance.transform.SetParent(spot, false);
-            Renderer[] renderers = instance.GetComponentsInChildren<Renderer>();
-            if (renderers.Length == 0) return;
-            Bounds bounds = renderers[0].bounds;
-            foreach (Renderer renderer in renderers) bounds.Encapsulate(renderer.bounds);
-            float scale = bounds.size.y > 0.0001f ? height / bounds.size.y : 1f;
-            instance.transform.localScale = Vector3.one * scale;
-            instance.transform.localPosition = -(new Vector3(bounds.center.x, bounds.min.y, bounds.center.z) - spot.position) * scale;
         }
 
         // An invisible wall: only the player (who moves with physics) bumps into it.
@@ -993,6 +977,7 @@ namespace BubbleTea.EditorTools
                 : null;
             // The drive-thru cashier's pad sits beside the drive-thru's cash pile, like the main one.
             UnlockPad driveThruCashierPad = CreatePad(content.DriveThruCashier, Layout.DriveThruCashier, billPrefab, wallet, padMat);
+            ResizePad(driveThruCashierPad, 1.5f);
             // The drive-thru window sits in the lane wall, its customer side facing the cars outside.
             UnlockPad driveThruPad = CreatePad(content.DriveThru, Layout.DriveThru, billPrefab, wallet, padMat,
                 driveThruCashierPad);
@@ -1086,7 +1071,29 @@ namespace BubbleTea.EditorTools
                 secondShopPad.gameObject.SetActive(false);
                 all.Add(secondShopPad);
             }
+            // Decor: small pads that appear one after another once the café tables are built. They
+            // don't count toward opening the next shop.
+            UnlockPad previous = seatingPad;
+            for (int i = 0; i < content.Decor.Length && i < Layout.Decor.Length; i++)
+            {
+                UnlockPad decorPad = CreatePad(content.Decor[i], Layout.Decor[i], billPrefab, wallet, padMat);
+                ResizePad(decorPad, 1.3f);
+                AddToReveal(previous, decorPad);
+                decorPad.gameObject.SetActive(false);
+                all.Add(decorPad);
+                previous = decorPad;
+            }
             return all.ToArray();
+        }
+
+        // Adds a pad to the ones another pad brings out when it's bought.
+        private static void AddToReveal(UnlockPad pad, UnlockPad next)
+        {
+            var serialized = new SerializedObject(pad);
+            SerializedProperty list = serialized.FindProperty("unlocksNext");
+            list.arraySize++;
+            list.GetArrayElementAtIndex(list.arraySize - 1).objectReferenceValue = next;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void SetObjectList(Object component, string fieldName, params GameObject[] objects)
@@ -1303,6 +1310,7 @@ namespace BubbleTea.EditorTools
             {
                 BuildableDefinition definition = pads[i].Definition;
                 int points = definition == content.Statue ? 3
+                    : System.Array.IndexOf(content.Decor, definition) >= 0 ? 2
                     : definition == content.Planter || definition == content.MenuBoard || definition == content.Seating ||
                       definition == content.Expansion ||
                       definition == content.DriveThru ? 2
@@ -1742,6 +1750,59 @@ namespace BubbleTea.EditorTools
             truckSettings.ApplyModifiedPropertiesWithoutUndo();
             truck.position = points[0];
             truck.gameObject.SetActive(false);
+        }
+
+        // A comfy two-seat sofa against the kitchen's back wall, where baristas take their breaks.
+        private static void CreateStaffSofa()
+        {
+            var go = new GameObject("StaffSofa");
+            go.transform.position = Layout.StaffSofa;
+            go.transform.rotation = Quaternion.Euler(0f, 180f, 0f); // faces into the kitchen (south)
+            Material fabric = GetOrCreateMaterial("SofaFabric", new Color(0.93f, 0.55f, 0.6f));
+            Material cushion = GetOrCreateMaterial("SofaCushion", new Color(1f, 0.78f, 0.8f));
+            Material wood = GetOrCreateMaterial("SofaLegs", new Color(0.45f, 0.29f, 0.2f));
+
+            // The base keeps its collider so the player walks around the sofa, not through it.
+            GameObject seatBase = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            seatBase.name = "Base";
+            seatBase.transform.SetParent(go.transform, false);
+            seatBase.transform.localPosition = new Vector3(0f, 0.25f, 0f);
+            seatBase.transform.localScale = new Vector3(1.9f, 0.3f, 0.75f);
+            seatBase.GetComponent<Renderer>().sharedMaterial = fabric;
+            SofaPart(go.transform, "Back", new Vector3(0f, 0.62f, -0.3f), new Vector3(1.9f, 0.6f, 0.18f), fabric);
+            foreach (float x in new[] { -1f, 1f })
+            {
+                SofaPart(go.transform, "Arm", new Vector3(x * 0.98f, 0.5f, 0f), new Vector3(0.18f, 0.42f, 0.75f), fabric);
+                SofaPart(go.transform, "Cushion", new Vector3(x * 0.44f, 0.43f, 0.05f), new Vector3(0.84f, 0.08f, 0.62f), cushion);
+                SofaPart(go.transform, "BackCushion", new Vector3(x * 0.44f, 0.68f, -0.19f), new Vector3(0.82f, 0.36f, 0.08f), cushion);
+                foreach (float z in new[] { -0.3f, 0.3f })
+                    SofaPart(go.transform, "Leg", new Vector3(x * 0.85f, 0.05f, z), new Vector3(0.08f, 0.1f, 0.08f), wood);
+            }
+
+            var seats = new Transform[2];
+            for (int i = 0; i < 2; i++)
+            {
+                seats[i] = new GameObject("Seat " + (i + 1)).transform;
+                seats[i].SetParent(go.transform, false);
+                seats[i].localPosition = new Vector3(i == 0 ? -0.44f : 0.44f, 0.2f, 0.08f); // hips at cushion height
+            }
+            var sofa = go.AddComponent<StaffSofa>();
+            var serialized = new SerializedObject(sofa);
+            SerializedProperty list = serialized.FindProperty("seats");
+            list.arraySize = seats.Length;
+            for (int i = 0; i < seats.Length; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = seats[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SofaPart(Transform parent, string name, Vector3 position, Vector3 size, Material material)
+        {
+            GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            part.name = name;
+            Object.DestroyImmediate(part.GetComponent<Collider>());
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = position;
+            part.transform.localScale = size;
+            part.GetComponent<Renderer>().sharedMaterial = material;
         }
 
         // A banner for shop events (tour bus, critic, today's special), below the other alerts.

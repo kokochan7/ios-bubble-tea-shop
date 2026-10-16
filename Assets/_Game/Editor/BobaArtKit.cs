@@ -41,6 +41,14 @@ namespace BubbleTea.EditorTools
             public static readonly Color Bamboo = Hex("D9C48A");          // dried bamboo (whisks, crates)
             public static readonly Color BambooGreen = Hex("7DB65A");     // living bamboo canes
             public static readonly Color DarkBambooGreen = Hex("4F8A3C");
+            // Buyable decor: paper lanterns, the lucky cat, the koi pond and the cherry blossom tree.
+            public static readonly Color LanternRed = Hex("E5483A");
+            public static readonly Color PondWater = Hex("6FC3D9");
+            public static readonly Color PondStone = Hex("B7B2AA");
+            public static readonly Color Koi = Hex("FF8A3D");
+            public static readonly Color Sakura = Hex("FFB7CF");
+            public static readonly Color SakuraDeep = Hex("F58CB0");
+            public static readonly Color Bark = Hex("7A5140");
             public static readonly Color Mint = Hex("A9E2CC");
             public static readonly Color DeepMint = Hex("6CC4A6");
             public static readonly Color Lavender = Hex("C7B3E8");
@@ -72,6 +80,8 @@ namespace BubbleTea.EditorTools
 
             public static readonly Color Skin = Hex("FFDCC2");
             public static readonly Color Cheek = Hex("FFA9B4");
+            public static readonly Color Iris = Hex("6B4A3A");      // warm brown anime eyes
+            public static readonly Color Mouth = Hex("C9606E");
             public static readonly Color Hair = Hex("4A3226");
             public static readonly Color Leaf = Hex("6DBB78");
             public static readonly Color DarkLeaf = Hex("4E9B5E");
@@ -132,13 +142,19 @@ namespace BubbleTea.EditorTools
             };
             GameObject plant = Save("Plant", BuildPlant());
             models["Planter"] = plant;
+            // Decor bought on pads; each one makes the shop a little nicer (see ShopDecor).
+            models["BambooPlant"] = plant;
+            models["PaperLanterns"] = Save("PaperLanterns", BuildPaperLanterns());
+            models["LuckyCat"] = Save("LuckyCat", BuildLuckyCat());
+            models["KoiPond"] = Save("KoiPond", BuildKoiPond());
+            models["SakuraTree"] = Save("SakuraTree", BuildSakuraTree());
             models["MenuBoard"] = Save("MenuBoard", BuildMenuBoard());
             models["Statue"] = Save("BobaStatue", BuildBobaStatue());
             models["Table"] = Save("CafeTable", BuildCafeTable());
             models["BusStop"] = Save("BusStop", BuildBusStop());
 
-            // Free potted bamboo in the corners; the menu board and statue are bought on pads.
-            var decorations = new List<GameObject> { plant };
+            // No free decorations any more: decor is bought on pads.
+            var decorations = new List<GameObject>();
 
             ArtSet set = ArtLibrary.Load();
             set.EnsureSlots();
@@ -647,7 +663,8 @@ namespace BubbleTea.EditorTools
                 Capsule(leg, "Shin" + s, new Vector3(0f, -0.09f, 0f), new Vector3(0.13f, 0.1f, 0.13f), Palette.Charcoal);
                 Sphere(leg, "Foot" + s, new Vector3(0f, -0.19f, 0.03f), new Vector3(0.16f, 0.1f, 0.24f), Palette.Charcoal);
             }
-            Capsule(root, "Body", new Vector3(0f, 0.5f, 0f), new Vector3(0.5f, 0.4f, 0.44f), shirt);
+            // Chibi proportions: a small body under a big head.
+            Capsule(root, "Body", new Vector3(0f, 0.48f, 0f), new Vector3(0.44f, 0.36f, 0.4f), shirt);
             if (apron.HasValue)
             {
                 Box(root, "Apron", new Vector3(0f, 0.45f, 0.21f), new Vector3(0.34f, 0.44f, 0.03f), apron.Value);
@@ -664,14 +681,31 @@ namespace BubbleTea.EditorTools
                 Sphere(shoulder, "Hand" + s, new Vector3(side * 0.06f, -0.36f, 0.02f), Vector3.one * 0.11f, Palette.Skin);
             }
 
-            // A big round head with dot eyes and rosy cheeks.
-            Sphere(root, "Head", new Vector3(0f, 1.14f, 0f), Vector3.one * 0.62f, Palette.Skin);
-            Sphere(root, "EyeL", new Vector3(-0.11f, 1.15f, 0.28f), new Vector3(0.07f, 0.09f, 0.04f), Palette.Charcoal);
-            Sphere(root, "EyeR", new Vector3(0.11f, 1.15f, 0.28f), new Vector3(0.07f, 0.09f, 0.04f), Palette.Charcoal);
-            Sphere(root, "CheekL", new Vector3(-0.18f, 1.07f, 0.25f), new Vector3(0.09f, 0.05f, 0.03f), Palette.Cheek);
-            Sphere(root, "CheekR", new Vector3(0.18f, 1.07f, 0.25f), new Vector3(0.09f, 0.05f, 0.03f), Palette.Cheek);
+            // An anime-style head: big and round, with large shiny eyes, rosy blush and a tiny smile.
+            Sphere(root, "Head", new Vector3(0f, 1.12f, 0f), new Vector3(0.72f, 0.68f, 0.66f), Palette.Skin);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                string s = side < 0f ? "L" : "R";
+                Sphere(root, "Eye" + s, new Vector3(side * 0.12f, 1.1f, 0.3f), new Vector3(0.12f, 0.17f, 0.04f), Palette.Charcoal);
+                Sphere(root, "Iris" + s, new Vector3(side * 0.12f, 1.085f, 0.312f), new Vector3(0.085f, 0.11f, 0.03f), Palette.Iris);
+                // Two sparkles in each eye: a big one up top and a little one below.
+                Sphere(root, "Sparkle" + s, new Vector3(side * 0.12f + 0.025f, 1.13f, 0.322f), new Vector3(0.045f, 0.05f, 0.02f), Color.white);
+                Sphere(root, "SparkleSmall" + s, new Vector3(side * 0.12f - 0.02f, 1.06f, 0.322f), new Vector3(0.022f, 0.022f, 0.015f), Color.white);
+                Sphere(root, "Cheek" + s, new Vector3(side * 0.21f, 1.02f, 0.26f), new Vector3(0.11f, 0.05f, 0.03f), Palette.Cheek);
+            }
+            Sphere(root, "Mouth", new Vector3(0f, 0.99f, 0.318f), new Vector3(0.05f, 0.022f, 0.02f), Palette.Mouth);
 
-            Sphere(root, "Hair", new Vector3(0f, 1.22f, -0.04f), new Vector3(0.66f, 0.56f, 0.64f), Palette.Hair);
+            // Hair: a cap over the back of the head, a fringe of bangs and two side locks.
+            Sphere(root, "Hair", new Vector3(0f, 1.2f, -0.05f), new Vector3(0.78f, 0.68f, 0.74f), Palette.Hair);
+            for (int i = 0; i < 5; i++)
+            {
+                float x = (i - 2) * 0.12f;
+                Transform bang = Sphere(root, "Bang" + i, new Vector3(x, 1.31f - Mathf.Abs(i - 2) * 0.02f, 0.25f - Mathf.Abs(i - 2) * 0.03f),
+                    new Vector3(0.16f, 0.2f, 0.1f), Palette.Hair);
+                bang.localRotation = Quaternion.Euler(-20f, 0f, (i - 2) * -12f);
+            }
+            Sphere(root, "LockL", new Vector3(-0.33f, 1.0f, 0.08f), new Vector3(0.13f, 0.34f, 0.15f), Palette.Hair);
+            Sphere(root, "LockR", new Vector3(0.33f, 1.0f, 0.08f), new Vector3(0.13f, 0.34f, 0.15f), Palette.Hair);
             if (randomLook)
             {
                 AddRandomLook(root, style, shirt);
@@ -680,19 +714,22 @@ namespace BubbleTea.EditorTools
             switch (style)
             {
                 case CharacterStyle.Buns:
-                    Sphere(root, "BunL", new Vector3(-0.22f, 1.47f, -0.04f), Vector3.one * 0.2f, Palette.Hair);
-                    Sphere(root, "BunR", new Vector3(0.22f, 1.47f, -0.04f), Vector3.one * 0.2f, Palette.Hair);
+                    Sphere(root, "BunL", new Vector3(-0.26f, 1.5f, -0.05f), Vector3.one * 0.22f, Palette.Hair);
+                    Sphere(root, "BunR", new Vector3(0.26f, 1.5f, -0.05f), Vector3.one * 0.22f, Palette.Hair);
+                    // A cowlick sticking up on top, the classic anime touch.
+                    Capsule(root, "Ahoge", new Vector3(0.03f, 1.6f, 0.02f), new Vector3(0.04f, 0.08f, 0.04f), Palette.Hair)
+                        .localRotation = Quaternion.Euler(0f, 0f, -25f);
                     break;
                 case CharacterStyle.Cap:
-                    Sphere(root, "Cap", new Vector3(0f, 1.32f, -0.02f), new Vector3(0.64f, 0.42f, 0.64f), Palette.DeepMint);
-                    Box(root, "Visor", new Vector3(0f, 1.36f, 0.3f), new Vector3(0.4f, 0.03f, 0.22f), Palette.DeepMint);
+                    Sphere(root, "Cap", new Vector3(0f, 1.38f, -0.03f), new Vector3(0.78f, 0.46f, 0.76f), Palette.DeepMint);
+                    Box(root, "Visor", new Vector3(0f, 1.41f, 0.36f), new Vector3(0.44f, 0.03f, 0.24f), Palette.DeepMint);
                     break;
                 case CharacterStyle.Headband:
-                    Sphere(root, "Band", new Vector3(0f, 1.3f, -0.01f), new Vector3(0.68f, 0.1f, 0.66f), Palette.DeepPink);
-                    Sphere(root, "Bow", new Vector3(0.24f, 1.42f, 0.05f), new Vector3(0.16f, 0.1f, 0.06f), Palette.DeepPink);
+                    Sphere(root, "Band", new Vector3(0f, 1.36f, -0.02f), new Vector3(0.8f, 0.1f, 0.76f), Palette.DeepPink);
+                    Sphere(root, "Bow", new Vector3(0.28f, 1.5f, 0.05f), new Vector3(0.18f, 0.11f, 0.06f), Palette.DeepPink);
                     break;
                 case CharacterStyle.Bob:
-                    Sphere(root, "Bob", new Vector3(0f, 1.1f, -0.08f), new Vector3(0.7f, 0.42f, 0.6f), Palette.Hair);
+                    Sphere(root, "Bob", new Vector3(0f, 1.08f, -0.09f), new Vector3(0.82f, 0.46f, 0.7f), Palette.Hair);
                     Box(root, "BagStrap", new Vector3(0f, 0.6f, 0f), new Vector3(0.06f, 0.5f, 0.47f), Palette.DarkWood);
                     Box(root, "Bag", new Vector3(0f, 0.55f, -0.27f), new Vector3(0.3f, 0.32f, 0.14f), Palette.Peach);
                     break;
@@ -704,27 +741,28 @@ namespace BubbleTea.EditorTools
         {
             var female = new GameObject("Female").transform;
             female.SetParent(root, false);
-            Sphere(female, "LongHair", new Vector3(0f, 1.0f, -0.12f), new Vector3(0.7f, 0.66f, 0.52f), Palette.Hair);
-            if (style != CharacterStyle.Cap && style != CharacterStyle.Uniform) Sphere(female, "Bow", new Vector3(0.24f, 1.42f, 0.05f), new Vector3(0.16f, 0.1f, 0.06f), Palette.DeepPink);
+            Sphere(female, "LongHair", new Vector3(0f, 0.96f, -0.15f), new Vector3(0.8f, 0.74f, 0.54f), Palette.Hair);
+            if (style != CharacterStyle.Cap && style != CharacterStyle.Uniform) Sphere(female, "Bow", new Vector3(0.28f, 1.5f, 0.05f), new Vector3(0.18f, 0.11f, 0.06f), Palette.DeepPink);
 
             var male = new GameObject("Male").transform;
             male.SetParent(root, false);
-            Sphere(male, "Fringe", new Vector3(0f, 1.36f, 0.1f), new Vector3(0.54f, 0.2f, 0.36f), Palette.Hair);
+            // Spiky anime hair on top.
+            Sphere(male, "Fringe", new Vector3(0f, 1.48f, -0.02f), new Vector3(0.5f, 0.2f, 0.44f), Palette.Hair);
 
             switch (style)
             {
                 case CharacterStyle.Cap:
-                    Sphere(root, "Cap", new Vector3(0f, 1.32f, -0.02f), new Vector3(0.64f, 0.42f, 0.64f), Palette.DeepMint);
-                    Box(root, "Visor", new Vector3(0f, 1.36f, 0.3f), new Vector3(0.4f, 0.03f, 0.22f), Palette.DeepMint);
+                    Sphere(root, "Cap", new Vector3(0f, 1.38f, -0.03f), new Vector3(0.78f, 0.46f, 0.76f), Palette.DeepMint);
+                    Box(root, "Visor", new Vector3(0f, 1.41f, 0.36f), new Vector3(0.44f, 0.03f, 0.24f), Palette.DeepMint);
                     break;
                 case CharacterStyle.Bob:
                     Box(root, "BagStrap", new Vector3(0f, 0.6f, 0f), new Vector3(0.06f, 0.5f, 0.47f), Palette.DarkWood);
                     Box(root, "Bag", new Vector3(0f, 0.55f, -0.27f), new Vector3(0.3f, 0.32f, 0.14f), Palette.Peach);
                     break;
                 case CharacterStyle.Uniform:
-                    Sphere(root, "Cap", new Vector3(0f, 1.32f, -0.02f), new Vector3(0.64f, 0.42f, 0.64f), uniform);
-                    Sphere(root, "CapBand", new Vector3(0f, 1.27f, -0.02f), new Vector3(0.66f, 0.08f, 0.66f), Palette.Gold);
-                    Box(root, "Visor", new Vector3(0f, 1.36f, 0.3f), new Vector3(0.4f, 0.03f, 0.22f), uniform);
+                    Sphere(root, "Cap", new Vector3(0f, 1.38f, -0.03f), new Vector3(0.78f, 0.46f, 0.76f), uniform);
+                    Sphere(root, "CapBand", new Vector3(0f, 1.33f, -0.03f), new Vector3(0.8f, 0.08f, 0.78f), Palette.Gold);
+                    Box(root, "Visor", new Vector3(0f, 1.41f, 0.36f), new Vector3(0.44f, 0.03f, 0.24f), uniform);
                     break;
             }
 
@@ -735,7 +773,8 @@ namespace BubbleTea.EditorTools
             // Staff keep their uniform color; only customers get a random shirt.
             if (style == CharacterStyle.Uniform) SetRenderers(serialized, "shirt", root);
             else SetRenderers(serialized, "shirt", root, "Body", "ShoulderL/ArmL", "ShoulderR/ArmR");
-            SetRenderers(serialized, "hair", root, "Hair", "Female/LongHair", "Male/Fringe");
+            SetRenderers(serialized, "hair", root, "Hair", "Bang0", "Bang1", "Bang2", "Bang3", "Bang4", "LockL", "LockR",
+                "Female/LongHair", "Male/Fringe");
             SetRenderers(serialized, "skin", root, "Head", "ShoulderL/HandL", "ShoulderR/HandR");
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
@@ -784,13 +823,14 @@ namespace BubbleTea.EditorTools
         // ---------- Decorations ----------
 
         // Potted bamboo: a cluster of green stalks of different heights, each with node rings and
-        // a few slender leaves sprouting near the top, in a low cream pot.
+        // a few slender leaves near the top, in a low cream pot. No two surfaces sit in the same
+        // plane (they used to flicker against each other as the camera moved).
         private static GameObject BuildPlant()
         {
             var root = new GameObject("Plant").transform;
-            Part(root, "Pot", Taper("PlantPot", 0.2f, 0.25f, 0.3f), Vector3.zero, Palette.Cream);
-            Part(root, "PotBand", Taper("PlantPotBand", 0.245f, 0.255f, 0.05f), new Vector3(0f, 0.25f, 0f), Palette.Terracotta);
-            Cylinder(root, "Soil", new Vector3(0f, 0.29f, 0f), 0.23f, 0.02f, Palette.DarkWood);
+            Part(root, "Pot", Taper("BambooPot", 0.2f, 0.25f, 0.3f), Vector3.zero, Palette.Cream);
+            Part(root, "PotBand", Taper("BambooPotBand", 0.24f, 0.25f, 0.05f), new Vector3(0f, 0.2f, 0f), Palette.Terracotta);
+            Cylinder(root, "Soil", new Vector3(0f, 0.315f, 0f), 0.21f, 0.03f, Palette.DarkWood);
 
             // x, z, height and lean (degrees) of each stalk.
             Vector4[] stalks =
@@ -800,22 +840,140 @@ namespace BubbleTea.EditorTools
             };
             for (int i = 0; i < stalks.Length; i++)
             {
-                Vector4 s = stalks[i];
-                var stalk = Pivot(root, "Stalk", new Vector3(s.x, 0.3f, s.y));
-                stalk.localRotation = Quaternion.Euler(s.w, i * 67f, -s.w * 0.6f);
+                Vector4 st = stalks[i];
+                var stalk = Pivot(root, "Stalk", new Vector3(st.x, 0.31f, st.y));
+                stalk.localRotation = Quaternion.Euler(st.w, i * 67f, -st.w * 0.6f);
                 Color green = i % 2 == 0 ? Palette.BambooGreen : Palette.DarkBambooGreen;
-                Cylinder(stalk, "Cane", new Vector3(0f, s.z * 0.5f, 0f), 0.032f, s.z, green);
-                // Node rings every 30 cm.
-                for (float y = 0.3f; y < s.z - 0.05f; y += 0.3f)
-                    Cylinder(stalk, "Node", new Vector3(0f, y, 0f), 0.038f, 0.025f, Palette.DarkBambooGreen);
+                Cylinder(stalk, "Cane", new Vector3(0f, st.z * 0.5f, 0f), 0.034f, st.z, green);
+                // Node rings every 30 cm, a little wider than the cane.
+                for (float y = 0.33f; y < st.z - 0.08f; y += 0.3f)
+                    Cylinder(stalk, "Node", new Vector3(0f, y, 0f), 0.043f, 0.035f, Palette.DarkBambooGreen);
                 // Leaves near the top, fanning out to the sides.
                 for (int leaf = 0; leaf < 3; leaf++)
                 {
-                    var stem = Pivot(stalk, "Leaf", new Vector3(0f, s.z - 0.15f - leaf * 0.22f, 0f));
+                    var stem = Pivot(stalk, "Leaf", new Vector3(0f, st.z - 0.17f - leaf * 0.22f, 0f));
                     stem.localRotation = Quaternion.Euler(0f, leaf * 120f + i * 40f, 0f) * Quaternion.Euler(0f, 0f, 62f);
-                    Sphere(stem, "Blade", new Vector3(0f, 0.15f, 0f), new Vector3(0.07f, 0.3f, 0.015f),
+                    Sphere(stem, "Blade", new Vector3(0f, 0.16f, 0f), new Vector3(0.08f, 0.32f, 0.03f),
                         leaf % 2 == 0 ? Palette.Leaf : Palette.DarkLeaf);
                 }
+            }
+            return root.gameObject;
+        }
+
+        // A wooden lantern post on a stone base with two red paper lanterns hanging from its arm.
+        private static GameObject BuildPaperLanterns()
+        {
+            var root = new GameObject("PaperLanterns").transform;
+            Box(root, "Base", new Vector3(0f, 0.08f, 0f), new Vector3(0.5f, 0.16f, 0.5f), Palette.PondStone);
+            Box(root, "Post", new Vector3(0f, 1.2f, 0f), new Vector3(0.12f, 2.1f, 0.12f), Palette.DarkWood);
+            Box(root, "Arm", new Vector3(0.35f, 2.2f, 0f), new Vector3(0.9f, 0.08f, 0.1f), Palette.DarkWood);
+            Box(root, "Cap", new Vector3(0f, 2.3f, 0f), new Vector3(0.22f, 0.06f, 0.22f), Palette.Gold);
+            foreach (float x in new[] { 0.3f, 0.7f })
+            {
+                float top = x < 0.5f ? 2.0f : 1.9f;
+                Cylinder(root, "Cord", new Vector3(x, top + 0.08f, 0f), 0.01f, 0.16f, Palette.Charcoal);
+                Cylinder(root, "TopCap", new Vector3(x, top - 0.02f, 0f), 0.08f, 0.05f, Palette.Gold);
+                Sphere(root, "Lantern", new Vector3(x, top - 0.22f, 0f), new Vector3(0.32f, 0.36f, 0.32f), Palette.LanternRed);
+                // Gold ribs around the paper.
+                Sphere(root, "Rib", new Vector3(x, top - 0.22f, 0f), new Vector3(0.335f, 0.06f, 0.335f), Palette.Gold);
+                Cylinder(root, "BottomCap", new Vector3(x, top - 0.42f, 0f), 0.07f, 0.05f, Palette.Gold);
+                Cylinder(root, "Tassel", new Vector3(x, top - 0.55f, 0f), 0.02f, 0.2f, Palette.LanternRed);
+            }
+            return root.gameObject;
+        }
+
+        // A white lucky cat waving one paw, with a red collar and gold bell, on a red cushion.
+        private static GameObject BuildLuckyCat()
+        {
+            var root = new GameObject("LuckyCat").transform;
+            Box(root, "Cushion", new Vector3(0f, 0.06f, 0f), new Vector3(0.62f, 0.12f, 0.62f), Palette.LanternRed);
+            Sphere(root, "Body", new Vector3(0f, 0.36f, 0f), new Vector3(0.48f, 0.5f, 0.42f), Color.white);
+            Sphere(root, "Head", new Vector3(0f, 0.78f, 0.02f), new Vector3(0.5f, 0.44f, 0.44f), Color.white);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                Transform ear = Primitive(root, PrimitiveType.Cube, "Ear", new Vector3(side * 0.15f, 0.98f, 0.0f),
+                    new Vector3(0.11f, 0.11f, 0.08f), Color.white, false);
+                ear.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                Transform inner = Primitive(root, PrimitiveType.Cube, "EarInner", new Vector3(side * 0.15f, 0.975f, 0.04f),
+                    new Vector3(0.06f, 0.06f, 0.02f), Palette.Cheek, false);
+                inner.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                Sphere(root, "Eye", new Vector3(side * 0.1f, 0.8f, 0.23f), new Vector3(0.06f, 0.07f, 0.03f), Palette.Charcoal);
+                Sphere(root, "Cheek", new Vector3(side * 0.15f, 0.72f, 0.21f), new Vector3(0.08f, 0.045f, 0.03f), Palette.Cheek);
+                Sphere(root, "Foot", new Vector3(side * 0.12f, 0.14f, 0.16f), new Vector3(0.14f, 0.1f, 0.16f), Color.white);
+            }
+            Sphere(root, "Nose", new Vector3(0f, 0.75f, 0.235f), new Vector3(0.035f, 0.025f, 0.02f), Palette.DeepPink);
+            Cylinder(root, "Collar", new Vector3(0f, 0.585f, 0.01f), 0.19f, 0.04f, Palette.LanternRed);
+            Sphere(root, "Bell", new Vector3(0f, 0.55f, 0.2f), new Vector3(0.08f, 0.08f, 0.08f), Palette.Gold);
+            Sphere(root, "Coin", new Vector3(0.08f, 0.36f, 0.21f), new Vector3(0.16f, 0.2f, 0.03f), Palette.Gold);
+            // The raised, beckoning paw.
+            Transform arm = Pivot(root, "WavingArm", new Vector3(0.2f, 0.52f, 0.06f));
+            arm.localRotation = Quaternion.Euler(0f, 0f, 15f);
+            Capsule(arm, "Arm", new Vector3(0f, 0.17f, 0f), new Vector3(0.11f, 0.13f, 0.11f), Color.white);
+            Sphere(arm, "Paw", new Vector3(0f, 0.33f, 0.02f), new Vector3(0.13f, 0.12f, 0.1f), Color.white);
+            return root.gameObject;
+        }
+
+        // A little oval pond ringed with stones, with lily pads and three koi just under the surface.
+        private static GameObject BuildKoiPond()
+        {
+            var root = new GameObject("KoiPond").transform;
+            Cylinder(root, "Bed", new Vector3(0f, 0.04f, 0f), 1f, 0.08f, Palette.PondStone).localScale = new Vector3(1.9f, 0.04f, 1.25f);
+            Cylinder(root, "Water", new Vector3(0f, 0.1f, 0f), 1f, 0.04f, Palette.PondWater).localScale = new Vector3(1.7f, 0.02f, 1.05f);
+            for (int i = 0; i < 14; i++)
+            {
+                float angle = i * Mathf.PI * 2f / 14f;
+                Vector3 at = new(Mathf.Cos(angle) * 0.92f, 0.12f, Mathf.Sin(angle) * 0.6f);
+                float size = 0.22f + (i % 3) * 0.04f;
+                Sphere(root, "Stone", at, new Vector3(size, size * 0.6f, size), i % 2 == 0 ? Palette.PondStone : Palette.Stone);
+            }
+            Color[] koi = { Palette.Koi, Color.white, Palette.Koi };
+            for (int i = 0; i < 3; i++)
+            {
+                Transform fish = Pivot(root, "Koi", new Vector3(-0.35f + i * 0.35f, 0.125f, (i - 1) * 0.18f));
+                fish.localRotation = Quaternion.Euler(0f, 40f + i * 110f, 0f);
+                Sphere(fish, "Body", Vector3.zero, new Vector3(0.09f, 0.04f, 0.26f), koi[i]);
+                Sphere(fish, "Spot", new Vector3(0f, 0.012f, 0.03f), new Vector3(0.06f, 0.03f, 0.08f), i == 1 ? Palette.Koi : Color.white);
+                Transform tail = Primitive(fish, PrimitiveType.Cube, "Tail", new Vector3(0f, 0f, -0.15f), new Vector3(0.1f, 0.01f, 0.07f), koi[i], false);
+                tail.localRotation = Quaternion.Euler(0f, 45f, 0f);
+            }
+            foreach (Vector3 pad in new[] { new Vector3(0.45f, 0.13f, 0.25f), new Vector3(-0.5f, 0.13f, -0.2f), new Vector3(0.15f, 0.13f, -0.32f) })
+            {
+                Cylinder(root, "LilyPad", pad, 0.11f, 0.012f, Palette.Leaf);
+            }
+            Sphere(root, "Flower", new Vector3(0.45f, 0.16f, 0.25f), new Vector3(0.08f, 0.05f, 0.08f), Palette.Sakura);
+            return root.gameObject;
+        }
+
+        // A small cherry blossom tree: a curving trunk, a few branches and clouds of pink blossom,
+        // with petals scattered at its foot.
+        private static GameObject BuildSakuraTree()
+        {
+            var root = new GameObject("SakuraTree").transform;
+            Cylinder(root, "Planter", new Vector3(0f, 0.12f, 0f), 0.42f, 0.24f, Palette.PondStone);
+            Cylinder(root, "Soil", new Vector3(0f, 0.255f, 0f), 0.38f, 0.03f, Palette.DarkWood);
+            Part(root, "Trunk", Taper("SakuraTrunk", 0.12f, 0.08f, 1.5f), new Vector3(0f, 0.25f, 0f), Palette.Bark);
+            Vector3[] branches = { new(25f, 0f, 30f), new(-30f, 0f, 120f), new(20f, 0f, 230f) };
+            foreach (Vector3 b in branches)
+            {
+                Transform branch = Pivot(root, "Branch", new Vector3(0f, 1.4f, 0f));
+                branch.localRotation = Quaternion.Euler(0f, b.z, 0f) * Quaternion.Euler(b.x, 0f, 0f);
+                Cylinder(branch, "Wood", new Vector3(0f, 0.3f, 0f), 0.045f, 0.6f, Palette.Bark);
+            }
+            Vector3[] blossoms =
+            {
+                new(0f, 2.15f, 0f), new(0.45f, 1.95f, 0.15f), new(-0.42f, 1.98f, 0.12f), new(0.1f, 1.95f, -0.45f),
+                new(-0.2f, 2.35f, -0.15f), new(0.25f, 2.3f, 0.3f), new(-0.3f, 1.85f, -0.35f),
+            };
+            for (int i = 0; i < blossoms.Length; i++)
+            {
+                float size = 0.62f + (i % 3) * 0.1f;
+                Sphere(root, "Blossom", blossoms[i], new Vector3(size, size * 0.8f, size), i % 3 == 1 ? Palette.SakuraDeep : Palette.Sakura);
+            }
+            for (int i = 0; i < 8; i++)
+            {
+                float angle = i * 2.4f;
+                float r = 0.5f + (i % 3) * 0.12f;
+                Cylinder(root, "Petal", new Vector3(Mathf.Cos(angle) * r, 0.006f + i * 0.0005f, Mathf.Sin(angle) * r), 0.05f, 0.004f, Palette.Sakura);
             }
             return root.gameObject;
         }

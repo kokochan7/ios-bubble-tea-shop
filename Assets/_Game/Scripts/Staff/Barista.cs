@@ -23,6 +23,8 @@ namespace BubbleTea.Staff
     /// faster (one barista per station). They swap items through the same floor zones the player
     /// uses. The Carry More upgrade applies to baristas too: they carry several of the same item
     /// per trip.
+    /// Every so often, between jobs, a barista takes a short break on the staff sofa; their station
+    /// runs slower until they're back.
     /// </summary>
     [RequireComponent(typeof(ItemCarrier))]
     public class Barista : MonoBehaviour
@@ -45,6 +47,13 @@ namespace BubbleTea.Staff
         [SerializeField, Tooltip("How far in front of a station's middle they stand to help, in meters.")]
         private float standDistance = 1.1f;
 
+        [SerializeField, Tooltip("Seconds of work between breaks, picked at random in this range.")]
+        private Vector2 secondsBetweenBreaks = new(60f, 120f);
+
+        [SerializeField, Tooltip("How long a break lasts, in seconds, picked at random in this range.")]
+        private Vector2 breakSeconds = new(10f, 16f);
+
+
         private enum Job { None, Fetch, Deliver, Trash }
 
         private ItemCarrier carrier;
@@ -64,18 +73,39 @@ namespace BubbleTea.Staff
         private Station helping;      // the station they stand behind while there's nothing to carry
         private bool helpingThere;    // true once they've arrived and are speeding it up
         private float rethinkTimer;
+        private float untilBreak;
+        private Transform breakSeat;   // the sofa seat while on a break
+        private bool sittingDown;
+        private float standY;
+        private float breakTimer;
+        private FloatingText breakLabel;
+
+        private static readonly Color BreakBlue = new(0.6f, 0.85f, 1f);
+
+        /// <summary>True while they're on a break (walking to the sofa or sitting on it).</summary>
+        public bool OnBreak => breakSeat != null;
 
         private void Awake()
         {
             carrier = GetComponent<ItemCarrier>();
             TakeNothing();
+            untilBreak = Random.Range(secondsBetweenBreaks.x, secondsBetweenBreaks.y);
         }
 
         private void Update()
         {
+            if (OnBreak)
+            {
+                TakeBreak();
+                return;
+            }
+            untilBreak -= Time.deltaTime;
+
             switch (job)
             {
                 case Job.None:
+                    // Time for a break, and nothing in hand: head for the sofa.
+                    if (untilBreak <= 0f && carrier.Stack.Count == 0 && StartBreak()) return;
                     Plan();
                     if (job == Job.None) HelpAtStation();
                     else StopHelping();
@@ -86,7 +116,61 @@ namespace BubbleTea.Staff
             }
         }
 
-        private void OnDisable() => StopHelping();
+        private void OnDisable()
+        {
+            StopHelping();
+            EndBreak();
+        }
+
+        // ---------- Breaks ----------
+
+        private bool StartBreak()
+        {
+            breakSeat = StaffSofa.TakeSeat(this);
+            if (breakSeat == null)
+            {
+                untilBreak = 10f; // the sofa is full: try again a little later
+                return false;
+            }
+            StopHelping();
+            sittingDown = false;
+            return true;
+        }
+
+        private void TakeBreak()
+        {
+            if (!sittingDown)
+            {
+                if (!WalkTo(breakSeat.position)) return;
+                standY = transform.position.y;
+                transform.SetPositionAndRotation(breakSeat.position, breakSeat.rotation); // the seat sits at cushion height
+                if (TryGetComponent(out WalkBob bob)) bob.Sitting = true;
+                sittingDown = true;
+                breakTimer = Random.Range(breakSeconds.x, breakSeconds.y);
+                return;
+            }
+            breakLabel ??= FloatingText.Create(transform, Vector3.up * 1.9f, 0.04f);
+            breakLabel.Show(Mathf.Repeat(Time.time, 1.5f) < 0.75f ? "ON BREAK z" : "ON BREAK zZ", BreakBlue);
+            breakTimer -= Time.deltaTime;
+            if (breakTimer <= 0f) EndBreak();
+        }
+
+        private void EndBreak()
+        {
+            if (breakSeat == null) return;
+            if (sittingDown)
+            {
+                Vector3 standing = transform.position;
+                standing.y = standY;
+                transform.position = standing;
+                if (TryGetComponent(out WalkBob bob)) bob.Sitting = false;
+            }
+            if (breakLabel != null) breakLabel.Hide();
+            StaffSofa.FreeSeat(breakSeat);
+            breakSeat = null;
+            sittingDown = false;
+            untilBreak = Random.Range(secondsBetweenBreaks.x, secondsBetweenBreaks.y);
+        }
 
         // ---------- Helping at a station ----------
 

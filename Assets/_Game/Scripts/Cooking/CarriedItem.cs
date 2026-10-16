@@ -12,7 +12,7 @@ namespace BubbleTea.Cooking
         private ItemDefinition definition;
 
         [SerializeField, Tooltip("Seconds a hop between stacks takes.")]
-        private float hopSeconds = 0.2f;
+        private float hopSeconds = 0.35f;
 
         [SerializeField, Tooltip("How high the hop goes.")]
         private float hopHeight = 0.6f;
