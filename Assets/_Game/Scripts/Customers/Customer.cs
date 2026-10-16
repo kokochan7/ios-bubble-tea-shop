@@ -9,8 +9,8 @@ namespace BubbleTea.Customers
     /// <summary>
     /// Walks in, waits in line at a <see cref="ServingCounter"/>, buys their drinks (one to
     /// five, more as the shop can make more kinds) when it's their turn, and walks out with them. Gray-box movement: straight lines, no pathfinding.
-    /// Their order (and patience) starts when they reach the counter: then a light by their order
-    /// turns from green to yellow to red. Some customers tip (1% to 30%), more often and more when
+    /// Their order (and patience) starts when they walk in through the door: then a light by their
+    /// order turns from green to yellow to red. Some customers tip (1% to 30%), more often and more when
     /// served quickly; a customer who runs out of patience leaves without buying.
     /// Some visitors are special (the Matcha House has them): tourists off a tour bus wear a sun
     /// hat, order less and wait longer; a tea critic wears a gold crown, always orders the most,
@@ -34,7 +34,7 @@ namespace BubbleTea.Customers
         private float bubbleIconScale = 2f;
 
         [SerializeField, Min(0f), Tooltip("Seconds a customer will wait before leaving without buying. 0 = they wait forever.")]
-        private float patienceSeconds = 20f;
+        private float patienceSeconds = 15f;
 
         [SerializeField, Range(0f, 2f), Tooltip("Extra patience for each drink after the first, as a share of the patience above.")]
         private float patiencePerExtraDrink = 0.4f;
@@ -104,6 +104,8 @@ namespace BubbleTea.Customers
         private float tolerance;
         private bool checkedPrice;
         private float tipShare = -1f; // decided once, on the first drink handed over
+        private bool hasDoorLine;     // the order starts on stepping past doorZ (otherwise at the counter)
+        private float doorZ;
 
         private readonly List<DrinkRecipe> orders = new();
         private readonly List<CarriedItem> held = new();
@@ -128,7 +130,8 @@ namespace BubbleTea.Customers
         private static readonly List<DrinkRecipe> NoOrders = new();
 
         /// <summary>
-        /// True once they've walked up to the counter and placed their order. Until then their
+        /// True once their order has started: when they step in through the shop's door (or, with no
+        /// door set, like cars at the drive-thru, when they reach the counter). Until then their
         /// bubble is hidden, their patience doesn't run down and nobody starts on their drinks.
         /// </summary>
         public bool OrderStarted { get; private set; }
@@ -242,9 +245,10 @@ namespace BubbleTea.Customers
                 return;
             }
 
-            // Patience only starts once they've ordered at the counter (then drains at full speed
-            // at the front of the line, slower if they're ever further back).
+            // Patience only starts once the order has (then drains at full speed at the front of the
+            // line and slower further back).
             int index = counter.QueueIndexOf(this);
+            if (!OrderStarted && hasDoorLine && transform.position.z >= doorZ) StartOrder();
             if (OrderStarted)
             {
                 waited += Time.deltaTime * (index <= 0 ? 1f : backOfLineDrain);
@@ -279,7 +283,14 @@ namespace BubbleTea.Customers
             if (faceCounter && toCounter.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(toCounter);
         }
 
-        // Reached the counter: the order bubble and mood light pop up and the clock starts.
+        /// <summary>The order starts once the customer walks north past this z (the shop's front wall).</summary>
+        public void StartOrderPast(float z)
+        {
+            hasDoorLine = true;
+            doorZ = z;
+        }
+
+        // Inside the shop (or at the counter): the order bubble and mood light pop up and the clock starts.
         private void StartOrder()
         {
             OrderStarted = true;

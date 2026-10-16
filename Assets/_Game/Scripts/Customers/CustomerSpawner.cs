@@ -29,6 +29,12 @@ namespace BubbleTea.Customers
         [SerializeField, Tooltip("Most customers in the shop at once.")]
         private int maxCustomers = 4;
 
+        [SerializeField, Tooltip("Customers' orders start as they step in past this z (the shop's front wall). Off: orders start at the counter (drive-thru cars).")]
+        private bool startOrdersAtDoor;
+
+        [SerializeField, Tooltip("The z of the shop's front wall, for the setting above.")]
+        private float doorZ;
+
         [SerializeField, Range(0f, 1f), Tooltip("Chance a new customer is a tea critic (0 = never).")]
         private float criticChance;
 
@@ -84,6 +90,7 @@ namespace BubbleTea.Customers
                 inside.Remove(left);
                 gone?.Invoke(left);
             }, kind);
+            if (startOrdersAtDoor) customer.StartOrderPast(doorZ);
             return customer;
         }
     }

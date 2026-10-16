@@ -98,10 +98,10 @@ namespace BubbleTea.EditorTools
             HalfWidth = 9f, HalfDepth = 7.5f,
             DoorFrom = -4.5f, DoorTo = 1.5f,
             StaffDoorFrom = 6.2f, StaffDoorTo = 8.6f,
-            LaneWallX = 15f,
+            LaneWallX = 12.5f,                 // the expansion adds a 3.5 m strip on the east side
             Counter = new(-2f, 0f, 0f),
             Seating = new(3f, 0f, -4.6f),      // east of the queue, clear of the staff door
-            DriveThru = new(14f, 0f, 3.5f),
+            DriveThru = new(11.5f, 0f, 3.5f),
             TrashCan = new(-8.3f, 0f, 0.8f),   // front-west corner of the kitchen, away from the bars
             FloorCash = new(-4.6f, 0f, 0.9f),  // in the kitchen, just left of the counter
             PlayerStart = new(-4.4f, 1f, 1.9f), // clear of the Matcha House's stocker pad
@@ -114,7 +114,7 @@ namespace BubbleTea.EditorTools
             Cashier = new(0.6f, 0f, 1.8f),
             Expansion = new(7.6f, 0f, -5.8f),   // by the east wall it opens up
             Cleaner = new(-6.4f, 0f, -4.6f),
-            DriveThruCashier = new(11f, 0f, 6f),
+            DriveThruCashier = new(8.6f, 0f, 6f),
             SecondShopPad = new(-6.4f, 0f, -1.6f), // both bus stops stand on the left of the dining room
             TravelBack = new(-6.4f, 0f, -1.6f),
             // Matcha House: the supply dock against the west wall (its spot faces into the kitchen), the
@@ -126,8 +126,8 @@ namespace BubbleTea.EditorTools
             Baristas = new Vector3[] { new(3f, 0f, 2.75f), new(5.4f, 0f, 2.75f), new(7.8f, 0f, 2.75f), new(7.6f, 0f, 6.2f) },
             Windows = new[] { -6.2f, 6.2f },
             Lamps = new[] { -4.4f, 4.4f },
-            ExpansionWindows = new[] { 12f },
-            ExpansionLamps = new[] { 14.2f },
+            ExpansionWindows = new[] { 10.6f },
+            ExpansionLamps = new[] { 11.6f },
             Trees = new Vector3[]
             {
                 new(-12f, 0f, -9.5f), new(-12f, 0f, -2f), new(-12f, 0f, 5f), new(-12f, 0f, 10f),
@@ -480,6 +480,11 @@ namespace BubbleTea.EditorTools
             CustomerSpawner mainSpawner = CreateCustomerSpawner("CustomerSpawner", "Main", content.CustomerPrefab,
                 new Vector3(Layout.Counter.x, 0f, street), new Vector3((Layout.DoorFrom + Layout.DoorTo) / 2f, 0f, street),
                 secondsBetween: 3f, max: 4);
+            // Their order bubble and patience start as they walk in through the front door.
+            var doorSettings = new SerializedObject(mainSpawner);
+            doorSettings.FindProperty("startOrdersAtDoor").boolValue = true;
+            doorSettings.FindProperty("doorZ").floatValue = -Layout.HalfDepth;
+            doorSettings.ApplyModifiedPropertiesWithoutUndo();
             // The Matcha House's own events: tea critics, tour buses, the daily special and supply deliveries.
             if (plan.Number > 1)
             {
@@ -628,7 +633,7 @@ namespace BubbleTea.EditorTools
                 var spot = new GameObject(model.name).transform;
                 spot.SetParent(root, false);
                 spot.localPosition = spots[i];
-                AttachLoose(model, spot, 1.2f);
+                AttachLoose(model, spot, 1.9f); // potted bamboo stands a little taller than a person's shoulder
             }
         }
 

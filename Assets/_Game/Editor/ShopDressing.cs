@@ -240,14 +240,19 @@ namespace BubbleTea.EditorTools
                     heart.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                 }
 
-                // Little potted plants on the sill.
+                // Little pots of bamboo on the sill.
                 Material pot = Mat("Pot", new Color(0.90f, 0.60f, 0.45f), 0.2f);
-                Material leaf = Mat("SillLeaf", new Color(0.42f, 0.73f, 0.47f), 0.2f);
+                Material leaf = Mat("SillLeaf", new Color(0.49f, 0.71f, 0.35f), 0.2f);
                 for (int i = -1; i <= 1; i += 2)
                 {
                     Vector3 p = new(i * 0.7f, -height / 2f + 0.02f, -0.14f);
                     Part(window, PrimitiveType.Cylinder, "Pot", p, new Vector3(0.18f, 0.08f, 0.18f), pot);
-                    Part(window, PrimitiveType.Sphere, "Plant", p + new Vector3(0f, 0.15f, 0f), new Vector3(0.24f, 0.22f, 0.24f), leaf);
+                    for (int k = -1; k <= 1; k++)
+                    {
+                        float tall = 0.32f - Mathf.Abs(k) * 0.08f;
+                        Part(window, PrimitiveType.Cylinder, "Bamboo", p + new Vector3(k * 0.04f, 0.08f + tall / 2f, 0f),
+                            new Vector3(0.025f, tall / 2f, 0.025f), leaf);
+                    }
                 }
             }
         }

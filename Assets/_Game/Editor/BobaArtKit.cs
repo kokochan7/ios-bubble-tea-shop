@@ -38,7 +38,9 @@ namespace BubbleTea.EditorTools
             public static readonly Color Stone = Hex("A7A39C");
             public static readonly Color Yuzu = Hex("F7D84A");
             public static readonly Color Ceramic = Hex("F4EFE4");
-            public static readonly Color Bamboo = Hex("D9C48A");
+            public static readonly Color Bamboo = Hex("D9C48A");          // dried bamboo (whisks, crates)
+            public static readonly Color BambooGreen = Hex("7DB65A");     // living bamboo canes
+            public static readonly Color DarkBambooGreen = Hex("4F8A3C");
             public static readonly Color Mint = Hex("A9E2CC");
             public static readonly Color DeepMint = Hex("6CC4A6");
             public static readonly Color Lavender = Hex("C7B3E8");
@@ -135,7 +137,7 @@ namespace BubbleTea.EditorTools
             models["Table"] = Save("CafeTable", BuildCafeTable());
             models["BusStop"] = Save("BusStop", BuildBusStop());
 
-            // Free plants in the corners; the menu board and statue are bought on pads.
+            // Free potted bamboo in the corners; the menu board and statue are bought on pads.
             var decorations = new List<GameObject> { plant };
 
             ArtSet set = ArtLibrary.Load();
@@ -781,22 +783,39 @@ namespace BubbleTea.EditorTools
 
         // ---------- Decorations ----------
 
+        // Potted bamboo: a cluster of green stalks of different heights, each with node rings and
+        // a few slender leaves sprouting near the top, in a low cream pot.
         private static GameObject BuildPlant()
         {
             var root = new GameObject("Plant").transform;
-            Part(root, "Pot", Taper("PlantPot", 0.16f, 0.22f, 0.36f), Vector3.zero, Palette.Cream);
-            Part(root, "PotBand", Taper("PlantPotBand", 0.215f, 0.225f, 0.05f), new Vector3(0f, 0.3f, 0f), Palette.Terracotta);
-            Cylinder(root, "Soil", new Vector3(0f, 0.34f, 0f), 0.2f, 0.02f, Palette.DarkWood);
-            for (int i = 0; i < 7; i++)
+            Part(root, "Pot", Taper("PlantPot", 0.2f, 0.25f, 0.3f), Vector3.zero, Palette.Cream);
+            Part(root, "PotBand", Taper("PlantPotBand", 0.245f, 0.255f, 0.05f), new Vector3(0f, 0.25f, 0f), Palette.Terracotta);
+            Cylinder(root, "Soil", new Vector3(0f, 0.29f, 0f), 0.23f, 0.02f, Palette.DarkWood);
+
+            // x, z, height and lean (degrees) of each stalk.
+            Vector4[] stalks =
             {
-                float angle = i * 360f / 7f;
-                float tilt = 35f + (i % 3) * 12f;
-                var stem = new GameObject("Leaf").transform;
-                stem.SetParent(root, false);
-                stem.localPosition = new Vector3(0f, 0.36f, 0f);
-                stem.localRotation = Quaternion.Euler(0f, angle, 0f) * Quaternion.Euler(tilt, 0f, 0f);
-                Sphere(stem, "Blade", new Vector3(0f, 0.32f + (i % 2) * 0.1f, 0f), new Vector3(0.24f, 0.42f, 0.05f),
-                    i % 2 == 0 ? Palette.Leaf : Palette.DarkLeaf);
+                new(0f, 0f, 1.75f, 0f), new(0.11f, 0.06f, 1.45f, 5f), new(-0.1f, 0.07f, 1.3f, -6f),
+                new(0.04f, -0.12f, 1.55f, 4f), new(-0.08f, -0.08f, 1.1f, -4f),
+            };
+            for (int i = 0; i < stalks.Length; i++)
+            {
+                Vector4 s = stalks[i];
+                var stalk = Pivot(root, "Stalk", new Vector3(s.x, 0.3f, s.y));
+                stalk.localRotation = Quaternion.Euler(s.w, i * 67f, -s.w * 0.6f);
+                Color green = i % 2 == 0 ? Palette.BambooGreen : Palette.DarkBambooGreen;
+                Cylinder(stalk, "Cane", new Vector3(0f, s.z * 0.5f, 0f), 0.032f, s.z, green);
+                // Node rings every 30 cm.
+                for (float y = 0.3f; y < s.z - 0.05f; y += 0.3f)
+                    Cylinder(stalk, "Node", new Vector3(0f, y, 0f), 0.038f, 0.025f, Palette.DarkBambooGreen);
+                // Leaves near the top, fanning out to the sides.
+                for (int leaf = 0; leaf < 3; leaf++)
+                {
+                    var stem = Pivot(stalk, "Leaf", new Vector3(0f, s.z - 0.15f - leaf * 0.22f, 0f));
+                    stem.localRotation = Quaternion.Euler(0f, leaf * 120f + i * 40f, 0f) * Quaternion.Euler(0f, 0f, 62f);
+                    Sphere(stem, "Blade", new Vector3(0f, 0.15f, 0f), new Vector3(0.07f, 0.3f, 0.015f),
+                        leaf % 2 == 0 ? Palette.Leaf : Palette.DarkLeaf);
+                }
             }
             return root.gameObject;
         }
