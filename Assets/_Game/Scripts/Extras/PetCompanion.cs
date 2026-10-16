@@ -9,10 +9,10 @@ using UnityEngine;
 namespace BubbleTea.Extras
 {
     /// <summary>
-    /// The shop pet. It roams the shop on its own and goes to say hello to customers: each one it
-    /// visits gets back some patience and is happier (likelier to tip, and tips more), and some
-    /// give the pet a little tip. Now and then it naps on an empty chair (hopping off when a customer
-    /// wants the seat) or sniffs out some money, or a pearl. Pets and outfits are bought with pearls.
+    /// The shop pet. It roams the dining room on its own and goes to say hello to customers: each
+    /// one it visits gets back some patience and is happier (likelier to tip, and tips more), and
+    /// some give the pet a little tip. Now and then it goes through the staff door for a nap on the
+    /// staff sofa, or sniffs out some money, or a pearl. Pets are bought with pearls.
     /// </summary>
     public class PetCompanion : MonoBehaviour
     {
@@ -29,13 +29,6 @@ namespace BubbleTea.Extras
             public bool CurlyTail;  // shiba
         }
 
-        public class Outfit
-        {
-            public string Id;
-            public string Name;
-            public int Price;
-        }
-
         public static readonly Pet[] Pets =
         {
             new Pet { Id = "cat", Name = "Mango the Cat", Price = 15, Fur = new Color(0.98f, 0.66f, 0.32f), Belly = new Color(1f, 0.93f, 0.82f), Ears = new Color(0.98f, 0.66f, 0.32f) },
@@ -44,22 +37,15 @@ namespace BubbleTea.Extras
             new Pet { Id = "panda", Name = "Bao the Panda", Price = 30, Fur = new Color(0.97f, 0.97f, 0.97f), Belly = new Color(0.97f, 0.97f, 0.97f), Ears = new Color(0.15f, 0.15f, 0.17f), Patches = true },
         };
 
-        public static readonly Outfit[] Outfits =
-        {
-            new Outfit { Id = "bow", Name = "Pink Bow", Price = 5 },
-            new Outfit { Id = "scarf", Name = "Cozy Scarf", Price = 6 },
-            new Outfit { Id = "party", Name = "Party Hat", Price = 6 },
-            new Outfit { Id = "crown", Name = "Golden Crown", Price = 10 },
-        };
-
         private enum State { Roam, Visit, Nap, Sniff }
 
         private const float PatienceBack = 0.25f;               // share of a customer's patience a visit gives back
         private const float Joy = 0.25f;                        // extra happiness from a visit (likelier and bigger tips)
         private const float TipChance = 0.35f;                  // chance a visited customer tips the pet
+        private const float DoorApproach = 1.2f;                // meters either side of the staff door to line up on
         private static readonly Vector2 SniffEvery = new(40f, 70f);
-        private static readonly Vector2 NapEvery = new(80f, 130f);
-        private static readonly Vector2 NapSeconds = new(10f, 16f);
+        private static readonly Vector2 BreakEvery = new(90f, 150f);
+        private static readonly Vector2 BreakSeconds = new(15f, 25f);
         private static readonly Color Pink = new(1f, 0.55f, 0.7f);
 
         private static PetCompanion current;
@@ -70,22 +56,26 @@ namespace BubbleTea.Extras
         private float pause;             // a little sit-and-look-around between walks
         private float stateTimer;
         private float sniffTimer;
-        private float napTimer;
+        private float breakTimer;
         private float stuckTimer;
         private Vector3 stuckCheck;
         private Customer friend;         // the customer it's visiting
         private bool greeted;
-        private SeatingTable napTable;
-        private int napSeat = -1;
+        private Transform napSeat;       // its spot on the staff sofa during a break
+        private bool napping;            // arrived and asleep
         private FloatingText label;
         private Wallet wallet;
         private OfflineEarnings earnings;
         private float labelTimer;
 
-        public static Pet Find(string id) => Array.Find(Pets, p => p.Id == id);
-        public static Outfit FindOutfit(string id) => Array.Find(Outfits, o => o.Id == id);
+        // The staff door between the dining room and the kitchen: the only way through.
+        private Transform staffDoor;
+        private float kitchenSide = 1f;  // +1 if the kitchen is north of the door (bigger z), -1 if south
+        private StaffSofa sofa;
 
-        /// <summary>Lets the chosen pet (in its outfit) loose in the shop, replacing any pet already out.</summary>
+        public static Pet Find(string id) => Array.Find(Pets, p => p.Id == id);
+
+        /// <summary>Lets the chosen pet loose in the shop, replacing any pet already out.</summary>
         public static void Refresh()
         {
             Vector3 spot = current != null ? current.transform.position : Vector3.zero;
@@ -101,7 +91,7 @@ namespace BubbleTea.Extras
             var root = new GameObject("Pet " + pet.Id);
             root.transform.position = spot;
             current = root.AddComponent<PetCompanion>();
-            current.Build(pet, FindOutfit(Profile.ActiveOutfit));
+            current.Build(pet);
         }
 
         private void Start()
@@ -109,19 +99,30 @@ namespace BubbleTea.Extras
 #if UNITY_2023_1_OR_NEWER
             wallet = FindFirstObjectByType<Wallet>();
             earnings = FindFirstObjectByType<OfflineEarnings>();
+            sofa = FindFirstObjectByType<StaffSofa>();
+            BubbleTea.Building.SwingDoor[] doors = FindObjectsByType<BubbleTea.Building.SwingDoor>(FindObjectsSortMode.None);
 #else
             wallet = FindObjectOfType<Wallet>();
             earnings = FindObjectOfType<OfflineEarnings>();
+            sofa = FindObjectOfType<StaffSofa>();
+            BubbleTea.Building.SwingDoor[] doors = FindObjectsOfType<BubbleTea.Building.SwingDoor>();
 #endif
+            foreach (BubbleTea.Building.SwingDoor door in doors)
+            {
+                if (door.name == "Staff Door" || staffDoor == null) staffDoor = door.transform;
+            }
+            if (staffDoor != null && sofa != null) kitchenSide = sofa.transform.position.z >= staffDoor.position.z ? 1f : -1f;
+
             label = FloatingText.Create(transform, Vector3.up * 1.1f, 0.035f);
             sniffTimer = UnityEngine.Random.Range(SniffEvery.x, SniffEvery.y);
-            napTimer = UnityEngine.Random.Range(NapEvery.x, NapEvery.y);
+            breakTimer = UnityEngine.Random.Range(BreakEvery.x, BreakEvery.y);
             pause = 1f;
             goal = transform.position;
         }
 
         private void OnDestroy()
         {
+            if (napSeat != null) StaffSofa.FreeSeat(napSeat);
             if (label != null) Destroy(label.gameObject);
             if (current == this) current = null;
         }
@@ -143,12 +144,34 @@ namespace BubbleTea.Extras
             }
         }
 
-        // ---------------------------------------------------------------- roaming
+        // ---------------------------------------------------------------- the dining room and the kitchen
+
+        private bool InKitchen(Vector3 spot) => staffDoor != null && (spot.z - staffDoor.position.z) * kitchenSide > 0f;
+
+        // Where to head next on the way to a spot: straight there in the same room, otherwise
+        // lined up with the staff door on this side, then through it to the other side.
+        private Vector3 NextStep(Vector3 target)
+        {
+            if (staffDoor == null || InKitchen(transform.position) == InKitchen(target)) return target;
+            Vector3 door = staffDoor.position;
+            door.y = 0f;
+            float here = Mathf.Sign(transform.position.z - door.z);
+            if (here == 0f) here = 1f;
+            Vector3 approach = door + new Vector3(0f, 0f, here * DoorApproach);
+            Vector3 through = door - new Vector3(0f, 0f, here * DoorApproach);
+            Vector3 offset = approach - transform.position;
+            offset.y = 0f;
+            return offset.sqrMagnitude < 0.25f || Mathf.Abs(transform.position.x - door.x) < 0.4f && Mathf.Abs(transform.position.z - door.z) < DoorApproach
+                ? through
+                : approach;
+        }
+
+        // ---------------------------------------------------------------- roaming the dining room
 
         private void Roam()
         {
             sniffTimer -= Time.deltaTime;
-            napTimer -= Time.deltaTime;
+            breakTimer -= Time.deltaTime;
 
             if (pause > 0f)
             {
@@ -172,38 +195,39 @@ namespace BubbleTea.Extras
             }
         }
 
-        // What next: say hello to a customer, take a nap, or trot somewhere in the shop.
+        // What next: say hello to a customer (most of the time), go for a nap in the kitchen
+        // now and then, or trot somewhere in the dining room.
         private void PickNext()
         {
-            if (napTimer <= 0f && SeatingTable.TryFindNapSeat(transform.position, 30f, out napTable, out napSeat))
+            if (breakTimer <= 0f)
             {
-                state = State.Nap;
-                stateTimer = -1f; // walking to the chair
+                StartBreak();
                 return;
             }
 
             Customer pick = PickCustomer();
-            if (pick != null && UnityEngine.Random.value < 0.65f)
+            if (pick != null && UnityEngine.Random.value < 0.8f)
             {
                 friend = pick;
                 greeted = false;
-                stateTimer = 10f; // gives up if it can't reach them in time
+                stateTimer = 12f; // gives up if it can't reach them in time
                 state = State.Visit;
+                ResetStuck();
                 return;
             }
 
-            goal = RandomSpot();
+            goal = DiningSpot();
             ResetStuck();
         }
 
-        // The nearest customer the pet hasn't met yet.
+        // The nearest customer in the dining room the pet hasn't met yet.
         private Customer PickCustomer()
         {
             Customer best = null;
             float bestDistance = float.MaxValue;
             foreach (Customer customer in Customer.Active)
             {
-                if (customer == null || !customer.CanBePetted) continue;
+                if (customer == null || !customer.CanBePetted || InKitchen(customer.transform.position)) continue;
                 float distance = (customer.transform.position - transform.position).sqrMagnitude;
                 if (distance < bestDistance)
                 {
@@ -214,27 +238,23 @@ namespace BubbleTea.Extras
             return best;
         }
 
-        // Somewhere in the shop: beside a bar, a chair or the counter, a little off to one side.
-        private Vector3 RandomSpot()
+        // Somewhere in the dining room: by a table or in front of the counter, a little off to one side.
+        private Vector3 DiningSpot()
         {
             Vector3 spot = transform.position;
-            int pickFrom = UnityEngine.Random.Range(0, 3);
-            if (pickFrom == 0 && Cooking.Station.All.Count > 0)
-            {
-                Cooking.Station station = Cooking.Station.All[UnityEngine.Random.Range(0, Cooking.Station.All.Count)];
-                if (station != null) spot = station.ZoneCenter;
-            }
-            else if (pickFrom == 1 && SeatingTable.All.Count > 0)
+            if (UnityEngine.Random.value < 0.6f && SeatingTable.All.Count > 0)
             {
                 SeatingTable table = SeatingTable.All[UnityEngine.Random.Range(0, SeatingTable.All.Count)];
                 if (table != null) spot = table.Seat(UnityEngine.Random.Range(0, 2)).position;
             }
-            else if (PlayerMovement.Current != null)
+            else
             {
-                spot = PlayerMovement.Current.position; // comes to see what you're up to
+                ServingCounter counter = ServingCounter.FindLane("Main");
+                if (counter != null) spot = counter.QueuePosition(UnityEngine.Random.Range(0, 3));
             }
-            spot += new Vector3(UnityEngine.Random.Range(-1f, 1f), 0f, UnityEngine.Random.Range(-1f, 1f));
+            spot += new Vector3(UnityEngine.Random.Range(-1.2f, 1.2f), 0f, UnityEngine.Random.Range(-1.2f, 1.2f));
             spot.y = 0f;
+            if (InKitchen(spot) && staffDoor != null) spot.z = staffDoor.position.z - kitchenSide * 2f; // keep it on the dining side
             return spot;
         }
 
@@ -243,7 +263,7 @@ namespace BubbleTea.Extras
         private void Visit()
         {
             stateTimer -= Time.deltaTime;
-            if (friend == null || !friend.isActiveAndEnabled || stateTimer <= 0f || (!greeted && !friend.CanBePetted))
+            if (friend == null || !friend.isActiveAndEnabled || stateTimer <= 0f || (!greeted && (!friend.CanBePetted || Stuck())))
             {
                 EndVisit();
                 return;
@@ -286,26 +306,38 @@ namespace BubbleTea.Extras
             pause = UnityEngine.Random.Range(0.5f, 1.5f);
         }
 
-        // ---------------------------------------------------------------- napping
+        // ---------------------------------------------------------------- breaks in the kitchen
+
+        // Off through the staff door for a nap on the staff sofa (or curled up beside it if it's full).
+        private void StartBreak()
+        {
+            state = State.Nap;
+            napping = false;
+            napSeat = StaffSofa.TakeSeat(this);
+            stateTimer = UnityEngine.Random.Range(BreakSeconds.x, BreakSeconds.y);
+            ResetStuck();
+        }
+
+        private Vector3 NapSpot()
+        {
+            if (napSeat != null) return napSeat.position;
+            if (sofa != null) return sofa.transform.position + sofa.transform.forward * 1f;
+            return transform.position;
+        }
 
         private void Nap()
         {
-            if (napTable == null || !napTable.SeatFree(napSeat))
+            Vector3 spot = NapSpot();
+            if (!napping)
             {
-                WakeUp(); // a customer wants the chair
-                return;
-            }
-
-            Transform seat = napTable.Seat(napSeat);
-            if (stateTimer < 0f)
-            {
-                bool moving = WalkTo(new Vector3(seat.position.x, 0f, seat.position.z), 0.2f, 2.4f);
+                Vector3 floor = new(spot.x, 0f, spot.z);
+                bool moving = WalkTo(floor, 0.25f, 2.6f);
                 Hop(moving);
                 if (moving && !Stuck()) return;
-                stateTimer = UnityEngine.Random.Range(NapSeconds.x, NapSeconds.y); // hops up and curls up
+                napping = true; // hops up and curls up
             }
 
-            transform.SetPositionAndRotation(seat.position + Vector3.up * 0.45f, seat.rotation);
+            if (napSeat != null) transform.SetPositionAndRotation(spot + Vector3.up * 0.2f, napSeat.rotation);
             Hop(false);
             stateTimer -= Time.deltaTime;
             body.localScale = new Vector3(1.05f, 0.8f + Mathf.Sin(Time.time * 2f) * 0.03f, 1.05f); // curled up, breathing
@@ -315,15 +347,20 @@ namespace BubbleTea.Extras
 
         private void WakeUp()
         {
-            if (napTable != null && stateTimer >= 0f)
+            if (napSeat != null)
+            {
                 transform.position = new Vector3(transform.position.x, 0f, transform.position.z) + transform.forward * 0.5f;
-            napTable = null;
-            napSeat = -1;
+                StaffSofa.FreeSeat(napSeat);
+            }
+            napSeat = null;
+            napping = false;
             body.localScale = Vector3.one;
             label.Hide();
-            napTimer = UnityEngine.Random.Range(NapEvery.x, NapEvery.y);
+            breakTimer = UnityEngine.Random.Range(BreakEvery.x, BreakEvery.y);
             state = State.Roam;
-            pause = 0.5f;
+            goal = DiningSpot(); // back to the dining room
+            pause = 0f;
+            ResetStuck();
         }
 
         // ---------------------------------------------------------------- finding money
@@ -362,14 +399,16 @@ namespace BubbleTea.Extras
             labelTimer = seconds;
         }
 
-        // Steps towards a spot, steering around things like the staff do. False once it's there.
+        // Steps towards a spot (through the staff door if it's in the other room), steering around
+        // things like the staff do. False once it's there.
         private bool WalkTo(Vector3 target, float closeEnough, float speed)
         {
             Vector3 offset = target - transform.position;
             offset.y = 0f;
             if (offset.magnitude <= closeEnough) return false;
-            StaffSteering.Step(transform, target, speed * Time.deltaTime);
-            Face(target);
+            Vector3 step = NextStep(target);
+            StaffSteering.Step(transform, step, speed * Time.deltaTime);
+            Face(step);
             return true;
         }
 
@@ -405,7 +444,7 @@ namespace BubbleTea.Extras
 
         // ---------------------------------------------------------------- model
 
-        private void Build(Pet pet, Outfit outfit)
+        private void Build(Pet pet)
         {
             body = new GameObject("Body").transform;
             body.SetParent(transform, false);
@@ -446,34 +485,6 @@ namespace BubbleTea.Extras
                 ModelKit.Part(body, PrimitiveType.Sphere, new Vector3(0f, 0.32f, -0.28f), new Vector3(0.12f, 0.12f, 0.12f), pet.Patches ? dark : Color.white);
             else
                 ModelKit.Part(body, PrimitiveType.Capsule, new Vector3(0f, 0.45f, -0.3f), new Vector3(0.06f, 0.16f, 0.06f), pet.Fur, new Vector3(-30f, 0f, 0f));
-
-            if (outfit == null) return;
-            switch (outfit.Id)
-            {
-                case "bow":
-                    ModelKit.Part(head, PrimitiveType.Sphere, new Vector3(0.1f, 0.15f, 0.04f), new Vector3(0.1f, 0.07f, 0.04f), pink, new Vector3(0f, 0f, 25f));
-                    ModelKit.Part(head, PrimitiveType.Sphere, new Vector3(0.18f, 0.12f, 0.04f), new Vector3(0.1f, 0.07f, 0.04f), pink, new Vector3(0f, 0f, -25f));
-                    break;
-                case "scarf":
-                    ModelKit.Part(body, PrimitiveType.Cylinder, new Vector3(0f, 0.43f, 0.18f), new Vector3(0.3f, 0.04f, 0.26f), new Color(0.85f, 0.3f, 0.3f));
-                    ModelKit.Part(body, PrimitiveType.Cube, new Vector3(0.08f, 0.36f, 0.3f), new Vector3(0.06f, 0.14f, 0.03f), new Color(0.85f, 0.3f, 0.3f));
-                    break;
-                case "party":
-                    ModelKit.Part(head, PrimitiveType.Cylinder, new Vector3(0f, 0.24f, 0f), new Vector3(0.12f, 0.1f, 0.12f), new Color(0.45f, 0.65f, 1f));
-                    ModelKit.Part(head, PrimitiveType.Cylinder, new Vector3(0f, 0.33f, 0f), new Vector3(0.07f, 0.06f, 0.07f), new Color(0.45f, 0.65f, 1f));
-                    ModelKit.Part(head, PrimitiveType.Sphere, new Vector3(0f, 0.41f, 0f), new Vector3(0.06f, 0.06f, 0.06f), new Color(1f, 0.85f, 0.3f));
-                    break;
-                case "crown":
-                    Color gold = new(1f, 0.82f, 0.25f);
-                    ModelKit.Part(head, PrimitiveType.Cylinder, new Vector3(0f, 0.2f, 0f), new Vector3(0.18f, 0.04f, 0.18f), gold);
-                    for (int i = 0; i < 5; i++)
-                    {
-                        float a = i * 72f * Mathf.Deg2Rad;
-                        ModelKit.Part(head, PrimitiveType.Cube, new Vector3(Mathf.Sin(a) * 0.08f, 0.26f, Mathf.Cos(a) * 0.08f), new Vector3(0.03f, 0.07f, 0.03f), gold);
-                    }
-                    ModelKit.Part(head, PrimitiveType.Sphere, new Vector3(0f, 0.22f, 0.09f), new Vector3(0.035f, 0.035f, 0.02f), new Color(0.9f, 0.2f, 0.35f));
-                    break;
-            }
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

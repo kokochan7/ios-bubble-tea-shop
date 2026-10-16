@@ -1,6 +1,5 @@
 using System;
 using BubbleTea.Building;
-using BubbleTea.Economy;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,8 +7,8 @@ namespace BubbleTea.Extras
 {
     /// <summary>
     /// The pearl counter and the SHOP, TEAM, PETS and PLAY buttons down the right side of the screen,
-    /// with their pop-ups: the decor shop and collections, the staff skill trees, pets and outfits,
-    /// and the mini-games. Built in code when a shop opens (the save manager asks for it), so the
+    /// with their pop-ups: the decor shop and collections, the staff skill trees, pets, and the
+    /// mini-games (only once the whole shop is built). Built in code when a shop opens (the save manager asks for it), so the
     /// scenes don't need anything extra. The game is paused while a pop-up is open.
     /// </summary>
     public class ExtrasHud : MonoBehaviour
@@ -24,11 +23,12 @@ namespace BubbleTea.Extras
         private RectTransform column;
         private Text pearlLabel;
         private Text playLabel;
+        private GameObject playButton;
+        private BubbleTea.Saving.SaveManager saveManager;
+        private float endgameCheck;
         private GameObject popup;     // the open pop-up, if any
         private Action refresh;       // redraws the open pop-up
         private int tab;
-        private Wallet wallet;
-        private Economy.OfflineEarnings earnings;
 
         /// <summary>Called by the save manager as a shop opens.</summary>
         public static void Ensure()
@@ -47,11 +47,9 @@ namespace BubbleTea.Extras
         private void Start()
         {
 #if UNITY_2023_1_OR_NEWER
-            wallet = FindFirstObjectByType<Wallet>();
-            earnings = FindFirstObjectByType<Economy.OfflineEarnings>();
+            saveManager = FindFirstObjectByType<BubbleTea.Saving.SaveManager>();
 #else
-            wallet = FindObjectOfType<Wallet>();
-            earnings = FindObjectOfType<Economy.OfflineEarnings>();
+            saveManager = FindObjectOfType<BubbleTea.Saving.SaveManager>();
 #endif
             PetCompanion.Refresh();
         }
@@ -86,6 +84,28 @@ namespace BubbleTea.Extras
             if (column.gameObject.activeSelf != show) column.gameObject.SetActive(show);
             int wait = MiniGames.SecondsUntilReady;
             playLabel.text = wait > 0 ? $"{wait / 60}:{wait % 60:00}" : "PLAY";
+
+            endgameCheck -= Time.unscaledDeltaTime;
+            if (endgameCheck <= 0f)
+            {
+                endgameCheck = 1f;
+                bool endgame = EverythingUnlocked();
+                if (playButton.activeSelf != endgame) playButton.SetActive(endgame);
+            }
+        }
+
+        // The endgame: every pad in the shop is bought (the stop to the next shop doesn't count).
+        private bool EverythingUnlocked()
+        {
+            if (saveManager == null || saveManager.Pads == null || saveManager.Pads.Count == 0) return false;
+            foreach (BubbleTea.Building.UnlockPad pad in saveManager.Pads)
+            {
+                if (pad == null || pad.IsUnlocked) continue;
+                GameObject prefab = pad.Definition != null ? pad.Definition.Prefab : null;
+                if (prefab != null && prefab.GetComponentInChildren<BubbleTea.Travel.ShopTravel>(true) != null) continue;
+                return false;
+            }
+            return true;
         }
 
         // ---------------------------------------------------------------- the column of buttons
@@ -97,24 +117,29 @@ namespace BubbleTea.Extras
             UiKit.Fill(column);
             column.gameObject.AddComponent<BubbleTea.UI.SafeArea>();
 
-            // Pearls, under the STATS button.
+            // Pearls, at the top center just right of the money (same look as the money counter).
             RectTransform counter = UiKit.Box(column, "Pearls", new Color(0.15f, 0.15f, 0.2f, 0.75f));
-            Place(counter, 3);
+            UiKit.Pin(counter, new Vector2(0.5f, 1f), new Vector2(0f, -Margin), new Vector2(240f, 120f));
+            counter.pivot = new Vector2(0f, 1f);
+            counter.anchoredPosition = new Vector2(330f * 0.5f * Scale + 10f, -Margin);
+            counter.localScale = Vector3.one * Scale;
             counter.GetComponent<Image>().raycastTarget = false;
             RectTransform pearl = UiKit.PearlIcon(counter, 70f);
             UiKit.Pin(pearl, new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(70f, 70f));
-            pearlLabel = UiKit.Label(counter, Profile.Pearls.ToString("N0"), 50, new Color(1f, 0.92f, 0.7f), TextAnchor.MiddleRight);
+            pearlLabel = UiKit.Label(counter, Profile.Pearls.ToString("N0"), 58, new Color(1f, 0.92f, 0.7f), TextAnchor.MiddleCenter);
             pearlLabel.rectTransform.anchorMin = Vector2.zero;
             pearlLabel.rectTransform.anchorMax = Vector2.one;
-            pearlLabel.rectTransform.offsetMin = new Vector2(90f, 0f);
+            pearlLabel.rectTransform.offsetMin = new Vector2(84f, 0f);
             pearlLabel.rectTransform.offsetMax = new Vector2(-18f, 0f);
 
-            Place((RectTransform)UiKit.Button(column, "SHOP", new Color(0.95f, 0.66f, 0.3f, 0.92f), Vector2.zero, () => Open(DecorShop), 50).transform, 4);
-            Place((RectTransform)UiKit.Button(column, "TEAM", new Color(0.62f, 0.45f, 0.88f, 0.92f), Vector2.zero, () => Open(Team), 50).transform, 5);
-            Place((RectTransform)UiKit.Button(column, "PETS", new Color(0.4f, 0.75f, 0.7f, 0.92f), Vector2.zero, () => Open(Pets), 50).transform, 6);
+            Place((RectTransform)UiKit.Button(column, "SHOP", new Color(0.95f, 0.66f, 0.3f, 0.92f), Vector2.zero, () => Open(DecorShop), 50).transform, 3);
+            Place((RectTransform)UiKit.Button(column, "TEAM", new Color(0.62f, 0.45f, 0.88f, 0.92f), Vector2.zero, () => Open(Team), 50).transform, 4);
+            Place((RectTransform)UiKit.Button(column, "PETS", new Color(0.4f, 0.75f, 0.7f, 0.92f), Vector2.zero, () => Open(Pets), 50).transform, 5);
             Button play = UiKit.Button(column, "PLAY", new Color(0.35f, 0.7f, 0.95f, 0.92f), Vector2.zero, () => Open(Play), 50);
             playLabel = UiKit.TextOf(play);
-            Place((RectTransform)play.transform, 7);
+            playButton = play.gameObject;
+            Place((RectTransform)play.transform, 6);
+            playButton.SetActive(false); // shows up once the whole shop is built
         }
 
         // Top-right, in the same column as the MENU, GOALS and STATS buttons.
@@ -312,14 +337,12 @@ namespace BubbleTea.Extras
             }
         }
 
-        // ---------------------------------------------------------------- PETS: pets and outfits
+        // ---------------------------------------------------------------- PETS
 
         private void Pets(RectTransform body, Text title)
         {
             title.text = "PETS";
-            Tabs(body, new[] { "PETS", "OUTFITS" });
-            float top = 110f;
-            if (tab == 0)
+            float top = 0f;
             {
                 foreach (PetCompanion.Pet pet in PetCompanion.Pets)
                 {
@@ -358,43 +381,6 @@ namespace BubbleTea.Extras
                     32, new Color(0.8f, 0.8f, 0.88f));
                 UiKit.Pin(hint.rectTransform, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(900f, 220f));
             }
-            else
-            {
-                foreach (PetCompanion.Outfit outfit in PetCompanion.Outfits)
-                {
-                    RectTransform row = Row(body, top, 150f);
-                    top += 165f;
-                    RowText(row, outfit.Name, 40, 0f, 0.68f, Color.white);
-                    if (!Profile.OwnsOutfit(outfit.Id))
-                    {
-                        PriceButton(row, outfit.Price, () =>
-                        {
-                            if (!Profile.TrySpend(outfit.Price)) return;
-                            Profile.AddOutfit(outfit.Id);
-                            Profile.SetOutfit(outfit.Id);
-                            PetCompanion.Refresh();
-                        });
-                    }
-                    else if (Profile.ActiveOutfit == outfit.Id)
-                    {
-                        RowButton(row, "TAKE OFF", UiKit.Gray, () =>
-                        {
-                            Profile.SetOutfit("");
-                            PetCompanion.Refresh();
-                        });
-                    }
-                    else
-                    {
-                        RowButton(row, "WEAR", UiKit.Pink, () =>
-                        {
-                            Profile.SetOutfit(outfit.Id);
-                            PetCompanion.Refresh();
-                        });
-                    }
-                }
-                Text hint = UiKit.Label(body, "Outfits fit every pet.", 32, new Color(0.8f, 0.8f, 0.88f));
-                UiKit.Pin(hint.rectTransform, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(900f, 110f));
-            }
         }
 
         // ---------------------------------------------------------------- PLAY: mini-games
@@ -403,11 +389,9 @@ namespace BubbleTea.Extras
         {
             title.text = "MINI-GAMES";
             int wait = MiniGames.SecondsUntilReady;
-            int prize = Prize(1f);
-
             Text intro = UiKit.Label(body, wait > 0
                     ? $"Your next game is ready in {wait / 60}:{wait % 60:00}."
-                    : $"Play a quick game for up to ${prize:N0}.\nA great score also earns pearls!",
+                    : $"Play a quick game for up to {PearlPrize(1f)} pearls!",
                 40, Color.white);
             UiKit.Pin(intro.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -20f), new Vector2(900f, 200f));
             if (wait > 0) return;
@@ -438,29 +422,22 @@ namespace BubbleTea.Extras
         private void ShowResult(RectTransform body, float score)
         {
             for (int i = body.childCount - 1; i >= 0; i--) Destroy(body.GetChild(i).gameObject);
-            int money = Prize(score);
-            int pearls = score >= 0.9f ? 2 : score >= 0.6f ? 1 : 0;
+            int pearls = PearlPrize(score);
             string verdict = score >= 0.9f ? "AMAZING!" : score >= 0.6f ? "GREAT JOB!" : score >= 0.3f ? "NOT BAD!" : "NICE TRY!";
 
-            Text result = UiKit.Label(body, $"{verdict}\n\nScore {Mathf.RoundToInt(score * 100f)}%\n\n+${money:N0}" +
-                (pearls > 0 ? $"\n+{pearls} pearl{(pearls == 1 ? "" : "s")}" : ""), 56, Color.white);
-            UiKit.Pin(result.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(900f, 700f));
+            Text result = UiKit.Label(body, $"{verdict}\n\nScore {Mathf.RoundToInt(score * 100f)}%\n\n+{pearls} pearl{(pearls == 1 ? "" : "s")}", 56, Color.white);
+            UiKit.Pin(result.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(860f, 700f));
             Button collect = UiKit.Button(body, "COLLECT", UiKit.Green, new Vector2(460f, 140f), () =>
             {
-                if (wallet != null) wallet.Add(money);
                 Core.GameEvents.RaiseBonusCollected();
-                if (pearls > 0) Profile.AddPearls(pearls, "Mini-game bonus!");
+                Profile.AddPearls(pearls, "Mini-game prize!");
                 Close();
             }, 56);
-            UiKit.Pin((RectTransform)collect.transform, new Vector2(0.5f, 0f), new Vector2(0f, 60f), new Vector2(460f, 140f));
+            UiKit.Pin((RectTransform)collect.transform, new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(460f, 140f));
         }
 
-        // Money for a score: about two minutes of the shop's earnings for a perfect game.
-        private int Prize(float score)
-        {
-            float rate = earnings != null ? earnings.RatePerMinute : 0f;
-            return Mathf.RoundToInt(Mathf.Max(50f, rate * 2f) * Mathf.Clamp01(score));
-        }
+        // Pearls for a score: 1 for playing, up to 5 for a near-perfect game.
+        private static int PearlPrize(float score) => score >= 0.9f ? 5 : score >= 0.6f ? 3 : score >= 0.3f ? 2 : 1;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay() => instance = null;
