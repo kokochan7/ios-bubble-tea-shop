@@ -217,6 +217,23 @@ namespace BubbleTea.EditorTools
         [MenuItem("Bubble Tea/Build Second Shop Scene")]
         public static void BuildSecondShop() => BuildShop(SecondShop);
 
+        /// <summary>
+        /// Rebuilds every shop in one go (asks once). Later shops come first so the Boba Shop is
+        /// the scene left open. A new level only needs adding to <see cref="AllShops"/>.
+        /// </summary>
+        [MenuItem("Bubble Tea/Build All Shops", priority = 0)]
+        public static void BuildAllShops()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            if (!EditorUtility.DisplayDialog("Rebuild all shops?",
+                    "This rebuilds every shop scene, replacing any changes you made to them by hand.", "Rebuild All", "Cancel"))
+                return;
+            foreach (ShopPlan plan in AllShops) BuildShop(plan, ask: false);
+        }
+
+        // Every shop, built in this order by Build All Shops.
+        private static ShopPlan[] AllShops => new[] { SecondShop, FirstShop };
+
         /// <summary>Builds the title screen the game opens on (BubbleTea House): Play and Settings.</summary>
         [MenuItem("Bubble Tea/Build Main Menu Scene")]
         public static void BuildMainMenu()
@@ -424,11 +441,11 @@ namespace BubbleTea.EditorTools
             return rect;
         }
 
-        private static void BuildShop(ShopPlan plan)
+        private static void BuildShop(ShopPlan plan, bool ask = true)
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            if (ask && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
-            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(plan.ScenePath) != null &&
+            if (ask && AssetDatabase.LoadAssetAtPath<SceneAsset>(plan.ScenePath) != null &&
                 !EditorUtility.DisplayDialog("Rebuild shop scene?",
                     $"{plan.ScenePath} already exists. Rebuilding replaces it (and any changes you made to it).",
                     "Rebuild", "Cancel"))
