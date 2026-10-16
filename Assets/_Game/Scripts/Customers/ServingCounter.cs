@@ -231,6 +231,7 @@ namespace BubbleTea.Customers
             int price = PriceOf(order);
             if (UnityEngine.Random.value < BubbleTea.Extras.TeamSkills.DoubleSaleChance) price *= 2; // Lucky Register perk
             BubbleTea.Extras.TeamSkills.AddXp(BubbleTea.Extras.TeamSkills.Role.Cashier, 1);
+            BubbleTea.Extras.TeamSkills.AddXp(BubbleTea.Extras.TeamSkills.Role.Barista, 2); // every drink sold was made by the team
             int tip = Mathf.RoundToInt(price * Mathf.Max(0f, tipShare));
             if (cashPile != null) cashPile.AddValue(price + tip);
             GameEvents.RaiseDrinkSold(transform.position, price + tip);

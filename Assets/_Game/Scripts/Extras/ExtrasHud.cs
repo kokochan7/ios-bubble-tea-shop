@@ -294,46 +294,74 @@ namespace BubbleTea.Extras
             var role = (TeamSkills.Role)tab;
             int level = TeamSkills.Level(role);
             int points = TeamSkills.PointsLeft(role);
+            Color soft = new(0.8f, 0.8f, 0.88f);
 
-            RectTransform header = Row(body, 100f, 190f);
+            RectTransform header = Row(body, 95f, 120f);
             header.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
-            RowText(header, $"{TeamSkills.Title(role)} team   Level {level}", 46, 0f, 1f, Color.white, 0f, 125f);
+            RowText(header, $"{TeamSkills.Title(role)} team   Level {level}", 42, 0f, 0.6f, Color.white, 0f, 62f);
+            string pointText = TeamSkills.Workers(role) == 0
+                ? $"Hire a {TeamSkills.Title(role).ToLowerInvariant()} first"
+                : points > 0 ? $"{points} point{(points == 1 ? "" : "s")} to spend!" : "";
+            Text pointLabel = RowText(header, pointText, 32, 0.55f, 1f, points > 0 ? new Color(1f, 0.85f, 0.4f) : soft, 0f, 62f);
+            pointLabel.alignment = TextAnchor.MiddleRight;
             string progress = level >= TeamSkills.MaxLevel
                 ? "Max level!"
                 : $"{TeamSkills.XpIntoLevel(role)} / {TeamSkills.XpForNext(level)} XP to level {level + 1}";
-            RowText(header, progress, 34, 0f, 1f, new Color(0.8f, 0.8f, 0.88f), 65f, 65f);
-            string pointText = TeamSkills.Workers(role) == 0
-                ? $"Hire a {TeamSkills.Title(role).ToLowerInvariant()} to start earning XP."
-                : points > 0 ? $"{points} skill point{(points == 1 ? "" : "s")} to spend!" : "Keep working to earn skill points.";
-            RowText(header, pointText, 34, 0f, 1f, points > 0 ? new Color(1f, 0.85f, 0.4f) : new Color(0.8f, 0.8f, 0.88f), 125f, 0f);
+            RowText(header, progress, 30, 0f, 1f, soft, 58f, 20f);
 
             // XP bar.
             RectTransform barBack = UiKit.Box(body, "XP Bar", new Color(0.3f, 0.3f, 0.38f));
             barBack.anchorMin = new Vector2(0f, 1f);
             barBack.anchorMax = new Vector2(1f, 1f);
             barBack.pivot = new Vector2(0.5f, 1f);
-            barBack.offsetMin = new Vector2(24f, -320f);
-            barBack.offsetMax = new Vector2(-24f, -296f);
+            barBack.offsetMin = new Vector2(24f, -216f);
+            barBack.offsetMax = new Vector2(-24f, -196f);
             float fill = level >= TeamSkills.MaxLevel ? 1f : TeamSkills.XpIntoLevel(role) / (float)TeamSkills.XpForNext(level);
             RectTransform barFill = UiKit.Box(barBack, "Fill", UiKit.Purple);
             barFill.anchorMin = Vector2.zero;
             barFill.anchorMax = new Vector2(Mathf.Clamp01(fill), 1f);
             barFill.offsetMin = barFill.offsetMax = Vector2.zero;
 
-            float top = 350f;
+            float top = 232f;
             for (int p = 0; p < 3; p++)
             {
                 int perk = p;
                 TeamSkills.Perk info = TeamSkills.Perks[tab][p];
                 int rank = TeamSkills.Rank(role, p);
-                RectTransform row = Row(body, top, 230f);
-                top += 250f;
-                string pips = new string('●', rank) + new string('○', TeamSkills.MaxRank - rank);
-                RowText(row, $"{info.Name}   {pips}", 40, 0f, 0.68f, Color.white, 20f, 120f);
-                RowText(row, info.Description + (rank > 0 ? $"\n(rank {rank} of {TeamSkills.MaxRank})" : ""), 32, 0f, 0.68f,
-                    new Color(0.8f, 0.8f, 0.88f), 100f, 10f);
+                RectTransform row = Row(body, top, 160f);
+                top += 170f;
+                string pips = new string('\u25CF', rank) + new string('\u25CB', TeamSkills.MaxRank - rank);
+                RowText(row, $"{info.Name}   {pips}", 38, 0f, 0.68f, Color.white, 10f, 90f);
+                RowText(row, info.Description, 28, 0f, 0.68f, soft, 70f, 8f);
                 if (rank >= TeamSkills.MaxRank) RowButton(row, "MAXED", UiKit.Gray, () => { }, false);
                 else RowButton(row, "LEARN", UiKit.Purple, () => TeamSkills.Learn(role, perk), points > 0);
+            }
+
+            // The baristas' tab also has the shop's upgrades (they used to be on the upgrade desk), paid in cash.
+            Upgrades.UpgradeManager upgrades = Upgrades.UpgradeManager.Instance;
+            if (role != TeamSkills.Role.Barista || upgrades == null || upgrades.All.Count == 0) return;
+            Text heading = UiKit.Label(body, "KITCHEN UPGRADES (cash)", 34, new Color(1f, 0.85f, 0.4f), TextAnchor.MiddleLeft);
+            heading.rectTransform.anchorMin = new Vector2(0f, 1f);
+            heading.rectTransform.anchorMax = new Vector2(1f, 1f);
+            heading.rectTransform.pivot = new Vector2(0.5f, 1f);
+            heading.rectTransform.offsetMin = new Vector2(24f, -top - 50f);
+            heading.rectTransform.offsetMax = new Vector2(0f, -top);
+            top += 55f;
+            int money = upgrades.Wallet != null ? upgrades.Wallet.Money : 0;
+            foreach (Upgrades.UpgradeDefinition upgrade in upgrades.All)
+            {
+                if (upgrade == null) continue;
+                Upgrades.UpgradeDefinition item = upgrade;
+                RectTransform row = Row(body, top, 95f);
+                top += 102f;
+                RowText(row, $"{item.DisplayName}   Lv {upgrades.LevelOf(item)}/{item.MaxLevel}", 34, 0f, 0.68f, Color.white);
+                int cost = upgrades.NextCost(item);
+                if (cost < 0) RowButton(row, "MAX", UiKit.Gray, () => { }, false);
+                else RowButton(row, "$" + cost.ToString("N0"), UiKit.Green, () =>
+                {
+                    upgrades.TryBuy(item);
+                    Redraw();
+                }, money >= cost);
             }
         }
 

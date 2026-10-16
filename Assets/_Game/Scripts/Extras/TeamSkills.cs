@@ -72,7 +72,7 @@ namespace BubbleTea.Extras
         public static int Xp(Role role) => teams[(int)role].Xp;
 
         /// <summary>Experience needed to go from this level to the next.</summary>
-        public static int XpForNext(int level) => 20 + 15 * level;
+        public static int XpForNext(int level) => 10 + 10 * level;
 
         public static int Level(Role role)
         {

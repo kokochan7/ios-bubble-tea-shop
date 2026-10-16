@@ -467,6 +467,11 @@ namespace BubbleTea.EditorTools
             expansionFloorMat.color = plan.ExpansionFloorColor;
             Material playerMat = GetOrCreateMaterial("Player", new Color(0.36f, 0.62f, 0.95f));
             Material cashMat = GetOrCreateMaterial("Cash", new Color(0.35f, 0.78f, 0.38f));
+            // A printed banknote face (set every build so older green-block materials update too).
+            cashMat.mainTexture = BanknoteTexture();
+            cashMat.color = Color.white;
+            if (cashMat.HasProperty("_Smoothness")) cashMat.SetFloat("_Smoothness", 0.15f);
+            EditorUtility.SetDirty(cashMat);
             Material padMat = GetOrCreateMaterial("CashSpot", new Color(0.80f, 0.73f, 0.62f));
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -541,7 +546,7 @@ namespace BubbleTea.EditorTools
                 new Vector3(Layout.LaneX, 0f, street - 4f), new Vector3(Layout.LaneX, 0f, Layout.HalfDepth + 9f),
                 secondsBetween: 6f, max: 3);
             UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
-            CreateUpgradePanel(hud, upgrades, content.Upgrades);
+            // The upgrades are bought from the TEAM menu (BubbleTea.Extras.ExtrasHud), not a desk.
             OfflineEarnings offlineEarnings = null; // no reward for time away from the game
             new GameObject("ShopRecords").AddComponent<ShopRecords>(); // lifetime totals for goals and stats
             new GameObject("Payroll").AddComponent<Payroll>(); // pays the hired workers every shop hour
@@ -832,6 +837,99 @@ namespace BubbleTea.EditorTools
             return padFillSprite;
         }
 
+        // A dollar-bill face: pale mint paper, a dark green frame with a thin inner line, a cream
+        // oval portrait in the middle with a green ring, and a "1" badge in each corner.
+        private static Texture2D BanknoteTexture()
+        {
+            const string folder = "Assets/_Game/Art/Generated";
+            const int width = 512;
+            const int height = 280;
+            if (!AssetDatabase.IsValidFolder(folder))
+            {
+                System.IO.Directory.CreateDirectory(folder);
+                AssetDatabase.Refresh();
+            }
+
+            Color paper = new Color(0.78f, 0.90f, 0.72f);
+            Color paperDark = new Color(0.66f, 0.82f, 0.60f);
+            Color ink = new Color(0.12f, 0.42f, 0.22f);
+            Color cream = new Color(0.95f, 0.96f, 0.86f);
+            Color portrait = new Color(0.36f, 0.60f, 0.40f);
+
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, true);
+            var pixels = new Color[width * height];
+            float cx = (width - 1) * 0.5f;
+            float cy = (height - 1) * 0.5f;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int edge = Mathf.Min(Mathf.Min(x, width - 1 - x), Mathf.Min(y, height - 1 - y));
+                    // Paper with faint diagonal guilloche lines.
+                    float wave = Mathf.Sin((x + y) * 0.35f) * Mathf.Sin((x - y) * 0.12f);
+                    Color c = Color.Lerp(paper, paperDark, Mathf.Clamp01(wave * 0.5f + 0.25f));
+
+                    if (edge < 18) c = ink;                        // outer frame
+                    else if (edge >= 26 && edge < 30) c = ink;     // thin inner line
+
+                    // Central oval: cream with an ink ring and a simple bust silhouette.
+                    float ox = (x - cx) / 78f;
+                    float oy = (y - cy) / 96f;
+                    float oval = Mathf.Sqrt(ox * ox + oy * oy);
+                    if (oval < 1.08f) c = ink;
+                    if (oval < 0.98f)
+                    {
+                        c = cream;
+                        float hx = (x - cx) / 30f;
+                        float hy = (y - (cy + 18f)) / 36f;
+                        bool head = hx * hx + hy * hy < 1f;
+                        float sx = (x - cx) / 62f;
+                        float sy = (y - (cy - 64f)) / 40f;
+                        bool shoulders = sx * sx + sy * sy < 1f;
+                        if (head || shoulders) c = portrait;
+                    }
+
+                    // Corner badges: a filled circle with a "1" bar in each corner.
+                    for (int corner = 0; corner < 4; corner++)
+                    {
+                        float bx = corner % 2 == 0 ? 72f : width - 73f;
+                        float by = corner < 2 ? 70f : height - 71f;
+                        float dx = x - bx;
+                        float dy = y - by;
+                        float d = Mathf.Sqrt(dx * dx + dy * dy);
+                        if (d < 30f) c = ink;
+                        if (d < 25f) c = cream;
+                        if (Mathf.Abs(dx) < 4f && Mathf.Abs(dy) < 15f) c = ink;               // the 1's stem
+                        if (dx > -11f && dx < 0f && dy > 7f && dy < 15f && dy - 7f > -dx * 0.7f) c = ink; // its flag
+                        if (Mathf.Abs(dx) < 10f && dy > -15f && dy < -11f) c = ink;           // its foot
+                    }
+
+                    pixels[y * width + x] = c;
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+
+            string path = $"{folder}/Banknote.png";
+            System.IO.File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            if (importer != null)
+            {
+                importer.textureType = TextureImporterType.Default;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.mipmapEnabled = true;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.filterMode = FilterMode.Trilinear;
+                importer.anisoLevel = 8;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
         // Draws a 512px anti-aliased circle into a PNG and imports it as a UI sprite. The ring is a
         // soft disc with a bright rim; the knob is a solid disc with a darker edge and a top highlight.
         private static Sprite JoystickSprite(string name, bool ring)
@@ -1120,15 +1218,14 @@ namespace BubbleTea.EditorTools
                 if (i == 0 && stockerPad != null) reveals.Add(stockerPad);
                 baristaPads[i] = CreatePad(content.Baristas[i], baristaSpots[i], billPrefab, wallet, padMat, reveals.ToArray());
             }
-            UnlockPad upgradePad = CreatePad(content.UpgradeDesk, Layout.UpgradeDesk, billPrefab, wallet, padMat);
+            // No upgrade desk any more: its upgrades are bought in the TEAM menu, beside the staff skills.
             UnlockPad brewerPad = CreatePad(content.TeaBrewer, Layout.TeaBrewer, billPrefab, wallet, padMat,
-                baristaPads[0], upgradePad);
+                baristaPads[0]);
             Turn(brewerPad, 180f);
             UnlockPad counterPad = CreatePad(content.Counter, Layout.Counter, billPrefab, wallet, padMat, brewerPad);
 
             // Only the first pad is visible at the start.
             brewerPad.gameObject.SetActive(false);
-            upgradePad.gameObject.SetActive(false);
             taroPad.gameObject.SetActive(false);
             fruitPad.gameObject.SetActive(false);
             expansionPad.gameObject.SetActive(false);
@@ -1141,7 +1238,7 @@ namespace BubbleTea.EditorTools
             for (int i = 0; i < baristaPads.Length; i++) baristaPads[i].gameObject.SetActive(false);
             var all = new System.Collections.Generic.List<UnlockPad>
             {
-                counterPad, brewerPad, upgradePad, taroPad, fruitPad,
+                counterPad, brewerPad, taroPad, fruitPad,
                 expansionPad, driveThruPad, seatingPad, cashierPad, cleanerPad, driveThruCashierPad,
             };
             all.AddRange(baristaPads);
