@@ -52,6 +52,8 @@ namespace BubbleTea.Saving
         [SerializeField, Tooltip("The floor money that stops after a set amount. Leave empty if the scene has none.")]
         private CashPileRefiller floorCash;
 
+        private const int StartingMoneyPaid = 500; // the old floor pile's total, now given at the start
+
         [SerializeField, Tooltip("Seconds between saves while money keeps changing.")]
         private float autosaveSeconds = 5f;
 
@@ -162,7 +164,7 @@ namespace BubbleTea.Saving
                 goalsDay = dailyGoals != null ? dailyGoals.Day : null,
                 ratingService = rating != null ? rating.Service : -1f,
                 ratingLost = rating != null ? rating.Lost : 0f,
-                floorCashGiven = floorCash != null ? floorCash.Given : 0,
+                floorCashGiven = floorCash != null ? floorCash.Given : StartingMoneyPaid,
                 prices = PriceBook.Snapshot(),
                 clockMinutes = GameClock.Instance != null ? GameClock.Instance.MinuteOfDay : -1f,
                 clockDay = GameClock.Instance != null ? GameClock.Instance.Day : 1,
@@ -335,6 +337,13 @@ namespace BubbleTea.Saving
             if (dailyGoals != null) dailyGoals.Restore(data.goalsDay, data.goals);
             if (rating != null && data.ratingService >= 0f) rating.Restore(data.ratingService, data.ratingLost);
             if (floorCash != null) floorCash.Restore(data.floorCashGiven);
+            // The floor money pile is gone (shops now just start with $500); a save from before
+            // that hadn't picked it all up gets the rest straight into the wallet, once.
+            else if (wallet != null && data.floorCashGiven < StartingMoneyPaid)
+            {
+                wallet.Add(StartingMoneyPaid - Mathf.Max(0, data.floorCashGiven));
+                MarkDirty();
+            }
             PriceBook.Restore(data.prices);
             if (GameClock.Instance != null && data.clockMinutes >= 0f) GameClock.Instance.Restore(data.clockMinutes, data.clockDay);
 

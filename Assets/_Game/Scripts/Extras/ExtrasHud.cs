@@ -48,6 +48,7 @@ namespace BubbleTea.Extras
         private void Awake()
         {
             instance = this;
+            gameObject.AddComponent<HudStyle>(); // the raised, modern look for the whole HUD
             canvas = UiKit.Canvas(transform, "Extras Canvas", 30);
             BuildColumn();
         }

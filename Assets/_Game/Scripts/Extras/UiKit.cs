@@ -24,7 +24,14 @@ namespace BubbleTea.Extras
         private static Font font;
 
         public static Font Font => font != null ? font : font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        public static Sprite Rounded => rounded != null ? rounded : rounded = MakeSprite(64, 24f, true);
+        public static Sprite Rounded => rounded != null ? rounded : rounded = Named(MakeSprite(64, 24f, true), RoundedName);
+        public const string RoundedName = "UiKitRounded"; // HudStyle swaps it for its bevelled look
+
+        private static Sprite Named(Sprite sprite, string name)
+        {
+            sprite.name = name;
+            return sprite;
+        }
         public static Sprite Circle => circle != null ? circle : circle = MakeSprite(128, 63f, false);
 
         /// <summary>A screen-wide canvas drawn above the HUD.</summary>

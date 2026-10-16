@@ -498,9 +498,8 @@ namespace BubbleTea.EditorTools
             SetReference(player.GetComponent<PlayerMovement>(), "joystick", joystick);
             SetReference(player.GetComponent<PlayerMovement>(), "cameraTransform", camera.transform);
 
-            CashPile[] piles = CreateCashPiles(billPrefab, padMat, plan.Number);
             CreateTrashCan(padMat);
-            CashPileRefiller floorCash = CreateRefiller(piles, plan.Number);
+            CashPileRefiller floorCash = null; // no floor money any more: every shop starts with StartingMoney
             ShopContentBuilder.Content content = ShopContentBuilder.Build(billPrefab, plan.Number);
             UnlockPad[] pads = CreateUnlockPads(content, billPrefab, wallet, eastWall, expansionArea);
             if (content.TravelBack != null)
@@ -738,6 +737,9 @@ namespace BubbleTea.EditorTools
 
             player.AddComponent<PlayerMovement>();
             wallet = player.AddComponent<Wallet>();
+            var walletSettings = new SerializedObject(wallet);
+            walletSettings.FindProperty("money").intValue = StartingMoney;
+            walletSettings.ApplyModifiedPropertiesWithoutUndo();
             var collector = player.AddComponent<CashCollector>();
             SetReference(collector, "wallet", wallet);
 
@@ -1076,76 +1078,6 @@ namespace BubbleTea.EditorTools
             go.AddComponent<InputSystemUIInputModule>();
         }
 
-        private static CashPile[] CreateCashPiles(CashBill billPrefab, Material padMaterial, int shopNumber)
-        {
-            Vector3[] spots = { Layout.FloorCash };
-            var piles = new CashPile[spots.Length];
-            for (int i = 0; i < piles.Length; i++)
-            {
-                var go = new GameObject($"CashPile {i + 1}");
-                go.transform.position = spots[i];
-
-                // A flat tile under the pile so you can see where cash lands.
-                GameObject spot = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                spot.name = "Spot";
-                Object.DestroyImmediate(spot.GetComponent<BoxCollider>());
-                spot.transform.SetParent(go.transform, false);
-                spot.transform.localPosition = new Vector3(0f, 0.005f, 0f);
-                spot.transform.localScale = new Vector3(1.4f, 0.01f, 1.2f);
-                spot.GetComponent<Renderer>().sharedMaterial = padMaterial;
-
-                piles[i] = go.AddComponent<CashPile>();
-                SetReference(piles[i], "billPrefab", billPrefab);
-                // Starts empty: the refiller drops the first bills right away and counts them
-                // toward its $500 limit.
-                var pileSettings = new SerializedObject(piles[i]);
-                pileSettings.FindProperty("startingBills").intValue = 0;
-                // Bigger bills, fewer ticks. The Matcha House floor pays $20 bills (5 per refill = $100).
-                pileSettings.FindProperty("valuePerBill").intValue = shopNumber > 1 ? 20 : 10;
-                pileSettings.ApplyModifiedPropertiesWithoutUndo();
-            }
-            return piles;
-        }
-
-        // Keeps the floor money topped up until it has handed out $500 in total.
-        private static CashPileRefiller CreateRefiller(CashPile[] piles, int shopNumber)
-        {
-            var go = new GameObject("FloorCash");
-            var refiller = go.AddComponent<CashPileRefiller>();
-
-            var serialized = new SerializedObject(refiller);
-            SerializedProperty list = serialized.FindProperty("piles");
-            list.arraySize = piles.Length;
-            for (int i = 0; i < piles.Length; i++)
-            {
-                list.GetArrayElementAtIndex(i).objectReferenceValue = piles[i];
-            }
-            // $30 a refill in the Boba Shop ($10 x 3), $100 in the Matcha House ($20 x 5).
-            serialized.FindProperty("billsPerRefill").intValue = shopNumber > 1 ? 5 : 3;
-
-            // "$30/$500" floating over the first pile: money lying there now / money still to collect.
-            if (piles.Length > 0)
-            {
-                var labelGo = new GameObject("Amount Left");
-                labelGo.transform.SetParent(piles[0].transform, false);
-                labelGo.transform.localPosition = new Vector3(0f, 1.3f, 0f);
-                labelGo.transform.rotation = Quaternion.Euler(55f, 0f, 0f); // faces the camera
-                var text = labelGo.AddComponent<TextMesh>();
-                Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                text.font = font;
-                labelGo.GetComponent<MeshRenderer>().sharedMaterial = font.material;
-                text.fontSize = 64;
-                text.characterSize = 0.05f;
-                text.fontStyle = FontStyle.Bold;
-                text.anchor = TextAnchor.MiddleCenter;
-                text.alignment = TextAlignment.Center;
-                text.color = new Color(0.25f, 0.6f, 0.25f);
-                serialized.FindProperty("label").objectReferenceValue = text;
-            }
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-            return refiller;
-        }
-
         // Pads in a chain, a few new things at a time like levels in an RPG:
         //   counter -> tea brewer -> first barista + upgrade desk + topping bar;
         //   topping bar -> taro station + seating area + cashier; seating area -> cleaner;
@@ -1156,7 +1088,7 @@ namespace BubbleTea.EditorTools
         //   - the dining room at the front: the door, the line at the counter, café tables;
         //   - the counter across the middle, with a glass wall either side and a staff door;
         //   - the kitchen behind it: the bars in a row facing the counter, the baristas' pads
-        //     along the back wall, the upgrade desk, the trash can and the starting cash;
+        //     along the back wall, the trash can;
         //   - Expand Shop adds more kitchen and dining space to the east, and a drive-thru
         //     window onto a car lane outside the east wall.
         private static UnlockPad[] CreateUnlockPads(ShopContentBuilder.Content content, CashBill billPrefab, Wallet wallet,
@@ -1588,6 +1520,7 @@ namespace BubbleTea.EditorTools
 
         // The shop clock (random customer traffic) and its display in the top-left corner.
         // Size and edge gap of the top-corner HUD widgets (clock, money, stars, MENU, GOALS).
+        private const int StartingMoney = 500; // every shop starts with this (Kenny), no floor money pile
         private const float HudScale = 0.82f; // bigger so money, time, stars and buttons are easy to read on a phone
         private const float HudMargin = 16f;
 

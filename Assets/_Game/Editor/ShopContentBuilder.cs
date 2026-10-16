@@ -533,7 +533,7 @@ namespace BubbleTea.EditorTools
 
         // A floating high-tech screen low on the customers' side of the counter, showing what the
         // customer at the front still wants: a dark glass screen with glowing cyan text in a metal
-        // bezel with a neon rim, a "NOW ORDERING" header, a sweeping scan line and a status light.
+        // bezel with a neon rim, a "NOW ORDERING" header and a status light.
         // Kept low so it doesn't hide the kitchen behind it.
         private static void AddOrderBoard(GameObject root, ServingCounter counter, float counterTop)
         {
@@ -546,8 +546,6 @@ namespace BubbleTea.EditorTools
                 ScreenMaterial("OrderScreenBezel", new Color(0.13f, 0.14f, 0.18f), Color.black));
             Transform rim = AddScreenPart(board, "NeonRim", new Vector3(0f, 0.42f, 0.13f), new Vector3(1.16f, 1.26f, 0.02f),
                 ScreenMaterial("OrderScreenRim", cyan, cyan * 1.4f));
-            Transform scan = AddScreenPart(board, "ScanLine", new Vector3(0f, 0.42f, 0.055f), new Vector3(1f, 0.018f, 0.005f),
-                ScreenMaterial("OrderScreenScan", cyan, cyan * 0.9f));
             Transform led = AddScreenPart(board, "StatusLight", new Vector3(0f, 0f, 0.08f), new Vector3(0.05f, 0.05f, 0.02f),
                 ScreenMaterial("OrderScreenLed", new Color(0.3f, 1f, 0.45f), new Color(0.3f, 1f, 0.45f) * 1.5f));
             Transform icons = AddAnchor(board, "Icons", Vector3.zero);
@@ -570,7 +568,6 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("header").objectReferenceValue = header;
             serialized.FindProperty("bezel").objectReferenceValue = bezel;
             serialized.FindProperty("rim").objectReferenceValue = rim;
-            serialized.FindProperty("scanLine").objectReferenceValue = scan;
             serialized.FindProperty("statusLight").objectReferenceValue = led;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }

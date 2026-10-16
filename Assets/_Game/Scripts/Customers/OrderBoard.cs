@@ -9,7 +9,7 @@ namespace BubbleTea.Customers
     /// A high-tech screen over the counter showing the drinks the customer at the front of the line
     /// still wants, with the order written above the pictures (like "1x Milk Tea, 3x Taro Boba").
     /// Each drink disappears as it's handed over, and the screen hides when nobody is waiting. The
-    /// bezel and neon rim stretch with the screen, a scan line sweeps down it and a light blinks.
+    /// bezel and neon rim stretch with the screen, and a light blinks.
     /// </summary>
     public class OrderBoard : MonoBehaviour
     {
@@ -36,9 +36,6 @@ namespace BubbleTea.Customers
 
         [SerializeField, Tooltip("The glowing outline behind the frame, stretched with it. Optional.")]
         private Transform rim;
-
-        [SerializeField, Tooltip("A thin glowing line that sweeps down the screen. Optional.")]
-        private Transform scanLine;
 
         [SerializeField, Tooltip("A small blinking light in the frame's corner. Optional.")]
         private Transform statusLight;
@@ -74,19 +71,9 @@ namespace BubbleTea.Customers
             if (count > 0) Animate();
         }
 
-        // The scan line sweeps top to bottom; the status light blinks.
+        // The status light blinks.
         private void Animate()
         {
-            if (backing == null) return;
-            float top = backing.localPosition.y + backing.localScale.y * 0.5f - 0.02f;
-            float bottom = backing.localPosition.y - backing.localScale.y * 0.5f + 0.02f;
-            if (scanLine != null)
-            {
-                float t = Mathf.Repeat(Time.time * 0.45f, 1f);
-                Vector3 position = scanLine.localPosition;
-                scanLine.localPosition = new Vector3(backing.localPosition.x, Mathf.Lerp(top, bottom, t), position.z);
-                scanLine.localScale = new Vector3(backing.localScale.x - 0.02f, scanLine.localScale.y, scanLine.localScale.z);
-            }
             if (statusLight != null) statusLight.gameObject.SetActive(Mathf.Repeat(Time.time, 1.2f) < 0.8f);
         }
 
