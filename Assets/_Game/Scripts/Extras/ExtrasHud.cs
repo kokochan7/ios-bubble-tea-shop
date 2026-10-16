@@ -92,8 +92,10 @@ namespace BubbleTea.Extras
 
         private void BuildColumn()
         {
+            // Inside the safe area, like the HUD, so the buttons line up with MENU, GOALS and STATS.
             column = UiKit.Group(canvas, "Extras Column");
             UiKit.Fill(column);
+            column.gameObject.AddComponent<BubbleTea.UI.SafeArea>();
 
             // Pearls, under the STATS button.
             RectTransform counter = UiKit.Box(column, "Pearls", new Color(0.15f, 0.15f, 0.2f, 0.75f));
@@ -128,7 +130,7 @@ namespace BubbleTea.Extras
         {
             Close();
             tab = 0;
-            popup = UiKit.Popup(canvas, "", new Vector2(1000f, 1500f), Close, out RectTransform body, out Text title).gameObject;
+            popup = UiKit.Popup(canvas, "", new Vector2(940f, 1560f), Close, out RectTransform body, out Text title).gameObject;
             refresh = () =>
             {
                 for (int i = body.childCount - 1; i >= 0; i--) Destroy(body.GetChild(i).gameObject);
@@ -226,7 +228,7 @@ namespace BubbleTea.Extras
                 if (item.Collection != collection) continue;
                 RectTransform row = Row(body, top, 150f);
                 top += 165f;
-                RowText(row, item.Name, 44, 0f, 0.68f, Color.white);
+                RowText(row, item.Name, 40, 0f, 0.68f, Color.white);
                 if (!Profile.OwnsDecor(item.Id))
                 {
                     PriceButton(row, item.Price, () =>
@@ -302,7 +304,7 @@ namespace BubbleTea.Extras
                 RectTransform row = Row(body, top, 230f);
                 top += 250f;
                 string pips = new string('●', rank) + new string('○', TeamSkills.MaxRank - rank);
-                RowText(row, $"{info.Name}   {pips}", 44, 0f, 0.68f, Color.white, 20f, 120f);
+                RowText(row, $"{info.Name}   {pips}", 40, 0f, 0.68f, Color.white, 20f, 120f);
                 RowText(row, info.Description + (rank > 0 ? $"\n(rank {rank} of {TeamSkills.MaxRank})" : ""), 32, 0f, 0.68f,
                     new Color(0.8f, 0.8f, 0.88f), 100f, 10f);
                 if (rank >= TeamSkills.MaxRank) RowButton(row, "MAXED", UiKit.Gray, () => { }, false);
@@ -323,7 +325,7 @@ namespace BubbleTea.Extras
                 {
                     RectTransform row = Row(body, top, 150f);
                     top += 165f;
-                    RowText(row, pet.Name, 42, 0f, 0.68f, Color.white);
+                    RowText(row, pet.Name, 40, 0f, 0.68f, Color.white);
                     if (!Profile.OwnsPet(pet.Id))
                     {
                         PriceButton(row, pet.Price, () =>
@@ -336,7 +338,7 @@ namespace BubbleTea.Extras
                     }
                     else if (Profile.ActivePet == pet.Id)
                     {
-                        RowButton(row, "WITH YOU", UiKit.Gray, () =>
+                        RowButton(row, "IN SHOP", UiKit.Gray, () =>
                         {
                             Profile.SetPet("");
                             PetCompanion.Refresh();
@@ -352,7 +354,7 @@ namespace BubbleTea.Extras
                     }
                 }
                 Text hint = UiKit.Label(body,
-                    "Your pet follows you, naps on empty chairs when you stand still, and sniffs out money (and sometimes pearls). Tap WITH YOU to send it home.",
+                    "Your pet roams the shop and says hello to customers: they wait longer, tip more, and sometimes tip your pet. It also naps on empty chairs and sniffs out money (and pearls). Tap IN SHOP to send it home.",
                     32, new Color(0.8f, 0.8f, 0.88f));
                 UiKit.Pin(hint.rectTransform, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(900f, 220f));
             }
@@ -362,7 +364,7 @@ namespace BubbleTea.Extras
                 {
                     RectTransform row = Row(body, top, 150f);
                     top += 165f;
-                    RowText(row, outfit.Name, 42, 0f, 0.68f, Color.white);
+                    RowText(row, outfit.Name, 40, 0f, 0.68f, Color.white);
                     if (!Profile.OwnsOutfit(outfit.Id))
                     {
                         PriceButton(row, outfit.Price, () =>

@@ -9,9 +9,10 @@ using UnityEngine;
 namespace BubbleTea.Extras
 {
     /// <summary>
-    /// The player's shop pet. It trots after the player, naps on an empty chair when they stand still
-    /// for a while (hopping off when a customer wants the seat), and every so often sniffs out some
-    /// money (or, now and then, a pearl). Pets and their outfits are bought with pearls.
+    /// The shop pet. It roams the shop on its own and goes to say hello to customers: each one it
+    /// visits gets back some patience and is happier (likelier to tip, and tips more), and some
+    /// give the pet a little tip. Now and then it naps on an empty chair (hopping off when a customer
+    /// wants the seat) or sniffs out some money, or a pearl. Pets and outfits are bought with pearls.
     /// </summary>
     public class PetCompanion : MonoBehaviour
     {
@@ -51,29 +52,40 @@ namespace BubbleTea.Extras
             new Outfit { Id = "crown", Name = "Golden Crown", Price = 10 },
         };
 
-        private enum State { Follow, Nap, Sniff }
+        private enum State { Roam, Visit, Nap, Sniff }
 
-        private const float NapAfter = 7f;              // seconds the player stands still before the pet naps
+        private const float PatienceBack = 0.25f;               // share of a customer's patience a visit gives back
+        private const float Joy = 0.25f;                        // extra happiness from a visit (likelier and bigger tips)
+        private const float TipChance = 0.35f;                  // chance a visited customer tips the pet
         private static readonly Vector2 SniffEvery = new(40f, 70f);
+        private static readonly Vector2 NapEvery = new(80f, 130f);
+        private static readonly Vector2 NapSeconds = new(10f, 16f);
+        private static readonly Color Pink = new(1f, 0.55f, 0.7f);
 
         private static PetCompanion current;
 
         private Transform body;
         private State state;
-        private float stillTimer;
-        private Vector3 lastPlayerSpot;
-        private float sniffTimer;
+        private Vector3 goal;            // where it's trotting to while roaming
+        private float pause;             // a little sit-and-look-around between walks
         private float stateTimer;
+        private float sniffTimer;
+        private float napTimer;
+        private float stuckTimer;
+        private Vector3 stuckCheck;
+        private Customer friend;         // the customer it's visiting
+        private bool greeted;
         private SeatingTable napTable;
         private int napSeat = -1;
         private FloatingText label;
         private Wallet wallet;
         private OfflineEarnings earnings;
+        private float labelTimer;
 
         public static Pet Find(string id) => Array.Find(Pets, p => p.Id == id);
         public static Outfit FindOutfit(string id) => Array.Find(Outfits, o => o.Id == id);
 
-        /// <summary>Puts the chosen pet (in its outfit) next to the player, replacing any pet already out.</summary>
+        /// <summary>Lets the chosen pet (in its outfit) loose in the shop, replacing any pet already out.</summary>
         public static void Refresh()
         {
             Vector3 spot = current != null ? current.transform.position : Vector3.zero;
@@ -103,7 +115,9 @@ namespace BubbleTea.Extras
 #endif
             label = FloatingText.Create(transform, Vector3.up * 1.1f, 0.035f);
             sniffTimer = UnityEngine.Random.Range(SniffEvery.x, SniffEvery.y);
-            if (PlayerMovement.Current != null) lastPlayerSpot = PlayerMovement.Current.position;
+            napTimer = UnityEngine.Random.Range(NapEvery.x, NapEvery.y);
+            pause = 1f;
+            goal = transform.position;
         }
 
         private void OnDestroy()
@@ -114,93 +128,205 @@ namespace BubbleTea.Extras
 
         private void Update()
         {
-            Transform player = PlayerMovement.Current;
-            if (player == null) return;
-
-            // Is the player standing still?
-            if ((player.position - lastPlayerSpot).sqrMagnitude > 0.0025f) stillTimer = 0f;
-            else stillTimer += Time.deltaTime;
-            Vector3 playerSpot = player.position;
+            if (labelTimer > 0f)
+            {
+                labelTimer -= Time.deltaTime;
+                if (labelTimer <= 0f && state != State.Nap) label.Hide();
+            }
 
             switch (state)
             {
-                case State.Follow: Follow(player); break;
-                case State.Nap: Nap(player); break;
+                case State.Roam: Roam(); break;
+                case State.Visit: Visit(); break;
+                case State.Nap: Nap(); break;
                 case State.Sniff: Sniff(); break;
             }
-            lastPlayerSpot = playerSpot;
         }
 
-        private void Follow(Transform player)
+        // ---------------------------------------------------------------- roaming
+
+        private void Roam()
         {
-            Vector3 behind = player.position - player.forward * 1.1f + player.right * 0.5f;
-            behind.y = 0f;
-            if ((behind - transform.position).sqrMagnitude > 144f) transform.position = behind; // fell far behind: catch up
-            bool moving = WalkTo(behind, 0.25f);
-            Hop(moving);
-            if (!moving) Face(player.position);
-
-            if (stillTimer > NapAfter) StartNap();
-
             sniffTimer -= Time.deltaTime;
-            if (sniffTimer <= 0f && !moving)
-            {
-                state = State.Sniff;
-                stateTimer = 1.4f;
-            }
-        }
+            napTimer -= Time.deltaTime;
 
-        private void StartNap()
-        {
-            state = State.Nap;
-            stateTimer = 0f;
-            if (!SeatingTable.TryFindNapSeat(transform.position, 7f, out napTable, out napSeat))
+            if (pause > 0f)
             {
-                napTable = null;
-                napSeat = -1;
-            }
-        }
-
-        private void Nap(Transform player)
-        {
-            bool playerLeft = stillTimer < 0.01f && (player.position - transform.position).sqrMagnitude > 9f;
-            bool seatTaken = napTable != null && !napTable.SeatFree(napSeat);
-            if (playerLeft || seatTaken || (napTable == null && napSeat >= 0))
-            {
-                WakeUp();
+                pause -= Time.deltaTime;
+                Hop(false);
+                if (pause > 0f) return;
+                PickNext();
                 return;
             }
 
-            if (napTable != null)
+            bool moving = WalkTo(goal, 0.3f, 2.4f);
+            Hop(moving);
+            if (!moving || Stuck())
             {
-                Transform seat = napTable.Seat(napSeat);
-                if (stateTimer <= 0f)
+                pause = UnityEngine.Random.Range(1f, 3f);
+                if (sniffTimer <= 0f)
                 {
-                    if (WalkTo(new Vector3(seat.position.x, 0f, seat.position.z), 0.15f))
-                    {
-                        Hop(true);
-                        return;
-                    }
-                    stateTimer = 0.01f; // arrived: hop up
+                    state = State.Sniff;
+                    stateTimer = 1.4f;
                 }
-                transform.SetPositionAndRotation(seat.position + Vector3.up * 0.45f, seat.rotation); // curled up on the chair
             }
+        }
+
+        // What next: say hello to a customer, take a nap, or trot somewhere in the shop.
+        private void PickNext()
+        {
+            if (napTimer <= 0f && SeatingTable.TryFindNapSeat(transform.position, 30f, out napTable, out napSeat))
+            {
+                state = State.Nap;
+                stateTimer = -1f; // walking to the chair
+                return;
+            }
+
+            Customer pick = PickCustomer();
+            if (pick != null && UnityEngine.Random.value < 0.65f)
+            {
+                friend = pick;
+                greeted = false;
+                stateTimer = 10f; // gives up if it can't reach them in time
+                state = State.Visit;
+                return;
+            }
+
+            goal = RandomSpot();
+            ResetStuck();
+        }
+
+        // The nearest customer the pet hasn't met yet.
+        private Customer PickCustomer()
+        {
+            Customer best = null;
+            float bestDistance = float.MaxValue;
+            foreach (Customer customer in Customer.Active)
+            {
+                if (customer == null || !customer.CanBePetted) continue;
+                float distance = (customer.transform.position - transform.position).sqrMagnitude;
+                if (distance < bestDistance)
+                {
+                    best = customer;
+                    bestDistance = distance;
+                }
+            }
+            return best;
+        }
+
+        // Somewhere in the shop: beside a bar, a chair or the counter, a little off to one side.
+        private Vector3 RandomSpot()
+        {
+            Vector3 spot = transform.position;
+            int pickFrom = UnityEngine.Random.Range(0, 3);
+            if (pickFrom == 0 && Cooking.Station.All.Count > 0)
+            {
+                Cooking.Station station = Cooking.Station.All[UnityEngine.Random.Range(0, Cooking.Station.All.Count)];
+                if (station != null) spot = station.ZoneCenter;
+            }
+            else if (pickFrom == 1 && SeatingTable.All.Count > 0)
+            {
+                SeatingTable table = SeatingTable.All[UnityEngine.Random.Range(0, SeatingTable.All.Count)];
+                if (table != null) spot = table.Seat(UnityEngine.Random.Range(0, 2)).position;
+            }
+            else if (PlayerMovement.Current != null)
+            {
+                spot = PlayerMovement.Current.position; // comes to see what you're up to
+            }
+            spot += new Vector3(UnityEngine.Random.Range(-1f, 1f), 0f, UnityEngine.Random.Range(-1f, 1f));
+            spot.y = 0f;
+            return spot;
+        }
+
+        // ---------------------------------------------------------------- visiting customers
+
+        private void Visit()
+        {
+            stateTimer -= Time.deltaTime;
+            if (friend == null || !friend.isActiveAndEnabled || stateTimer <= 0f || (!greeted && !friend.CanBePetted))
+            {
+                EndVisit();
+                return;
+            }
+
+            Vector3 toPet = transform.position - friend.transform.position;
+            toPet.y = 0f;
+            Vector3 beside = friend.transform.position + (toPet.sqrMagnitude > 0.01f ? toPet.normalized : Vector3.back) * 0.8f;
+            beside.y = 0f;
+            bool moving = WalkTo(beside, 0.25f, 3.5f);
+            Hop(moving);
+            if (moving && !greeted) return;
+
+            Face(friend.transform.position);
+            if (!greeted)
+            {
+                greeted = true;
+                stateTimer = 2.5f; // stays for a cuddle
+                friend.PetVisit(PatienceBack, Joy);
+                Say("\u2665", Pink, 2.5f); // a heart
+
+                if (UnityEngine.Random.value < TipChance)
+                {
+                    float rate = earnings != null ? earnings.RatePerMinute : 0f;
+                    int tip = Mathf.Clamp(Mathf.RoundToInt(rate / 20f), 2, 200);
+                    if (wallet != null) wallet.Add(tip);
+                    GameEvents.RaiseTipped(transform.position, tip);
+                    Say("\u2665 +$" + tip, Pink, 2.5f);
+                }
+            }
+            // A happy wiggle while they say hello.
+            body.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 14f) * 8f);
+        }
+
+        private void EndVisit()
+        {
+            friend = null;
+            body.localRotation = Quaternion.identity;
+            state = State.Roam;
+            pause = UnityEngine.Random.Range(0.5f, 1.5f);
+        }
+
+        // ---------------------------------------------------------------- napping
+
+        private void Nap()
+        {
+            if (napTable == null || !napTable.SeatFree(napSeat))
+            {
+                WakeUp(); // a customer wants the chair
+                return;
+            }
+
+            Transform seat = napTable.Seat(napSeat);
+            if (stateTimer < 0f)
+            {
+                bool moving = WalkTo(new Vector3(seat.position.x, 0f, seat.position.z), 0.2f, 2.4f);
+                Hop(moving);
+                if (moving && !Stuck()) return;
+                stateTimer = UnityEngine.Random.Range(NapSeconds.x, NapSeconds.y); // hops up and curls up
+            }
+
+            transform.SetPositionAndRotation(seat.position + Vector3.up * 0.45f, seat.rotation);
             Hop(false);
-            stateTimer += Time.deltaTime;
-            body.localScale = new Vector3(1.05f, 0.8f + Mathf.Sin(stateTimer * 2f) * 0.03f, 1.05f); // curled up, breathing
-            label.Show(Mathf.Repeat(stateTimer, 1.6f) < 0.8f ? "z" : "z Z", new Color(0.6f, 0.85f, 1f));
+            stateTimer -= Time.deltaTime;
+            body.localScale = new Vector3(1.05f, 0.8f + Mathf.Sin(Time.time * 2f) * 0.03f, 1.05f); // curled up, breathing
+            label.Show(Mathf.Repeat(Time.time, 1.6f) < 0.8f ? "z" : "z Z", new Color(0.6f, 0.85f, 1f));
+            if (stateTimer <= 0f) WakeUp();
         }
 
         private void WakeUp()
         {
-            if (napTable != null) transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
+            if (napTable != null && stateTimer >= 0f)
+                transform.position = new Vector3(transform.position.x, 0f, transform.position.z) + transform.forward * 0.5f;
             napTable = null;
             napSeat = -1;
             body.localScale = Vector3.one;
             label.Hide();
-            state = State.Follow;
-            stillTimer = 0f;
+            napTimer = UnityEngine.Random.Range(NapEvery.x, NapEvery.y);
+            state = State.Roam;
+            pause = 0.5f;
         }
+
+        // ---------------------------------------------------------------- finding money
 
         // Stops, sniffs the floor ("!"), then finds some money, or now and then a pearl.
         private void Sniff()
@@ -212,11 +338,11 @@ namespace BubbleTea.Extras
 
             body.localRotation = Quaternion.identity;
             sniffTimer = UnityEngine.Random.Range(SniffEvery.x, SniffEvery.y);
-            state = State.Follow;
+            state = State.Roam;
             if (UnityEngine.Random.value < 1f / 6f)
             {
                 Profile.AddPearls(1, "Your pet found a pearl!");
-                label.Show("+1 pearl", new Color(1f, 0.88f, 0.55f));
+                Say("+1 pearl", new Color(1f, 0.88f, 0.55f), 1.5f);
             }
             else
             {
@@ -224,27 +350,43 @@ namespace BubbleTea.Extras
                 int amount = Mathf.Clamp(Mathf.RoundToInt(rate / 6f), 5, 500);
                 if (wallet != null) wallet.Add(amount);
                 GameEvents.RaiseCashCollected(transform.position);
-                label.Show("+$" + amount, new Color(0.55f, 0.95f, 0.55f));
+                Say("+$" + amount, new Color(0.55f, 0.95f, 0.55f), 1.5f);
             }
-            Invoke(nameof(HideLabel), 1.5f);
         }
 
-        private void HideLabel()
+        // ---------------------------------------------------------------- moving
+
+        private void Say(string text, Color color, float seconds)
         {
-            if (state != State.Nap && label != null) label.Hide();
+            label.Show(text, color);
+            labelTimer = seconds;
         }
 
         // Steps towards a spot, steering around things like the staff do. False once it's there.
-        private bool WalkTo(Vector3 target, float closeEnough)
+        private bool WalkTo(Vector3 target, float closeEnough, float speed)
         {
             Vector3 offset = target - transform.position;
             offset.y = 0f;
-            float distance = offset.magnitude;
-            if (distance <= closeEnough) return false;
-            float speed = Mathf.Clamp(distance * 3f, 1.5f, 7.5f);
+            if (offset.magnitude <= closeEnough) return false;
             StaffSteering.Step(transform, target, speed * Time.deltaTime);
             Face(target);
             return true;
+        }
+
+        // True if it hasn't got anywhere for a few seconds (something's in the way): try somewhere else.
+        private bool Stuck()
+        {
+            stuckTimer += Time.deltaTime;
+            if (stuckTimer < 3f) return false;
+            bool stuck = (transform.position - stuckCheck).sqrMagnitude < 0.25f;
+            ResetStuck();
+            return stuck;
+        }
+
+        private void ResetStuck()
+        {
+            stuckTimer = 0f;
+            stuckCheck = transform.position;
         }
 
         private void Face(Vector3 target)

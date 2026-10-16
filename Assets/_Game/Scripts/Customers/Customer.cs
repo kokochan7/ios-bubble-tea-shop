@@ -145,6 +145,26 @@ namespace BubbleTea.Customers
         /// </summary>
         public bool OrderStarted { get; private set; }
 
+        /// <summary>True once the shop pet has said hello (each customer gets one visit).</summary>
+        public bool PetVisited { get; private set; }
+
+        /// <summary>True if the shop pet can go and say hello: on foot, inside the shop, and not on their way out.</summary>
+        public bool CanBePetted => !PetVisited && canSit && state != State.Leaving && (OrderStarted || state == State.Sitting);
+
+        private float petJoy; // extra happiness from the shop pet
+
+        /// <summary>
+        /// The shop pet says hello: they get back some of their patience (a share of it) and are
+        /// happier, so they're likelier to tip and tip more.
+        /// </summary>
+        public void PetVisit(float patienceBack, float joy)
+        {
+            PetVisited = true;
+            waited = Mathf.Max(0f, waited - patience * patienceBack);
+            petJoy = joy;
+            if (OrderStarted) ShowMood();
+        }
+
         /// <summary>The next drink this customer wants, or null once they have them all.</summary>
         public DrinkRecipe Order => orders.Count > 0 ? orders[0] : null;
 
@@ -163,6 +183,8 @@ namespace BubbleTea.Customers
             tolerance = UnityEngine.Random.Range(priceTolerance.x, priceTolerance.y);
             checkedPrice = false;
             tipShare = -1f;
+            PetVisited = false;
+            petJoy = 0f;
             OrderStarted = false;
             if (IsStarter()) counter.PickOrders(orders, maxCount: 1);
             else if (kind == Visit.Tourist) counter.PickOrders(orders, maxCount: touristMaxDrinks);
@@ -358,10 +380,10 @@ namespace BubbleTea.Customers
         private float TipShare()
         {
             if (tipShare >= 0f) return tipShare;
-            float mood = Mood;
+            float mood = Mathf.Clamp01(Mood + petJoy); // a visit from the shop pet cheers them up
             if (visit == Visit.Critic || visit == Visit.Vip)
                 tipShare = UnityEngine.Random.Range(Mathf.Lerp(tipRange.x, tipRange.y, 0.5f), tipRange.y);
-            else if (UnityEngine.Random.value < Mathf.Lerp(tipChance.x, tipChance.y, mood) + ShopDecor.Happiness)
+            else if (UnityEngine.Random.value < Mathf.Lerp(tipChance.x, tipChance.y, mood) + ShopDecor.Happiness + petJoy * 0.5f)
                 tipShare = UnityEngine.Random.Range(tipRange.x, Mathf.Lerp(tipRange.x, tipRange.y, Mathf.Max(mood, 0.2f)))
                     * (1f + ShopDecor.Happiness); // decor makes customers happier, so they tip a bit more
             else

@@ -123,23 +123,27 @@ namespace BubbleTea.Extras
             backdrop.GetComponent<Image>().sprite = null;
             Fill(backdrop);
 
+            // Laid out like the GOALS and STATS pop-ups: title on top, a gray Close button at the bottom,
+            // and shrunk to fit short screens.
             RectTransform panel = Box(backdrop, "Panel", PanelColor);
             Pin(panel, new Vector2(0.5f, 0.5f), Vector2.zero, size);
+            panel.pivot = new Vector2(0.5f, 0.5f);
+            panel.gameObject.AddComponent<BubbleTea.UI.FitToScreen>();
 
-            titleLabel = Label(panel, title, 56, Color.white);
-            Pin(titleLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -10f), new Vector2(size.x - 240f, 100f));
+            titleLabel = Label(panel, title, 60, Color.white);
+            Pin(titleLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -20f), new Vector2(size.x - 80f, 100f));
 
             if (onClose != null)
             {
-                Button close = Button(panel, "X", Red, new Vector2(90f, 80f), onClose, 46);
-                Pin((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(-20f, -15f), new Vector2(90f, 80f));
+                Button close = Button(panel, "Close", Gray, new Vector2(440f, 110f), onClose, 50);
+                Pin((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(0f, 30f), new Vector2(440f, 110f));
             }
 
             body = Group(panel, "Body");
             body.anchorMin = Vector2.zero;
             body.anchorMax = Vector2.one;
-            body.offsetMin = new Vector2(30f, 30f);
-            body.offsetMax = new Vector2(-30f, -120f);
+            body.offsetMin = new Vector2(40f, onClose != null ? 170f : 40f);
+            body.offsetMax = new Vector2(-40f, -140f);
             return backdrop;
         }
 
