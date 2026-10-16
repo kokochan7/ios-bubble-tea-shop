@@ -90,23 +90,29 @@ namespace BubbleTea.Customers
 
         private void Update() => zone.Tick(transform, Clean);
 
+        private static readonly List<(SeatingTable, int)> free = new();
+
         /// <summary>Finds a clean, empty seat anywhere in the shop and holds it for the customer.</summary>
         public static bool TryReserve(Customer customer, out SeatingTable table, out int seat)
         {
+            // Any free, clean seat, picked at random so the tables fill up in no set order.
+            free.Clear();
             foreach (SeatingTable candidate in active)
             {
                 for (int i = 0; i < candidate.seats.Length; i++)
                 {
-                    if (candidate.occupants[i] != null || candidate.IsMessy(i)) continue;
-                    candidate.occupants[i] = customer;
-                    table = candidate;
-                    seat = i;
-                    return true;
+                    if (candidate.occupants[i] == null && !candidate.IsMessy(i)) free.Add((candidate, i));
                 }
             }
-            table = null;
-            seat = -1;
-            return false;
+            if (free.Count == 0)
+            {
+                table = null;
+                seat = -1;
+                return false;
+            }
+            (table, seat) = free[UnityEngine.Random.Range(0, free.Count)];
+            table.occupants[seat] = customer;
+            return true;
         }
 
         public Transform Seat(int seat) => seats[seat];

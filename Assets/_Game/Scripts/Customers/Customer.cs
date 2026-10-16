@@ -59,7 +59,7 @@ namespace BubbleTea.Customers
         private bool canSit = true;
 
         [SerializeField, Range(0f, 1f), Tooltip("Chance a customer sits down if a clean seat is free.")]
-        private float sitChance = 0.6f;
+        private float sitChance = 0.85f;
 
         [SerializeField, Tooltip("Seconds a customer sits, picked between these two.")]
         private Vector2 sitSeconds = new(5f, 9f);

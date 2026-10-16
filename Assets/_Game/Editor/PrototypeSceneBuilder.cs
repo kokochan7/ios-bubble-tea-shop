@@ -123,12 +123,12 @@ namespace BubbleTea.EditorTools
             Baristas = new Vector3[] { new(3f, 0f, 2.75f), new(5.4f, 0f, 2.75f), new(7.8f, 0f, 2.2f) },
             StaffSofa = new(7.25f, 0f, 6.95f),  // against the back wall, east of the bars, clear of the drive-thru cash
             // Decor pads in the dining room: bamboo and lanterns down the west wall, the lucky cat
-            // against the glass wall left of the staff door, the koi pond in the front-east corner and
+            // against the glass wall right of the staff door (facing the camera), the koi pond in the front-east corner and
             // the cherry tree out toward the middle, clear of the queue and the cleaner's pad.
             // Order: bamboo plants, paper lanterns, lucky cat, koi pond, cherry blossom tree.
             Decor = new Vector3[]
             {
-                new(-8.3f, 0f, -6.8f), new(-8.3f, 0f, -0.8f), new(5.2f, 0f, -0.65f), new(7.8f, 0f, -6.6f), new(-6.2f, 0f, -2.4f),
+                new(-8.3f, 0f, -6.8f), new(-8.3f, 0f, -0.8f), new(8.8f, 0f, -0.55f), new(7.8f, 0f, -6.6f), new(-6.2f, 0f, -2.4f),
             },
             Windows = new[] { -6.2f, 6.2f },
             Lamps = new[] { -4.4f, 4.4f },
@@ -1086,6 +1086,7 @@ namespace BubbleTea.EditorTools
             {
                 UnlockPad decorPad = CreatePad(content.Decor[i], Layout.Decor[i], billPrefab, wallet, padMat);
                 ResizePad(decorPad, 1.3f);
+                if (i == 2) Turn(decorPad, 180f); // the lucky cat waves at the player, not at the wall
                 AddToReveal(previous, decorPad);
                 decorPad.gameObject.SetActive(false);
                 all.Add(decorPad);
