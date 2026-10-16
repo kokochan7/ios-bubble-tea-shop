@@ -80,6 +80,7 @@ namespace BubbleTea.Cooking
         private static float nextJamTime = float.PositiveInfinity;
         private static UnityEngine.SceneManagement.Scene jamScene;
         private float hintTimer;
+        private float jammedFor; // seconds jammed with a barista here (Jam Fixer perk)
 
         private int baristas;
 
@@ -169,6 +170,7 @@ namespace BubbleTea.Cooking
         private void Jam()
         {
             Jammed = true;
+            jammedFor = 0f;
             nextJamTime = float.PositiveInfinity; // the next one is planned once this is fixed
             GameEvents.RaiseStationJammed(transform.position, true);
         }
@@ -185,7 +187,13 @@ namespace BubbleTea.Cooking
                 hintTimer = 2f; // shows "WALK CLOSER!" for a moment
                 return;
             }
+            FixJam();
+        }
+
+        private void FixJam()
+        {
             Jammed = false;
+            jammedFor = 0f;
             PlanNextJam();
             GameEvents.RaiseStationJammed(transform.position, false);
         }
@@ -329,6 +337,11 @@ namespace BubbleTea.Cooking
 
         private void Update()
         {
+            if (Jammed && baristas > 0)
+            {
+                jammedFor += Time.deltaTime;
+                if (jammedFor >= BubbleTea.Extras.TeamSkills.JamFixSeconds) FixJam(); // a barista with Jam Fixer sorts it out
+            }
             Work();
             zone.Tick(transform, Handoff);
             UpdateLabels();
@@ -351,6 +364,7 @@ namespace BubbleTea.Cooking
             }
 
             float speed = Stats.Get(StatId.BrewSpeed, 1f) * (1f + baristaSpeedBonus * baristas);
+            if (UsesSupplies) speed *= BubbleTea.Extras.TeamSkills.StockedBarSpeed; // stockers' Fresh Stock perk
             if (NeedsHands) speed *= handWhiskSpeed; // the player whisks fast
             workTimer += Time.deltaTime * speed;
             if (workTimer < current.Seconds) return;
@@ -362,6 +376,7 @@ namespace BubbleTea.Cooking
             }
             current = null;
             workTimer = 0f;
+            if (baristas > 0) BubbleTea.Extras.TeamSkills.AddXp(BubbleTea.Extras.TeamSkills.Role.Barista, 1);
         }
 
         // Steps that use up an input come first, so dropped-off items get processed
@@ -422,7 +437,9 @@ namespace BubbleTea.Cooking
         {
             if (WantsCrate && carrier.WillGiveTo(this) && carrier.Stack.TryTake(i => i == supplyItem, out CarriedItem crate))
             {
-                supplies += suppliesPerCrate;
+                supplies = Mathf.Min(maxSupplies, supplies + suppliesPerCrate + BubbleTea.Extras.TeamSkills.ExtraCrateScoops);
+                if (carrier.GetComponent<BubbleTea.Staff.Stocker>() != null)
+                    BubbleTea.Extras.TeamSkills.AddXp(BubbleTea.Extras.TeamSkills.Role.Stocker, 3);
                 crate.MoveTo(transform, Vector3.up * 1.2f, 0.5f);
                 Destroy(crate.gameObject, 0.25f); // after its hop onto the bar
                 return true;

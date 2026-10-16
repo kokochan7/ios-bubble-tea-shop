@@ -33,6 +33,9 @@ namespace BubbleTea.Staff
         private float cooldown;
         private bool atSpot;
 
+        private void OnEnable() => BubbleTea.Extras.TeamSkills.CountWorker(BubbleTea.Extras.TeamSkills.Role.Cashier, 1);
+        private void OnDisable() => BubbleTea.Extras.TeamSkills.CountWorker(BubbleTea.Extras.TeamSkills.Role.Cashier, -1);
+
         private void Start()
         {
 #if UNITY_2023_1_OR_NEWER

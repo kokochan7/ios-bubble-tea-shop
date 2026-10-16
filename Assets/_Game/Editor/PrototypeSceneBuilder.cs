@@ -2063,7 +2063,7 @@ namespace BubbleTea.EditorTools
             title.text = "GM TOOLS";
 
             var green = new Color(0.35f, 0.78f, 0.38f);
-            Button money = CreateMenuButton("Money", panel, "+ $10,000", rounded, font, green, out _);
+            Button money = CreateMenuButton("Money", panel, "+ $10,000 & 50 pearls", rounded, font, green, out _);
             SetTopRow((RectTransform)money.transform, 160f, 120f, 60f, 60f);
             Button buildAll = CreateMenuButton("BuildAll", panel, "Build Everything", rounded, font, green, out _);
             SetTopRow((RectTransform)buildAll.transform, 310f, 120f, 60f, 60f);

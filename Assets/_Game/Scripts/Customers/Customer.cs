@@ -367,6 +367,7 @@ namespace BubbleTea.Customers
             else
                 tipShare = 0f;
             tipShare *= 1f + VipRegulars.TipBonus; // VIPs won over make every tip a little bigger
+            tipShare *= 1f + BubbleTea.Extras.TeamSkills.TipBonus; // the cashiers' Charm perk
             return tipShare;
         }
 

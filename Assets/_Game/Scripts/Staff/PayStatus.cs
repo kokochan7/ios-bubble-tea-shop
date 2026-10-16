@@ -50,7 +50,8 @@ namespace BubbleTea.Staff
         public static float SpeedOf(Component worker)
         {
             var status = worker.GetComponent<PayStatus>();
-            return status != null ? status.Speed : 1f;
+            float skill = BubbleTea.Extras.TeamSkills.SpeedFor(worker); // the team's speed perk
+            return (status != null ? status.Speed : 1f) * skill;
         }
 
         private void Start() => Show();

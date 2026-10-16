@@ -134,6 +134,7 @@ namespace BubbleTea.Customers
         private void OnGone(Regular r, Customer vip)
         {
             if (!vip.WasServed || vip.ServedMood < 0.5f) return;
+            BubbleTea.Extras.Profile.AddPearls(1, $"{r.name} loved the visit");
             bool wasFriend = r.fastVisits >= fastVisitsForPerk;
             r.fastVisits++;
             if (!wasFriend && r.fastVisits >= fastVisitsForPerk)

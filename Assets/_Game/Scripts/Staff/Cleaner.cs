@@ -28,6 +28,9 @@ namespace BubbleTea.Staff
         private Wallet wallet;
         private float cooldown;
 
+        private void OnEnable() => BubbleTea.Extras.TeamSkills.CountWorker(BubbleTea.Extras.TeamSkills.Role.Cleaner, 1);
+        private void OnDisable() => BubbleTea.Extras.TeamSkills.CountWorker(BubbleTea.Extras.TeamSkills.Role.Cleaner, -1);
+
         private void Start()
         {
 #if UNITY_2023_1_OR_NEWER
@@ -46,7 +49,7 @@ namespace BubbleTea.Staff
                 Vector3 front = messy.ZoneCenter + new Vector3(0f, 0f, -1f);
                 Vector3 back = messy.ZoneCenter + new Vector3(0f, 0f, 1f);
                 Vector3 cleanSpot = (front - transform.position).sqrMagnitude <= (back - transform.position).sqrMagnitude ? front : back;
-                if (WalkTo(cleanSpot)) messy.TryCleanOne();
+                if (WalkTo(cleanSpot) && messy.TryCleanOne()) BubbleTea.Extras.TeamSkills.AddXp(BubbleTea.Extras.TeamSkills.Role.Cleaner, 1);
                 return;
             }
 

@@ -48,6 +48,9 @@ namespace BubbleTea.Building
                 Make(built, id, tapToMove: true);
         }
 
+        /// <summary>Asks for a save (something was put out or put away).</summary>
+        public static void NotifyChanged() => Moved?.Invoke();
+
         /// <summary>Makes something movable, saved under this ID (unique in the shop).</summary>
         public static Movable Make(GameObject thing, string id, bool tapToMove)
         {

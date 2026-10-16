@@ -117,6 +117,30 @@ namespace BubbleTea.Customers
 
         public Transform Seat(int seat) => seats[seat];
 
+        /// <summary>True while nobody has this seat (a shop pet may nap on it until a customer comes).</summary>
+        public bool SeatFree(int seat) => seat >= 0 && seat < seats.Length && occupants[seat] == null;
+
+        /// <summary>The nearest empty seat within range, for a napping pet. False if there's none.</summary>
+        public static bool TryFindNapSeat(Vector3 near, float range, out SeatingTable table, out int seat)
+        {
+            table = null;
+            seat = -1;
+            float best = range * range;
+            foreach (SeatingTable candidate in active)
+            {
+                for (int i = 0; i < candidate.seats.Length; i++)
+                {
+                    if (candidate.occupants[i] != null || candidate.seats[i] == null) continue;
+                    float distance = (candidate.seats[i].position - near).sqrMagnitude;
+                    if (distance >= best) continue;
+                    best = distance;
+                    table = candidate;
+                    seat = i;
+                }
+            }
+            return table != null;
+        }
+
         /// <summary>The customer got up. Pays the bonus and leaves a mess if they actually sat down.</summary>
         public void Leave(int seat, bool sat)
         {
@@ -124,7 +148,7 @@ namespace BubbleTea.Customers
             occupants[seat] = null;
             if (!sat) return;
 
-            if (cashPile != null) cashPile.AddValue(bonusPerVisit);
+            if (cashPile != null) cashPile.AddValue(Mathf.RoundToInt(bonusPerVisit * (1f + BubbleTea.Extras.TeamSkills.TableCashBonus)));
             if (seat < messes.Length && messes[seat] != null) messes[seat].SetActive(true);
             GameEvents.RaiseMessChanged(MessCount);
         }
@@ -135,7 +159,7 @@ namespace BubbleTea.Customers
         public bool TryCleanOne()
         {
             if (Time.time < cleanTimer) return false;
-            cleanTimer = Time.time + 0.4f;
+            cleanTimer = Time.time + 0.4f / BubbleTea.Extras.TeamSkills.CleanSpeed;
             return Clean(null);
         }
 

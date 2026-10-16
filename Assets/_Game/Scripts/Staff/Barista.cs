@@ -89,7 +89,7 @@ namespace BubbleTea.Staff
         {
             carrier = GetComponent<ItemCarrier>();
             TakeNothing();
-            untilBreak = Random.Range(secondsBetweenBreaks.x, secondsBetweenBreaks.y);
+            untilBreak = Random.Range(secondsBetweenBreaks.x, secondsBetweenBreaks.y) * BubbleTea.Extras.TeamSkills.BreakSpacing;
         }
 
         private void Update()
@@ -116,8 +116,11 @@ namespace BubbleTea.Staff
             }
         }
 
+        private void OnEnable() => BubbleTea.Extras.TeamSkills.CountWorker(BubbleTea.Extras.TeamSkills.Role.Barista, 1);
+
         private void OnDisable()
         {
+            BubbleTea.Extras.TeamSkills.CountWorker(BubbleTea.Extras.TeamSkills.Role.Barista, -1);
             StopHelping();
             EndBreak();
         }
@@ -169,7 +172,7 @@ namespace BubbleTea.Staff
             StaffSofa.FreeSeat(breakSeat);
             breakSeat = null;
             sittingDown = false;
-            untilBreak = Random.Range(secondsBetweenBreaks.x, secondsBetweenBreaks.y);
+            untilBreak = Random.Range(secondsBetweenBreaks.x, secondsBetweenBreaks.y) * BubbleTea.Extras.TeamSkills.BreakSpacing;
         }
 
         // ---------- Helping at a station ----------

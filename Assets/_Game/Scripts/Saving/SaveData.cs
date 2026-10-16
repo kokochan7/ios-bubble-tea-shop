@@ -12,7 +12,7 @@ namespace BubbleTea.Saving
     public class SaveData
     {
         /// <summary>Bumped when the layout changes, so old saves can be upgraded instead of lost.</summary>
-        public int version = 12;
+        public int version = 13;
 
         public int money;
         public List<PadSave> pads = new();
@@ -58,6 +58,12 @@ namespace BubbleTea.Saving
 
         /// <summary>Added in version 12: bars, decor and tables the player moved, by their pad's save ID.</summary>
         public List<PlacementSave> placements = new();
+
+        /// <summary>Added in version 13: each staff team's experience and perks.</summary>
+        public List<BubbleTea.Extras.TeamSkills.TeamSave> team = new();
+
+        /// <summary>Added in version 13: collectible decor put out in this shop (where it stands is in placements).</summary>
+        public List<string> cosmetics = new();
     }
 
     /// <summary>Where the player moved one thing to, and which way it faces.</summary>

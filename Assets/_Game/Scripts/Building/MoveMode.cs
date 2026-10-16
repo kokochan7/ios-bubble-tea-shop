@@ -35,6 +35,8 @@ namespace BubbleTea.Building
         private Bounds footprint;        // the target's box when the move started
         private Vector3 footprintPivot;
         private float hintTimer;
+        private bool mustFit;
+        private System.Action<bool> ended;
 
         private VirtualJoystick joystick;
         private RectTransform moveButton;
@@ -42,13 +44,18 @@ namespace BubbleTea.Building
         private Text hint;
 
         /// <summary>Starts moving something straight away (the upgrade desk's menu button does this).</summary>
-        public static void Begin(Movable thing)
+        /// <param name="mustFit">DONE only works where it fits (for something new being put out).</param>
+        /// <param name="ended">Called when the move ends: true for DONE, false for CANCEL.</param>
+        public static void Begin(Movable thing, bool mustFit = false, System.Action<bool> ended = null)
         {
             if (thing == null) return;
             Ensure();
             if (instance.target != null) return;
             instance.picked = thing;
             instance.BeginMove();
+            if (instance.target != thing) return;
+            instance.mustFit = mustFit;
+            instance.ended = ended;
         }
 
         /// <summary>Makes sure the open shop has one (movable things call this when they appear).</summary>
@@ -239,23 +246,34 @@ namespace BubbleTea.Building
         {
             if (target == null) return;
             Vector3 position = target.transform.position;
+            bool moved = (position - startPosition).sqrMagnitude > 0.0001f || target.transform.rotation != startRotation;
+            if ((mustFit || moved) && !Fits(position, target.transform.rotation))
+            {
+                hint.text = "No room here. Slide it somewhere free";
+                hintTimer = 1.5f;
+                return;
+            }
             target.Place(position, target.transform.eulerAngles.y, byPlayer: true);
-            End();
+            End(true);
         }
 
         private void Cancel()
         {
             if (target == null) return;
             target.transform.SetPositionAndRotation(startPosition, startRotation);
-            End();
+            End(false);
         }
 
-        private void End()
+        private void End(bool kept = false)
         {
             target = null;
+            System.Action<bool> callback = ended;
+            ended = null;
+            mustFit = false;
             PlayerMovement.Locked = false;
             CameraFollow.Focus = null;
             if (bar != null) bar.SetActive(false);
+            callback?.Invoke(kept);
         }
 
         // True if the target, standing here and turned this way, doesn't overlap a wall, another

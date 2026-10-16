@@ -58,6 +58,8 @@ namespace BubbleTea.UI
         private void GiveMoney()
         {
             if (wallet != null) wallet.Add(moneyAmount);
+            BubbleTea.Extras.Profile.AddPearls(50, "Game master gift");
+            BubbleTea.Extras.Profile.NextMiniGameUnix = 0; // mini-games ready again
         }
 
         // Builds every pad in the shop, hidden ones included, as if each had been paid for.

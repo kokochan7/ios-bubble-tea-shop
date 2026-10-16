@@ -28,6 +28,9 @@ namespace BubbleTea.Staff
         private Station target;
         private float timer;
 
+        private void OnEnable() => BubbleTea.Extras.TeamSkills.CountWorker(BubbleTea.Extras.TeamSkills.Role.Stocker, 1);
+        private void OnDisable() => BubbleTea.Extras.TeamSkills.CountWorker(BubbleTea.Extras.TeamSkills.Role.Stocker, -1);
+
         private void Awake()
         {
             carrier = GetComponent<ItemCarrier>();

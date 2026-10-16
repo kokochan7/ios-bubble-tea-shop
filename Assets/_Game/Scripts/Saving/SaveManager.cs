@@ -88,6 +88,7 @@ namespace BubbleTea.Saving
             if (wallet != null) wallet.MoneyChanged += OnMoneyChanged;
             PriceBook.Changed += MarkDirty;
             Movable.Moved += Save;
+            BubbleTea.Extras.TeamSkills.Changed += MarkDirty;
             if (upgradeManager != null) upgradeManager.Changed += Save;
             if (dailyGoals != null) dailyGoals.Changed += MarkDirty;
             foreach (UnlockPad pad in pads)
@@ -103,6 +104,7 @@ namespace BubbleTea.Saving
             if (wallet != null) wallet.MoneyChanged -= OnMoneyChanged;
             PriceBook.Changed -= MarkDirty;
             Movable.Moved -= Save;
+            BubbleTea.Extras.TeamSkills.Changed -= MarkDirty;
             if (upgradeManager != null) upgradeManager.Changed -= Save;
             if (dailyGoals != null) dailyGoals.Changed -= MarkDirty;
             foreach (UnlockPad pad in pads)
@@ -117,6 +119,9 @@ namespace BubbleTea.Saving
         private void Start()
         {
             PriceBook.Clear(); // each shop has its own prices
+            BubbleTea.Extras.TeamSkills.Restore(null); // and its own staff teams and collectible decor
+            BubbleTea.Extras.Collections.Restore(null);
+            BubbleTea.Extras.ExtrasHud.Ensure();
             if (loadOnStart) Load();
             if (dailyGoals != null) dailyGoals.EnsureGoals();
             loaded = true;
@@ -163,6 +168,8 @@ namespace BubbleTea.Saving
                 clockDay = GameClock.Instance != null ? GameClock.Instance.Day : 1,
             };
             if (ShopRecords.Instance != null) data.records = ShopRecords.Instance.Snapshot();
+            data.team = BubbleTea.Extras.TeamSkills.Snapshot();
+            data.cosmetics = BubbleTea.Extras.Collections.Snapshot();
             if (VipRegulars.Instance != null) data.vips = VipRegulars.Instance.Snapshot();
             if (dailyGoals != null) data.goals.AddRange(dailyGoals.Goals);
             foreach (Station station in Station.All)
@@ -254,7 +261,8 @@ namespace BubbleTea.Saving
             resetting = true;
             try
             {
-                foreach (string path in AllSaveFiles()) File.Delete(path);
+                foreach (string path in AllSaveFiles()) File.Delete(path); // pearls and collections (save-profile.json) too
+                BubbleTea.Extras.Profile.Forget();
             }
             catch (Exception e)
             {
@@ -297,7 +305,9 @@ namespace BubbleTea.Saving
                 }
             }
 
-            // Things built by the pads above exist now, so the ones the player moved go back where they were put.
+            // Collectible decor comes back out, then everything the player moved goes back where they put it.
+            BubbleTea.Extras.Collections.Restore(data.cosmetics);
+            BubbleTea.Extras.TeamSkills.Restore(data.team);
             if (data.placements != null)
             {
                 foreach (PlacementSave entry in data.placements)
