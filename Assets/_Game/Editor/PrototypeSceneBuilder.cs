@@ -490,7 +490,7 @@ namespace BubbleTea.EditorTools
 
             // The Matcha House dresses the player in its green uniform (if the Art Set has it).
             string playerSlot = plan.Number > 1 && ArtLibrary.Load().Get("MatchaPlayer") != null ? "MatchaPlayer" : "Player";
-            GameObject player = CreatePlayer(playerMat, playerSlot, plan.Number > 1, out Wallet wallet);
+            GameObject player = CreatePlayer(playerMat, playerSlot, plan.Number > 1, plan.Number, out Wallet wallet);
             Camera camera = CreateCamera(player.transform);
             VirtualJoystick joystick = CreateHud(wallet, out Transform hud);
             CreateEventSystem();
@@ -701,7 +701,7 @@ namespace BubbleTea.EditorTools
             return wall;
         }
 
-        private static GameObject CreatePlayer(Material material, string artSlot, bool matchaTray, out Wallet wallet)
+        private static GameObject CreatePlayer(Material material, string artSlot, bool matchaTray, int shopNumber, out Wallet wallet)
         {
             GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             player.name = "Player";
@@ -738,7 +738,7 @@ namespace BubbleTea.EditorTools
             player.AddComponent<PlayerMovement>();
             wallet = player.AddComponent<Wallet>();
             var walletSettings = new SerializedObject(wallet);
-            walletSettings.FindProperty("money").intValue = StartingMoney;
+            walletSettings.FindProperty("money").intValue = StartingMoney(shopNumber);
             walletSettings.ApplyModifiedPropertiesWithoutUndo();
             var collector = player.AddComponent<CashCollector>();
             SetReference(collector, "wallet", wallet);
@@ -1520,7 +1520,9 @@ namespace BubbleTea.EditorTools
 
         // The shop clock (random customer traffic) and its display in the top-left corner.
         // Size and edge gap of the top-corner HUD widgets (clock, money, stars, MENU, GOALS).
-        private const int StartingMoney = 500; // every shop starts with this (Kenny), no floor money pile
+        // Money each shop starts with (Kenny): $110 in the Boba Shop, $330 in the Matcha House. No floor money pile.
+        private static int StartingMoney(int shopNumber) => shopNumber > 1 ? 330 : 110;
+        private const float BannerAlpha = 0.5f; // see-through so pop-up banners don't hide the shop (Kenny)
         private const float HudScale = 0.82f; // bigger so money, time, stars and buttons are easy to read on a phone
         private const float HudMargin = 16f;
 
@@ -1946,7 +1948,7 @@ namespace BubbleTea.EditorTools
             var image = banner.gameObject.AddComponent<Image>();
             image.sprite = rounded;
             image.type = Image.Type.Sliced;
-            image.color = new Color(0.2f, 0.45f, 0.8f, 0.92f);
+            image.color = new Color(0.2f, 0.45f, 0.8f, BannerAlpha);
             image.raycastTarget = false;
 
             Text text = CreateHudText("Text", banner, font, 36, TextAnchor.MiddleCenter);
@@ -2168,7 +2170,7 @@ namespace BubbleTea.EditorTools
             var image = banner.gameObject.AddComponent<Image>();
             image.sprite = rounded;
             image.type = Image.Type.Sliced;
-            image.color = new Color(0.82f, 0.26f, 0.24f, 0.92f);
+            image.color = new Color(0.82f, 0.26f, 0.24f, BannerAlpha);
             image.raycastTarget = false;
 
             Text text = CreateHudText("Text", banner, font, 36, TextAnchor.MiddleCenter);
@@ -2197,7 +2199,7 @@ namespace BubbleTea.EditorTools
             var image = banner.gameObject.AddComponent<Image>();
             image.sprite = rounded;
             image.type = Image.Type.Sliced;
-            image.color = new Color(0.55f, 0.2f, 0.5f, 0.92f);
+            image.color = new Color(0.55f, 0.2f, 0.5f, BannerAlpha);
             image.raycastTarget = false;
 
             Text text = CreateHudText("Text", banner, font, 36, TextAnchor.MiddleCenter);

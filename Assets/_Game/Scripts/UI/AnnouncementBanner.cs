@@ -50,7 +50,7 @@ namespace BubbleTea.UI
             (string message, Color color) = waiting.Dequeue();
             timer = seconds;
             if (label != null) label.text = message;
-            if (background != null) background.color = new Color(color.r, color.g, color.b, 0.92f);
+            if (background != null) background.color = new Color(color.r, color.g, color.b, 0.5f); // see-through (Kenny)
             if (banner != null) banner.SetActive(true);
         }
 

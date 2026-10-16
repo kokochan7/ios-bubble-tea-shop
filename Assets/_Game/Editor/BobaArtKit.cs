@@ -231,17 +231,7 @@ namespace BubbleTea.EditorTools
         {
             GameObject counter = BuildCounter(Palette.Mint, Palette.Blush);
             counter.name = "DriveThruCounter";
-            Transform root = counter.transform;
-
-            // A little striped awning over the window.
-            for (int i = 0; i < 6; i++)
-            {
-                Transform stripe = Box(root, "Awning", new Vector3(-0.92f + i * 0.367f, 2.15f, -0.35f),
-                    new Vector3(0.367f, 0.04f, 0.8f), i % 2 == 0 ? Palette.DeepPink : Palette.Cream);
-                stripe.localRotation = Quaternion.Euler(-18f, 0f, 0f);
-            }
-            Cylinder(root, "PostL", new Vector3(-1.05f, 1.55f, 0.35f), 0.04f, 1.1f, Palette.DarkWood);
-            Cylinder(root, "PostR", new Vector3(1.05f, 1.55f, 0.35f), 0.04f, 1.1f, Palette.DarkWood);
+            // No awning over the window: it hid the order screen (Kenny).
             return counter;
         }
 

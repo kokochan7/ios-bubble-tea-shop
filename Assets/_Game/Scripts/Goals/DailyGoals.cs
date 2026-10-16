@@ -123,7 +123,7 @@ namespace BubbleTea.Goals
 
             goal.claimed = true;
             if (wallet != null) wallet.Add(goal.reward);
-            BubbleTea.Extras.Profile.AddPearls(2, "Goal reward");
+            BubbleTea.Extras.Profile.AddPearls(1, "Goal reward");
             GameEvents.RaiseBonusCollected();
 
             goals.RemoveAt(index);

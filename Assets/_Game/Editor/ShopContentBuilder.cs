@@ -531,17 +531,17 @@ namespace BubbleTea.EditorTools
         // Size of the drinks on the bars and the counter: the same as everywhere else.
         private const float DrinkSizeOnBars = DrinkSize;
 
-        // A floating high-tech screen low on the customers' side of the counter, showing what the
-        // customer at the front still wants: a dark glass screen with glowing cyan text in a metal
-        // bezel with a neon rim, a "NOW ORDERING" header and a status light.
-        // Kept low so it doesn't hide the kitchen behind it.
+        // A floating high-tech screen on the customers' side of the counter, showing what the
+        // customer at the front still wants: a bright white screen with dark text in a metal bezel
+        // with a neon rim, a "NOW ORDERING" header and a status light. It floats out in front of
+        // the counter and above the register, so the register can't poke through it.
         private static void AddOrderBoard(GameObject root, ServingCounter counter, float counterTop)
         {
-            Transform board = AddAnchor(root.transform, "OrderBoard", new Vector3(0f, counterTop - 0.1f, -0.35f));
+            Transform board = AddAnchor(root.transform, "OrderBoard", new Vector3(0f, counterTop + 0.6f, -0.9f));
             board.localScale = Vector3.one * 0.95f;
             Color cyan = new Color(0.45f, 0.95f, 1f);
             Transform screen = AddScreenPart(board, "Screen", new Vector3(0f, 0.42f, 0.08f), new Vector3(1f, 1.1f, 0.04f),
-                ScreenMaterial("OrderScreen", new Color(0.03f, 0.06f, 0.13f), new Color(0.02f, 0.06f, 0.12f)));
+                ScreenMaterial("OrderScreen", Color.white, new Color(0.35f, 0.35f, 0.38f)));
             Transform bezel = AddScreenPart(board, "Bezel", new Vector3(0f, 0.42f, 0.11f), new Vector3(1.1f, 1.2f, 0.05f),
                 ScreenMaterial("OrderScreenBezel", new Color(0.13f, 0.14f, 0.18f), Color.black));
             Transform rim = AddScreenPart(board, "NeonRim", new Vector3(0f, 0.42f, 0.13f), new Vector3(1.16f, 1.26f, 0.02f),
@@ -552,9 +552,9 @@ namespace BubbleTea.EditorTools
 
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             // The order in words above the pictures.
-            TextMesh label = AddScreenText(board, "OrderText", font, new Vector3(0f, 0.7f, 0f), 64, 0.035f, cyan);
+            TextMesh label = AddScreenText(board, "OrderText", font, new Vector3(0f, 0.7f, 0f), 64, 0.035f, new Color(0.1f, 0.14f, 0.28f));
             // A small header along the top of the screen.
-            TextMesh header = AddScreenText(board, "Header", font, new Vector3(0f, 1f, 0f), 48, 0.022f, new Color(1f, 0.55f, 0.85f));
+            TextMesh header = AddScreenText(board, "Header", font, new Vector3(0f, 1f, 0f), 48, 0.022f, new Color(0.85f, 0.25f, 0.55f));
             header.text = "NOW ORDERING";
             board.gameObject.SetActive(false);
 
