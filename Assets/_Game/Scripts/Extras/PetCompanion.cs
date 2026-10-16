@@ -50,7 +50,15 @@ namespace BubbleTea.Extras
 
         private static PetCompanion current;
 
-        private Transform body;
+        private Transform body;          // the whole model: bobs, sits back and lies down
+        private Transform head;
+        private Transform tail;
+        private readonly Transform[] legs = new Transform[4]; // front left, front right, back left, back right
+        private Vector3 lastPosition;
+        private float stride;            // walk cycle, advanced by distance walked
+        private float idleTime;          // seconds standing still
+        private float sit;               // 0 standing .. 1 sitting
+        private float lie;               // 0 .. 1 lying down for a nap
         private State state;
         private Vector3 goal;            // where it's trotting to while roaming
         private float pause;             // a little sit-and-look-around between walks
@@ -142,6 +150,7 @@ namespace BubbleTea.Extras
                 case State.Nap: Nap(); break;
                 case State.Sniff: Sniff(); break;
             }
+            Animate();
         }
 
         // ---------------------------------------------------------------- the dining room and the kitchen
@@ -176,14 +185,12 @@ namespace BubbleTea.Extras
             if (pause > 0f)
             {
                 pause -= Time.deltaTime;
-                Hop(false);
                 if (pause > 0f) return;
                 PickNext();
                 return;
             }
 
             bool moving = WalkTo(goal, 0.3f, 2.4f);
-            Hop(moving);
             if (!moving || Stuck())
             {
                 pause = UnityEngine.Random.Range(1f, 3f);
@@ -274,7 +281,6 @@ namespace BubbleTea.Extras
             Vector3 beside = friend.transform.position + (toPet.sqrMagnitude > 0.01f ? toPet.normalized : Vector3.back) * 0.8f;
             beside.y = 0f;
             bool moving = WalkTo(beside, 0.25f, 3.5f);
-            Hop(moving);
             if (moving && !greeted) return;
 
             Face(friend.transform.position);
@@ -294,14 +300,11 @@ namespace BubbleTea.Extras
                     Say("\u2665 +$" + tip, Pink, 2.5f);
                 }
             }
-            // A happy wiggle while they say hello.
-            body.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 14f) * 8f);
         }
 
         private void EndVisit()
         {
             friend = null;
-            body.localRotation = Quaternion.identity;
             state = State.Roam;
             pause = UnityEngine.Random.Range(0.5f, 1.5f);
         }
@@ -332,13 +335,11 @@ namespace BubbleTea.Extras
             {
                 Vector3 floor = new(spot.x, 0f, spot.z);
                 bool moving = WalkTo(floor, 0.25f, 2.6f);
-                Hop(moving);
-                if (moving && !Stuck()) return;
+                    if (moving && !Stuck()) return;
                 napping = true; // hops up and curls up
             }
 
             if (napSeat != null) transform.SetPositionAndRotation(spot + Vector3.up * 0.2f, napSeat.rotation);
-            Hop(false);
             stateTimer -= Time.deltaTime;
             body.localScale = new Vector3(1.05f, 0.8f + Mathf.Sin(Time.time * 2f) * 0.03f, 1.05f); // curled up, breathing
             label.Show(Mathf.Repeat(Time.time, 1.6f) < 0.8f ? "z" : "z Z", new Color(0.6f, 0.85f, 1f));
@@ -369,11 +370,9 @@ namespace BubbleTea.Extras
         private void Sniff()
         {
             stateTimer -= Time.deltaTime;
-            body.localRotation = Quaternion.Euler(Mathf.Sin(Time.time * 18f) * 6f + 12f, 0f, 0f);
             label.Show("!", new Color(1f, 0.85f, 0.3f));
             if (stateTimer > 0f) return;
 
-            body.localRotation = Quaternion.identity;
             sniffTimer = UnityEngine.Random.Range(SniffEvery.x, SniffEvery.y);
             state = State.Roam;
             if (UnityEngine.Random.value < 1f / 6f)
@@ -436,10 +435,76 @@ namespace BubbleTea.Extras
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(look), 540f * Time.deltaTime);
         }
 
-        private void Hop(bool moving)
+        // Legs step in diagonal pairs as it walks, the body bobs, the head nods and the tail wags.
+        // Standing still for a moment it sits down (back legs folded, head up), and on a break it
+        // lies down. Sniffing puts its nose to the floor; meeting a customer it sits and wags hard.
+        private void Animate()
         {
-            float y = moving ? Mathf.Abs(Mathf.Sin(Time.time * 12f)) * 0.08f : 0f;
-            body.localPosition = new Vector3(0f, y, 0f);
+            float dt = Mathf.Max(Time.deltaTime, 0.0001f);
+            Vector3 moved = transform.position - lastPosition;
+            moved.y = 0f;
+            lastPosition = transform.position;
+            float speed = moved.magnitude / dt;
+            bool walking = speed > 0.3f && speed < 20f && !napping;
+            if (walking)
+            {
+                stride += moved.magnitude * 9f;
+                idleTime = 0f;
+            }
+            else idleTime += dt;
+
+            bool cuddle = state == State.Visit && greeted;
+            float sitGoal = !walking && state != State.Sniff && state != State.Nap && (idleTime > 1.2f || cuddle) ? 1f : 0f;
+            sit = Mathf.MoveTowards(sit, sitGoal, dt * 3f);
+            lie = Mathf.MoveTowards(lie, napping ? 1f : 0f, dt * 2.5f);
+
+            // Sitting tips the body back around the hips; lying lowers it to the floor.
+            float pitch = -28f * sit;
+            Vector3 hips = new(0f, 0.14f, -0.2f);
+            Quaternion tilt = Quaternion.Euler(pitch, 0f, 0f);
+            Vector3 position = hips - tilt * hips;
+            float bob = walking ? Mathf.Abs(Mathf.Sin(stride)) * 0.035f : 0f;
+            position.y += bob - 0.12f * lie;
+            body.localPosition = position;
+            body.localRotation = tilt;
+
+            // Legs: a trot while walking; sitting folds the back legs and straightens the front ones.
+            float swing = walking ? Mathf.Sin(stride) * 32f : 0f;
+            for (int i = 0; i < 4; i++)
+            {
+                if (legs[i] == null) continue;
+                bool front = i < 2;
+                bool pairA = i == 0 || i == 3;
+                float angle = pairA ? swing : -swing;
+                angle = Mathf.Lerp(angle, front ? 28f : -62f, sit);
+                angle = Mathf.Lerp(angle, front ? -80f : 80f, lie);
+                legs[i].localRotation = Quaternion.Euler(angle, 0f, 0f);
+                legs[i].localScale = new Vector3(1f, front ? 1f + 0.75f * sit : 1f, 1f);
+            }
+
+            // Head: nods with each step, sniffs the floor, looks around now and then, tilts at a friend.
+            if (head != null)
+            {
+                float nod = walking ? Mathf.Sin(stride * 2f) * 5f : 0f;
+                float look = 0f, tiltSide = 0f;
+                if (state == State.Sniff) nod = 38f + Mathf.Sin(Time.time * 18f) * 6f;
+                else if (cuddle)
+                {
+                    nod = -10f;
+                    tiltSide = Mathf.Sin(Time.time * 3f) * 12f;
+                }
+                else if (!walking) look = Mathf.Sin(Time.time * 0.8f) * 35f * Mathf.Clamp01(Mathf.Sin(Time.time * 0.35f) * 2f);
+                nod += 22f * sit + 25f * lie;
+                head.localRotation = Quaternion.Euler(nod, look, tiltSide);
+            }
+
+            // Tail: an easy wag, faster when walking, a happy blur with a friend, still when asleep.
+            if (tail != null)
+            {
+                float rate = cuddle ? 20f : walking ? 11f : 5f;
+                float size = cuddle ? 40f : walking ? 22f : 15f;
+                tail.localRotation = Quaternion.Euler(0f, Mathf.Sin(Time.time * rate) * size * (1f - lie), 0f);
+            }
         }
 
         // ---------------------------------------------------------------- model
@@ -448,43 +513,63 @@ namespace BubbleTea.Extras
         {
             body = new GameObject("Body").transform;
             body.SetParent(transform, false);
+            lastPosition = transform.position;
             Color dark = new(0.12f, 0.1f, 0.1f);
             Color pink = new(1f, 0.6f, 0.65f);
 
-            ModelKit.Part(body, PrimitiveType.Sphere, new Vector3(0f, 0.3f, 0f), new Vector3(0.38f, 0.32f, 0.55f), pet.Fur);
-            ModelKit.Part(body, PrimitiveType.Sphere, new Vector3(0f, 0.25f, 0.06f), new Vector3(0.3f, 0.22f, 0.4f), pet.Belly);
-            foreach (float x in new[] { -0.11f, 0.11f })
-            foreach (float z in new[] { -0.15f, 0.15f })
-                ModelKit.Part(body, PrimitiveType.Cylinder, new Vector3(x, 0.08f, z), new Vector3(0.1f, 0.08f, 0.1f), pet.Patches ? dark : pet.Fur);
+            ModelKit.Part(body, PrimitiveType.Sphere, new Vector3(0f, 0.32f, 0f), new Vector3(0.38f, 0.32f, 0.55f), pet.Fur);
+            ModelKit.Part(body, PrimitiveType.Sphere, new Vector3(0f, 0.27f, 0.06f), new Vector3(0.3f, 0.22f, 0.4f), pet.Belly);
 
-            Transform head = new GameObject("Head").transform;
+            // Legs hang from hip joints so they can swing and fold; a round paw at the bottom of each.
+            Color legColor = pet.Patches ? dark : pet.Fur;
+            int index = 0;
+            foreach (float z in new[] { 0.15f, -0.15f })
+            foreach (float x in new[] { -0.11f, 0.11f })
+            {
+                Transform hip = new GameObject(index < 2 ? "FrontLeg" : "BackLeg").transform;
+                hip.SetParent(body, false);
+                hip.localPosition = new Vector3(x, 0.22f, z);
+                ModelKit.Part(hip, PrimitiveType.Cylinder, new Vector3(0f, -0.1f, 0f), new Vector3(0.09f, 0.1f, 0.09f), legColor);
+                ModelKit.Part(hip, PrimitiveType.Sphere, new Vector3(0f, -0.2f, 0.02f), new Vector3(0.11f, 0.06f, 0.13f), pet.Patches ? dark : pet.Belly);
+                legs[index++] = hip;
+            }
+
+            // The head turns on a neck joint just above the chest.
+            head = new GameObject("Head").transform;
             head.SetParent(body, false);
-            head.localPosition = new Vector3(0f, 0.55f, 0.24f);
-            ModelKit.Part(head, PrimitiveType.Sphere, Vector3.zero, new Vector3(0.36f, 0.32f, 0.32f), pet.Fur);
-            ModelKit.Part(head, PrimitiveType.Sphere, new Vector3(0f, -0.06f, 0.13f), new Vector3(0.16f, 0.11f, 0.1f), pet.Belly);
-            ModelKit.Part(head, PrimitiveType.Sphere, new Vector3(0f, -0.03f, 0.18f), new Vector3(0.05f, 0.035f, 0.03f), dark);
+            head.localPosition = new Vector3(0f, 0.5f, 0.2f);
+            Transform face = new GameObject("Face").transform;
+            face.SetParent(head, false);
+            face.localPosition = new Vector3(0f, 0.07f, 0.06f);
+            ModelKit.Part(face, PrimitiveType.Sphere, Vector3.zero, new Vector3(0.36f, 0.32f, 0.32f), pet.Fur);
+            ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(0f, -0.06f, 0.13f), new Vector3(0.16f, 0.11f, 0.1f), pet.Belly);
+            ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(0f, -0.03f, 0.18f), new Vector3(0.05f, 0.035f, 0.03f), dark);
             foreach (float x in new[] { -0.08f, 0.08f })
             {
                 if (pet.Patches)
-                    ModelKit.Part(head, PrimitiveType.Sphere, new Vector3(x, 0.03f, 0.13f), new Vector3(0.1f, 0.12f, 0.05f), dark, new Vector3(0f, 0f, x > 0 ? -20f : 20f));
-                ModelKit.Part(head, PrimitiveType.Sphere, new Vector3(x, 0.03f, 0.155f), new Vector3(0.05f, 0.06f, 0.03f), pet.Patches ? Color.white : dark);
-                ModelKit.Part(head, PrimitiveType.Sphere, new Vector3(x * 1.5f, -0.04f, 0.13f), new Vector3(0.06f, 0.03f, 0.02f), pink);
+                    ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x, 0.03f, 0.13f), new Vector3(0.1f, 0.12f, 0.05f), dark, new Vector3(0f, 0f, x > 0 ? -20f : 20f));
+                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x, 0.03f, 0.155f), new Vector3(0.05f, 0.06f, 0.03f), pet.Patches ? Color.white : dark);
+                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 1.5f, -0.04f, 0.13f), new Vector3(0.06f, 0.03f, 0.02f), pink);
 
                 if (pet.LongEars)
-                    ModelKit.Part(head, PrimitiveType.Capsule, new Vector3(x, 0.27f, -0.02f), new Vector3(0.08f, 0.16f, 0.05f), pet.Ears, new Vector3(0f, 0f, x > 0 ? -8f : 8f));
+                    ModelKit.Part(face, PrimitiveType.Capsule, new Vector3(x, 0.27f, -0.02f), new Vector3(0.08f, 0.16f, 0.05f), pet.Ears, new Vector3(0f, 0f, x > 0 ? -8f : 8f));
                 else if (pet.Patches)
-                    ModelKit.Part(head, PrimitiveType.Sphere, new Vector3(x * 1.6f, 0.15f, 0f), new Vector3(0.1f, 0.1f, 0.06f), pet.Ears);
+                    ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 1.6f, 0.15f, 0f), new Vector3(0.1f, 0.1f, 0.06f), pet.Ears);
                 else
-                    ModelKit.Part(head, PrimitiveType.Cube, new Vector3(x * 1.3f, 0.15f, 0f), new Vector3(0.08f, 0.08f, 0.04f), pet.Ears, new Vector3(0f, 0f, 45f));
+                    ModelKit.Part(face, PrimitiveType.Cube, new Vector3(x * 1.3f, 0.15f, 0f), new Vector3(0.08f, 0.08f, 0.04f), pet.Ears, new Vector3(0f, 0f, 45f));
             }
 
-            // Tail: a curl for the shiba, a fluffy ball for the bunny and panda, a raised tail for the cat.
+            // Tail on a joint at the rump: a curl for the shiba, a fluffy ball for the bunny and panda,
+            // a raised tail for the cat.
+            tail = new GameObject("Tail").transform;
+            tail.SetParent(body, false);
+            tail.localPosition = new Vector3(0f, 0.38f, -0.25f);
             if (pet.CurlyTail)
-                ModelKit.Part(body, PrimitiveType.Sphere, new Vector3(0f, 0.48f, -0.25f), new Vector3(0.16f, 0.16f, 0.12f), pet.Belly);
+                ModelKit.Part(tail, PrimitiveType.Sphere, new Vector3(0f, 0.1f, 0f), new Vector3(0.16f, 0.16f, 0.12f), pet.Belly);
             else if (pet.LongEars || pet.Patches)
-                ModelKit.Part(body, PrimitiveType.Sphere, new Vector3(0f, 0.32f, -0.28f), new Vector3(0.12f, 0.12f, 0.12f), pet.Patches ? dark : Color.white);
+                ModelKit.Part(tail, PrimitiveType.Sphere, new Vector3(0f, -0.04f, -0.04f), new Vector3(0.12f, 0.12f, 0.12f), pet.Patches ? dark : Color.white);
             else
-                ModelKit.Part(body, PrimitiveType.Capsule, new Vector3(0f, 0.45f, -0.3f), new Vector3(0.06f, 0.16f, 0.06f), pet.Fur, new Vector3(-30f, 0f, 0f));
+                ModelKit.Part(tail, PrimitiveType.Capsule, new Vector3(0f, 0.08f, -0.06f), new Vector3(0.06f, 0.16f, 0.06f), pet.Fur, new Vector3(-30f, 0f, 0f));
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

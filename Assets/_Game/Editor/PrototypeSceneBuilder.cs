@@ -96,7 +96,7 @@ namespace BubbleTea.EditorTools
             StaffDoorFrom = 6.2f, StaffDoorTo = 8.6f,
             LaneWallX = 11f,                   // the expansion adds just a 2 m strip on the east side
             Counter = new(-2f, 0f, 0f),
-            Seating = new(3f, 0f, -4.6f),      // east of the queue, clear of the staff door
+            Seating = new(3.8f, 0f, -5f),      // the front-east part of the dining room (Kenny), clear of the staff door
             DriveThru = new(10f, 0f, 4.6f),     // in the 2 m strip; you serve it from the kitchen side
             TrashCan = new(-8.3f, 0f, 0.8f),   // front-west corner of the kitchen, away from the bars
             FloorCash = new(-4.6f, 0f, 0.9f),  // in the kitchen, just left of the counter
@@ -107,7 +107,7 @@ namespace BubbleTea.EditorTools
             ExtraBar = extraBar,
             UpgradeDesk = new(3f, 0f, 0.55f),  // right of the counter, its back to the glass wall
             Cashier = new(0.6f, 0f, 1.8f),
-            Expansion = new(7.6f, 0f, -3.4f),   // by the east wall it opens up, clear of the koi pond
+            Expansion = new(7.8f, 0f, -3.6f),    // by the east wall it opens up, between the tables and the koi pond
             Cleaner = new(-6.4f, 0f, -4.6f),
             DriveThruCashier = new(10f, 0f, 1.4f), // small pad in the strip, south of the window
             // Both travel stops stand outside on the sidewalk, just right of the gate's east pillar.
@@ -128,7 +128,7 @@ namespace BubbleTea.EditorTools
             // Order: bamboo plants, paper lanterns, lucky cat, koi pond, cherry blossom tree.
             Decor = new Vector3[]
             {
-                new(-8.3f, 0f, -6.8f), new(-8.3f, 0f, -0.8f), new(8.8f, 0f, -0.55f), new(7.8f, 0f, -6.6f), new(-6.2f, 0f, -2.4f),
+                new(-8.3f, 0f, -6.8f), new(-8.3f, 0f, -0.8f), new(8.8f, 0f, -0.55f), new(7.9f, 0f, -6.7f), new(-6.2f, 0f, -2.4f),
             },
             Windows = new[] { -6.2f, 6.2f },
             Lamps = new[] { -4.4f, 4.4f },
@@ -2032,7 +2032,7 @@ namespace BubbleTea.EditorTools
             RectTransform panel = CreateUiObject("Panel", root);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
             panel.gameObject.AddComponent<FitToScreen>();
-            panel.sizeDelta = new Vector2(800f, 1210f);
+            panel.sizeDelta = new Vector2(800f, 1370f);
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.sprite = rounded;
             panelImage.type = Image.Type.Sliced;
@@ -2049,15 +2049,16 @@ namespace BubbleTea.EditorTools
             SetTopRow((RectTransform)music.transform, 310f, 120f, 60f, 60f);
             Button vibration = CreateMenuButton("Vibration", panel, "Vibration: ON", rounded, font, green, out Text vibrationLabel);
             SetTopRow((RectTransform)vibration.transform, 460f, 120f, 60f, 60f);
+            CreateZoomSlider(panel, rounded, font, 600f);
             Button mainMenu = CreateMenuButton("MainMenu", panel, "Main Menu", rounded, font, new Color(0.91f, 0.51f, 0.60f), out _);
-            SetTopRow((RectTransform)mainMenu.transform, 610f, 120f, 60f, 60f);
+            SetTopRow((RectTransform)mainMenu.transform, 770f, 120f, 60f, 60f);
             Button reset = CreateMenuButton("Reset", panel, "Reset Progress", rounded, font, new Color(0.85f, 0.35f, 0.35f),
                 out Text resetLabel);
-            SetTopRow((RectTransform)reset.transform, 760f, 120f, 60f, 60f);
+            SetTopRow((RectTransform)reset.transform, 920f, 120f, 60f, 60f);
             Button gmOpen = CreateMenuButton("GmTools", panel, "GM Tools", rounded, font, new Color(0.55f, 0.4f, 0.8f), out _);
-            SetTopRow((RectTransform)gmOpen.transform, 910f, 120f, 60f, 60f);
+            SetTopRow((RectTransform)gmOpen.transform, 1070f, 120f, 60f, 60f);
             Button close = CreateMenuButton("Close", panel, "Close", rounded, font, new Color(0.45f, 0.45f, 0.55f), out _);
-            SetTopRow((RectTransform)close.transform, 1060f, 110f, 200f, 200f);
+            SetTopRow((RectTransform)close.transform, 1220f, 110f, 200f, 200f);
 
             SetReference(menu, "panel", panel.gameObject);
             SetReference(menu, "openButton", openButton);
@@ -2118,6 +2119,56 @@ namespace BubbleTea.EditorTools
             SetReference(gm, "wallet", wallet);
             SetReference(gm, "saveManager", saveManager);
             SetReference(gm, "upgradeManager", upgrades);
+        }
+
+        // "Zoom" with a bar under it, "-" and "+" at the ends: drag right to zoom in, left to zoom out.
+        private static void CreateZoomSlider(RectTransform panel, Sprite rounded, Font font, float top)
+        {
+            Text title = CreateHudText("ZoomLabel", panel, font, 46, TextAnchor.MiddleCenter);
+            SetTopRow(title.rectTransform, top, 60f, 60f, 60f);
+            title.text = "Zoom";
+
+            RectTransform row = CreateUiObject("Zoom", panel);
+            SetTopRow(row, top + 70f, 80f, 60f, 60f);
+            Text minus = CreateHudText("Out", row, font, 60, TextAnchor.MiddleLeft);
+            SetColumn(minus.rectTransform, 0f, 0.1f);
+            minus.text = "-";
+            Text plus = CreateHudText("In", row, font, 60, TextAnchor.MiddleRight);
+            SetColumn(plus.rectTransform, 0.9f, 1f);
+            plus.text = "+";
+
+            RectTransform track = CreateUiObject("Track", row);
+            track.anchorMin = new Vector2(0.12f, 0.5f);
+            track.anchorMax = new Vector2(0.88f, 0.5f);
+            track.sizeDelta = new Vector2(0f, 36f);
+            var back = track.gameObject.AddComponent<Image>();
+            back.sprite = rounded;
+            back.type = Image.Type.Sliced;
+            back.color = new Color(1f, 1f, 1f, 0.18f);
+
+            RectTransform fillRect = CreateUiObject("Fill", track);
+            Stretch(fillRect);
+            var fill = fillRect.gameObject.AddComponent<Image>();
+            fill.sprite = rounded;
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.color = new Color(0.45f, 0.62f, 0.9f);
+            fill.raycastTarget = false;
+
+            RectTransform handle = CreateUiObject("Handle", track);
+            handle.sizeDelta = new Vector2(70f, 70f);
+            var knob = handle.gameObject.AddComponent<Image>();
+            knob.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            knob.color = Color.white;
+            knob.raycastTarget = false;
+
+            // The whole row takes the drag, so the bar is easy to hit with a thumb.
+            var catcher = row.gameObject.AddComponent<Image>();
+            catcher.color = new Color(1f, 1f, 1f, 0f);
+            var slider = row.gameObject.AddComponent<ZoomSlider>();
+            SetReference(slider, "track", track);
+            SetReference(slider, "fill", fill);
+            SetReference(slider, "handle", handle);
         }
 
         private static Button CreateMenuButton(string name, Transform parent, string text, Sprite sprite, Font font, Color color,

@@ -30,6 +30,17 @@ namespace BubbleTea.Player
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay() => Focus = null;
 
+        public const float MinZoom = 0.55f; // closest (the camera distance times this)
+        public const float MaxZoom = 1.5f;  // furthest away
+        private const string ZoomKey = "CameraZoom";
+
+        /// <summary>The player's zoom from the Settings menu: 1 is normal, smaller is closer. Saved on this device.</summary>
+        public static float Zoom
+        {
+            get => Mathf.Clamp(PlayerPrefs.GetFloat(ZoomKey, 1f), MinZoom, MaxZoom);
+            set => PlayerPrefs.SetFloat(ZoomKey, Mathf.Clamp(value, MinZoom, MaxZoom));
+        }
+
         private Vector3 velocity;
         private Camera view;
 
@@ -53,12 +64,12 @@ namespace BubbleTea.Player
         // to show PhoneViewWidth meters from the normal distance.
         private Vector3 Offset()
         {
-            if (view == null || !Application.isMobilePlatform) return offset;
+            if (view == null || !Application.isMobilePlatform) return offset * Zoom;
             view.fieldOfView = PhoneFieldOfView;
             float halfWidthAtOneMeter = Mathf.Tan(PhoneFieldOfView * 0.5f * Mathf.Deg2Rad) * Mathf.Max(view.aspect, 0.01f);
             float needed = PhoneViewWidth * 0.5f / halfWidthAtOneMeter;
             float distance = Mathf.Max(offset.magnitude, needed);
-            return offset.normalized * distance;
+            return offset.normalized * distance * Zoom;
         }
     }
 }
