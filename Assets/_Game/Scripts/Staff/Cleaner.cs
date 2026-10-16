@@ -42,8 +42,11 @@ namespace BubbleTea.Staff
             SeatingTable messy = NearestMessyTable();
             if (messy != null)
             {
-                // Stand in the aisle beside the table, not inside it.
-                if (WalkTo(messy.ZoneCenter + new Vector3(0f, 0f, -1f))) messy.TryCleanOne();
+                // Stand in the aisle beside the table (whichever long side is nearer), not inside it.
+                Vector3 front = messy.ZoneCenter + new Vector3(0f, 0f, -1f);
+                Vector3 back = messy.ZoneCenter + new Vector3(0f, 0f, 1f);
+                Vector3 cleanSpot = (front - transform.position).sqrMagnitude <= (back - transform.position).sqrMagnitude ? front : back;
+                if (WalkTo(cleanSpot)) messy.TryCleanOne();
                 return;
             }
 
