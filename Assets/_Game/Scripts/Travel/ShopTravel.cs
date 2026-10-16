@@ -28,6 +28,20 @@ namespace BubbleTea.Travel
         [SerializeField, Tooltip("Sign text, turned to face the camera.")]
         private Transform label;
 
+        private static readonly System.Collections.Generic.List<ShopTravel> active = new();
+
+        /// <summary>Every travel spot in the open shop (moved things keep off them).</summary>
+        public static System.Collections.Generic.IReadOnlyList<ShopTravel> All => active;
+
+        /// <summary>Half the stop's width in meters.</summary>
+        public float HalfSize => halfSize;
+
+        private void OnEnable() => active.Add(this);
+        private void OnDisable() => active.Remove(this);
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => active.Clear();
+
         private Transform player;
         private float held;
         private bool leaving;

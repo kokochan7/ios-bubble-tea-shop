@@ -176,7 +176,7 @@ namespace BubbleTea.Cooking
         // A tap near the bar (or its "!") fixes a jam, once the player has walked over to it.
         private void OnTapped(Vector2 screenPosition)
         {
-            if (!Jammed) return;
+            if (!Jammed || BubbleTea.Building.MoveMode.Busy) return;
             Camera camera = Camera.main;
             if (camera == null) return;
             if (!TappedOnMe(camera, screenPosition)) return;

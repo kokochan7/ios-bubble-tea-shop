@@ -12,7 +12,7 @@ namespace BubbleTea.Saving
     public class SaveData
     {
         /// <summary>Bumped when the layout changes, so old saves can be upgraded instead of lost.</summary>
-        public int version = 11;
+        public int version = 12;
 
         public int money;
         public List<PadSave> pads = new();
@@ -55,6 +55,20 @@ namespace BubbleTea.Saving
 
         /// <summary>Added in version 11: each VIP regular's favorite drink and how many quick visits they've had.</summary>
         public List<BubbleTea.Customers.VipSave> vips = new();
+
+        /// <summary>Added in version 12: bars, decor and tables the player moved, by their pad's save ID.</summary>
+        public List<PlacementSave> placements = new();
+    }
+
+    /// <summary>Where the player moved one thing to, and which way it faces.</summary>
+    [Serializable]
+    public class PlacementSave
+    {
+        public string id;
+        public float x;
+        public float y;
+        public float z;
+        public float yaw;
     }
 
     /// <summary>One bar's supplies, by the bar's name.</summary>

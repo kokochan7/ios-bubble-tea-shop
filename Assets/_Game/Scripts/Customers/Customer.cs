@@ -113,7 +113,6 @@ namespace BubbleTea.Customers
 
         private readonly List<DrinkRecipe> orders = new();
         private readonly List<CarriedItem> held = new();
-        private readonly List<GameObject> icons = new();
         private float patience;
         private Visit visit;
 
@@ -182,19 +181,13 @@ namespace BubbleTea.Customers
             if (orders.Count == 0) StopWaiting(); // nothing on the menu can be made yet
         }
 
-        // Puts copies of the ordered drinks' models on the bubble so you can see what they want.
-        // Several drinks are shown side by side, a little smaller.
+        // No drink icons over their heads any more: just keeps the mood light centred above them.
         private void ShowOrder()
         {
             if (orderBubble == null) return;
-            float scale = bubbleIconScale; // the same size however many drinks they want
-            DrinkIcons.Show(orderBubble, orders, scale, scale * 0.23f, icons);
             if (moodLight != null && moodLight.transform.parent == orderBubble)
             {
-                // Keep the mood light just past the last drink.
-                Vector3 spot = moodLight.transform.localPosition;
-                spot.x = Mathf.Max(0.7f, (orders.Count - 1) * 0.5f * scale * 0.23f + 0.55f);
-                moodLight.transform.localPosition = spot;
+                moodLight.transform.localPosition = new Vector3(0f, 0.15f, 0f);
             }
         }
 

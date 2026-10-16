@@ -24,6 +24,12 @@ namespace BubbleTea.Player
         private const float PhoneViewWidth = 12f;    // meters across the screen at the player; bigger = more zoomed out
         private const float PhoneFieldOfView = 55f;  // vertical, in degrees
 
+        /// <summary>Followed instead of the player while set (the thing being moved in move mode).</summary>
+        public static Transform Focus { get; set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => Focus = null;
+
         private Vector3 velocity;
         private Camera view;
 
@@ -37,8 +43,9 @@ namespace BubbleTea.Player
 
         private void LateUpdate()
         {
-            if (target == null) return;
-            Vector3 desired = target.position + Offset();
+            Transform followed = Focus != null ? Focus : target;
+            if (followed == null) return;
+            Vector3 desired = followed.position + Offset();
             transform.position = Vector3.SmoothDamp(transform.position, desired, ref velocity, smoothTime);
         }
 

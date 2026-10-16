@@ -36,7 +36,7 @@ namespace BubbleTea.UI
         private void OnTapped(Vector2 screenPosition)
         {
             Camera camera = Camera.main;
-            if (camera == null || panel == null || panel.activeSelf) return;
+            if (camera == null || panel == null || panel.activeSelf || BubbleTea.Building.MoveMode.Busy) return;
             Ray ray = camera.ScreenPointToRay(screenPosition);
             foreach (RaycastHit hit in Physics.RaycastAll(ray, 200f))
             {

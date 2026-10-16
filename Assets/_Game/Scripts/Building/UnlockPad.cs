@@ -75,6 +75,9 @@ namespace BubbleTea.Building
         public int Cost => definition != null ? definition.Cost : 0;
         public int Remaining => Mathf.Max(0, Cost - paid);
         public int Paid => paid;
+
+        /// <summary>Half the pad's width in meters.</summary>
+        public float HalfSize => halfSize;
         public bool IsUnlocked => completed;
         public string SaveId => !string.IsNullOrEmpty(saveId) ? saveId : definition != null ? definition.name : name;
 
@@ -184,6 +187,7 @@ namespace BubbleTea.Building
                 if (station.GetComponentInChildren<BubbleTea.Travel.ShopTravel>() == null)
                     NameTag.Add(station, NameTag.NameFor(definition.DisplayName));
                 if (animate) station.AddComponent<PopIn>();
+                Movable.AddTo(station, SaveId); // bars, decor and tables can be tapped and moved
             }
             if (animate) GameEvents.RaiseUnlocked(transform.position);
 

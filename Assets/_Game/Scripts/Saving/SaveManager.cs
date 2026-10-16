@@ -87,6 +87,7 @@ namespace BubbleTea.Saving
         {
             if (wallet != null) wallet.MoneyChanged += OnMoneyChanged;
             PriceBook.Changed += MarkDirty;
+            Movable.Moved += Save;
             if (upgradeManager != null) upgradeManager.Changed += Save;
             if (dailyGoals != null) dailyGoals.Changed += MarkDirty;
             foreach (UnlockPad pad in pads)
@@ -101,6 +102,7 @@ namespace BubbleTea.Saving
         {
             if (wallet != null) wallet.MoneyChanged -= OnMoneyChanged;
             PriceBook.Changed -= MarkDirty;
+            Movable.Moved -= Save;
             if (upgradeManager != null) upgradeManager.Changed -= Save;
             if (dailyGoals != null) dailyGoals.Changed -= MarkDirty;
             foreach (UnlockPad pad in pads)
@@ -166,6 +168,12 @@ namespace BubbleTea.Saving
             foreach (Station station in Station.All)
             {
                 if (station != null && station.UsesSupplies) data.supplies.Add(new SupplySave { station = station.name, amount = station.Supplies });
+            }
+            foreach (Movable movable in Movable.All)
+            {
+                if (movable == null || !movable.HasMoved) continue;
+                Vector3 spot = movable.transform.position;
+                data.placements.Add(new PlacementSave { id = movable.Id, x = spot.x, y = spot.y, z = spot.z, yaw = movable.transform.eulerAngles.y });
             }
             foreach (UnlockPad pad in pads)
             {
@@ -286,6 +294,16 @@ namespace BubbleTea.Saving
                     if (entry == null) continue;
                     UpgradeDefinition upgrade = upgradeManager.Find(entry.id);
                     if (upgrade != null) upgradeManager.SetLevel(upgrade, entry.level);
+                }
+            }
+
+            // Things built by the pads above exist now, so the ones the player moved go back where they were put.
+            if (data.placements != null)
+            {
+                foreach (PlacementSave entry in data.placements)
+                {
+                    Movable movable = entry != null ? Movable.Find(entry.id) : null;
+                    if (movable != null) movable.Place(new Vector3(entry.x, entry.y, entry.z), entry.yaw, byPlayer: false);
                 }
             }
 

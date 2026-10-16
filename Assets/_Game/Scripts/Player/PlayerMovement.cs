@@ -29,6 +29,12 @@ namespace BubbleTea.Player
         /// <summary>The player in the open shop (bars that need the player's hands look for them).</summary>
         public static Transform Current { get; private set; }
 
+        /// <summary>True while the joystick is moving something in the shop instead of the player.</summary>
+        public static bool Locked { get; set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => Locked = false;
+
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
@@ -46,6 +52,7 @@ namespace BubbleTea.Player
             Vector2 input = joystick != null ? joystick.Value : Vector2.zero;
             if (input.sqrMagnitude < 0.0001f) input = ReadKeyboard();
             input = Vector2.ClampMagnitude(input, 1f);
+            if (Locked) input = Vector2.zero;
 
             Vector3 forward = Vector3.forward;
             Vector3 right = Vector3.right;
@@ -70,7 +77,8 @@ namespace BubbleTea.Player
             }
         }
 
-        private static Vector2 ReadKeyboard()
+        /// <summary>WASD / arrow keys as a stick direction (for testing in the editor).</summary>
+        public static Vector2 ReadKeyboard()
         {
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return Vector2.zero;
