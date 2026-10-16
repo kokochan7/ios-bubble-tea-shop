@@ -218,16 +218,17 @@ namespace BubbleTea.EditorTools
         public static void BuildSecondShop() => BuildShop(SecondShop);
 
         /// <summary>
-        /// Rebuilds every shop in one go (asks once). Later shops come first so the Boba Shop is
-        /// the scene left open. A new level only needs adding to <see cref="AllShops"/>.
+        /// Rebuilds the main menu and every shop in one go (asks once). Later shops come first so the
+        /// Boba Shop is the scene left open. A new level only needs adding to <see cref="AllShops"/>.
         /// </summary>
         [MenuItem("Bubble Tea/Build All Shops", priority = 0)]
         public static void BuildAllShops()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             if (!EditorUtility.DisplayDialog("Rebuild all shops?",
-                    "This rebuilds every shop scene, replacing any changes you made to them by hand.", "Rebuild All", "Cancel"))
+                    "This rebuilds the main menu and every shop scene, replacing any changes you made to them by hand.", "Rebuild All", "Cancel"))
                 return;
+            BuildMainMenu();
             foreach (ShopPlan plan in AllShops) BuildShop(plan, ask: false);
         }
 
