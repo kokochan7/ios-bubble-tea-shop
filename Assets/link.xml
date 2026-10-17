@@ -1,0 +1,11 @@
+<!-- Keeps engine parts that nothing in the scenes uses but code makes at runtime, so iPhone
+     builds (which strip unused engine code) still have them: the VIP bow and hats are made with
+     GameObject.CreatePrimitive, which adds a sphere or capsule collider. -->
+<linker>
+  <assembly fullname="UnityEngine.PhysicsModule">
+    <type fullname="UnityEngine.SphereCollider" preserve="all" />
+    <type fullname="UnityEngine.CapsuleCollider" preserve="all" />
+    <type fullname="UnityEngine.BoxCollider" preserve="all" />
+    <type fullname="UnityEngine.MeshCollider" preserve="all" />
+  </assembly>
+</linker>

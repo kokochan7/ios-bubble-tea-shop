@@ -81,6 +81,11 @@ namespace BubbleTea.Extras
         private float kitchenSide = 1f;  // +1 if the kitchen is north of the door (bigger z), -1 if south
         private StaffSofa sofa;
 
+        /// <summary>Where the pet is and how many parts it has (shown at the bottom of the PETS window).</summary>
+        public static string Report => current == null
+            ? "no pet out"
+            : $"pet at ({current.transform.position.x:0.0}, {current.transform.position.z:0.0}), {current.GetComponentsInChildren<MeshRenderer>().Length} parts";
+
         public static Pet Find(string id) => Array.Find(Pets, p => p.Id == id);
 
         /// <summary>Lets the chosen pet loose in the shop, replacing any pet already out.</summary>
