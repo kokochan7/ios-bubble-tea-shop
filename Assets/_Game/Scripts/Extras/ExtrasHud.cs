@@ -512,7 +512,11 @@ namespace BubbleTea.Extras
                 Text hint = UiKit.Label(body,
                     "Your pet roams the shop and says hello to customers: they wait longer, tip more, and sometimes tip your pet. It also naps on empty chairs and sniffs out money (and pearls). Tap IN SHOP to send it home.",
                     32, new Color(0.8f, 0.8f, 0.88f));
-                UiKit.Pin(hint.rectTransform, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(900f, 220f));
+                UiKit.Pin(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 50f), new Vector2(900f, 220f));
+
+                // Small print for checking a phone build: which build this is and what the pets are made of.
+                Text info = UiKit.Label(body, $"Build {ModelKit.BuildTag} - models: {ModelKit.Report}", 22, new Color(0.6f, 0.6f, 0.68f));
+                UiKit.Pin(info.rectTransform, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(900f, 50f));
             }
         }
 

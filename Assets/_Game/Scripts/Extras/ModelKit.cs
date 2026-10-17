@@ -12,6 +12,12 @@ namespace BubbleTea.Extras
         private static readonly Dictionary<Color, Material> materials = new();
         private static Shader shader;
 
+        /// <summary>Bumped with each change, so the PETS window shows whether the phone runs the newest build.</summary>
+        public const string BuildTag = "17 Oct C";
+
+        /// <summary>Which material runtime models are made from (shown at the bottom of the PETS window).</summary>
+        public static string Report { get; private set; } = "no models made yet";
+
         /// <summary>A material of this color (shared between models of the same color).</summary>
         public static Material Mat(Color color, bool glow = false)
         {
@@ -19,7 +25,14 @@ namespace BubbleTea.Extras
             if (materials.TryGetValue(key, out Material cached) && cached != null) return cached;
 
             Material template = BaseMaterial();
-            var material = template != null ? new Material(template) : new Material(FindShader());
+            Material material;
+            if (template != null) material = new Material(template);
+            else
+            {
+                material = new Material(FindShader());
+                Report = $"fallback shader {material.shader.name} (supported: {material.shader.isSupported})";
+                Debug.LogWarning("Bubble Tea: runtime models use " + Report);
+            }
             material.color = color;
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
             if (glow && material.HasProperty("_EmissionColor"))
@@ -85,7 +98,10 @@ namespace BubbleTea.Extras
                 if (saved != null) baseMaterial = new Material(saved);
             }
             if (baseMaterial != null)
-                Debug.Log($"Bubble Tea: runtime models use {baseMaterial.name} ({baseMaterial.shader.name}, supported: {baseMaterial.shader.isSupported}).");
+            {
+                Report = $"{baseMaterial.name} ({baseMaterial.shader.name}, supported: {baseMaterial.shader.isSupported})";
+                Debug.LogWarning("Bubble Tea: runtime models use " + Report);
+            }
             return baseMaterial;
         }
 
@@ -118,6 +134,7 @@ namespace BubbleTea.Extras
             materials.Clear();
             baseMaterial = null;
             shader = null;
+            Report = "no models made yet";
         }
     }
 }
