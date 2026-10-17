@@ -22,6 +22,9 @@ namespace BubbleTea.EditorTools
             // The Matcha House's own bars and green-uniformed staff.
             "MatchaPlayer", "MatchaBarista", "MatchaCashier", "MatchaCleaner",
             "WhiskBar", "FoamBar", "HojichaBar", "StrawberryBar", "YuzuBar", "SenchaBar", "TenjuBar",
+            // The Night Market's fruit bars and indigo-uniformed staff.
+            "NightPlayer", "NightBarista", "NightCashier", "NightCleaner",
+            "WinterMelonBar", "PassionFruitBar", "LycheeBar", "PeachBar",
             // Decor bought on pads.
             "BambooPlant", "PaperLanterns", "LuckyCat", "KoiPond", "SakuraTree",
         };

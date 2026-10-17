@@ -26,11 +26,11 @@ namespace BubbleTea.EditorTools
         private static string PrefabFolder = "Assets/_Game/Prefabs";
         private static int costScale = 1;
         private static int shopNumber = 1;
-        private static string staffSlotPrefix = ""; // "Matcha" in the Matcha House: green uniforms
+        private static string staffSlotPrefix = ""; // "Matcha" in the Matcha House (green uniforms), "Night" at the Night Market
 
         /// <summary>
         /// The art slot for a staff member (or the player) in the shop being built: the Matcha
-        /// House has its own green-uniformed versions, when the Art Set has them.
+        /// House and the Night Market have their own uniformed versions, when the Art Set has them.
         /// </summary>
         internal static string StaffSlot(string slotName) =>
             staffSlotPrefix.Length > 0 && ArtLibrary.Load().Get(staffSlotPrefix + slotName) != null
@@ -40,6 +40,8 @@ namespace BubbleTea.EditorTools
         internal struct Content
         {
             public BuildableDefinition Counter;
+            /// <summary>Night Market only: the second counter beside the first (its own line). Null in other shops.</summary>
+            public BuildableDefinition Counter2;
             public BuildableDefinition TeaBrewer;
             public BuildableDefinition TaroStation;
             public BuildableDefinition FruitBar;
@@ -62,18 +64,24 @@ namespace BubbleTea.EditorTools
             public BuildableDefinition Cleaner;
             public BuildableDefinition Seating;
             public BuildableDefinition Cashier;
+            /// <summary>Night Market only: the cashier at the second counter. Null in other shops.</summary>
+            public BuildableDefinition Cashier2;
+            /// <summary>Null in shops without a drive-thru (the Night Market), like DriveThru, CarPrefab and Expansion.</summary>
             public BuildableDefinition DriveThruCashier;
 
             /// <summary>Matcha House only: the stocker who carries crates to the bars. Null in other shops.</summary>
             public BuildableDefinition Stocker;
 
-            /// <summary>Matcha House only: the crate of supplies the delivery truck brings. Null in other shops.</summary>
+            /// <summary>The crate of supplies (the Matcha House's matcha powder, the Night Market's first fruit). Null in the Boba Shop.</summary>
             public ItemDefinition Crate;
 
-            /// <summary>Shop 1 only: the pad that opens the second shop. Null in other shops.</summary>
+            /// <summary>Every kind of crate the shop's bars use (one per fruit at the Night Market).</summary>
+            public ItemDefinition[] Crates;
+
+            /// <summary>The pad that opens the next shop, once everything else is built. Null in the last shop.</summary>
             public BuildableDefinition SecondShop;
 
-            /// <summary>Shop 2 only: the bus stop back to the first shop. Null in other shops.</summary>
+            /// <summary>The bus stop back to the shop before this one. Null in the first shop.</summary>
             public GameObject TravelBack;
         }
 
@@ -87,6 +95,7 @@ namespace BubbleTea.EditorTools
             public GameObject FruitBar;
             public GameObject ExtraBar; // optional fifth bar
             public ItemDefinition Supply; // optional crate some bars use up
+            public ItemDefinition[] Supplies; // every kind of crate, when bars use different ones
             public string ExtraName;
             public string BrewerName;
             public string TaroName;
@@ -107,7 +116,7 @@ namespace BubbleTea.EditorTools
                 EnsureFolder(PrefabFolder, sub);
                 DataFolder += "/" + sub;
                 PrefabFolder += "/" + sub;
-                costScale = 3; // everything costs (and pays) more in the second shop
+                costScale = shop > 2 ? 6 : 3; // everything costs (and pays) more in each later shop
             }
 
             EnsureFolder(DataFolder, "Items");
@@ -119,16 +128,25 @@ namespace BubbleTea.EditorTools
             EnsureFolder(PrefabFolder, "Decor");
 
             shopNumber = shop;
-            staffSlotPrefix = shop > 1 ? "Matcha" : "";
-            MenuSet set = shop > 1 ? BuildMatchaMenu() : BuildClassicMenu();
+            staffSlotPrefix = shop > 2 ? "Night" : shop > 1 ? "Matcha" : "";
+            bool nightMarket = shop > 2;
+            MenuSet set = nightMarket ? BuildNightMarketMenu() : shop > 1 ? BuildMatchaMenu() : BuildClassicMenu();
             DrinkRecipe[] menu = set.Menu;
             GameObject counter = BuildCounterPrefab("Counter", new Color(0.62f, 0.42f, 0.28f), menu, billPrefab,
                 "Main", priceMultiplier: 1f, queueSpacing: 1.1f);
-            GameObject driveThru = BuildCounterPrefab("DriveThru", new Color(0.35f, 0.55f, 0.75f), menu, billPrefab,
-                "DriveThru", priceMultiplier: 1.5f, queueSpacing: 3.2f,
-                // The window faces the car lane: cars queue along the lane, which runs past the
-                // counter's customer side, instead of straight out from it.
-                queueOffset: new Vector3(0f, 0f, -3.5f), queueYaw: -90f);
+            // The Night Market's second counter, beside the first, with its own line (and cashier).
+            GameObject counter2 = nightMarket
+                ? BuildCounterPrefab("Counter2", new Color(0.62f, 0.42f, 0.28f), menu, billPrefab,
+                    "Main2", priceMultiplier: 1f, queueSpacing: 1.1f, artSlot: "Counter")
+                : null;
+            // No drive-thru at the Night Market (it's a street stall).
+            GameObject driveThru = nightMarket
+                ? null
+                : BuildCounterPrefab("DriveThru", new Color(0.35f, 0.55f, 0.75f), menu, billPrefab,
+                    "DriveThru", priceMultiplier: 1.5f, queueSpacing: 3.2f,
+                    // The window faces the car lane: cars queue along the lane, which runs past the
+                    // counter's customer side, instead of straight out from it.
+                    queueOffset: new Vector3(0f, 0f, -3.5f), queueYaw: -90f);
 
             // Values per level start at level 0; costs start at the price of level 1. The Boba Shop's
             // upgrades max out at Lv 3/3, the Matcha House's at Lv 4/4. Brew Speed starts slow (0.75x)
@@ -159,7 +177,7 @@ namespace BubbleTea.EditorTools
                     Levels(maxLevel, 0f, 1f, 2f, 3f, 4f), Costs(maxLevel, 70, 150, 300, 600), // +1 finished drink per bar (see Station)
                     shownName: "Drink Shelf Space"));
                 // The Whisk Bar is whisked by hand until Whisk Master lets it run on its own.
-                upgradeList.Add(GetOrCreateUpgrade("Whisk Master", StatId.AutoWhisk, new[] { 0f, 1f }, new[] { 500 }));
+                if (!nightMarket) upgradeList.Add(GetOrCreateUpgrade("Whisk Master", StatId.AutoWhisk, new[] { 0f, 1f }, new[] { 500 }));
             }
             UpgradeDefinition[] upgrades = upgradeList.ToArray();
             GameObject upgradeDesk = BuildUpgradeDeskPrefab();
@@ -168,21 +186,31 @@ namespace BubbleTea.EditorTools
             return new Content
             {
                 Counter = GetOrCreateBuildable("Counter", 30, counter),
+                Counter2 = counter2 != null ? GetOrCreateBuildable("Counter 2", 600, counter2, shownName: "Second Counter") : null,
                 TeaBrewer = GetOrCreateBuildable(set.BrewerName, 80, set.Brewer),
                 TaroStation = GetOrCreateBuildable(set.TaroName, 250, set.TaroStation, shownName: set.TaroShownName),
                 FruitBar = GetOrCreateBuildable(set.FruitName, 400, set.FruitBar, shownName: set.FruitShownName),
                 ExtraBar = set.ExtraBar != null ? GetOrCreateBuildable(set.ExtraName, 700, set.ExtraBar, shownName: set.ExtraShownName) : null,
                 // The expansion builds nothing itself; its pad opens the wall and shows the new floor.
-                Expansion = GetOrCreateBuildable("Expand Shop", 1000, null),
-                DriveThru = GetOrCreateBuildable("Drive Thru", 600, driveThru),
-                CarPrefab = BuildCarPrefab(),
+                Expansion = nightMarket ? null : GetOrCreateBuildable("Expand Shop", 1000, null),
+                DriveThru = driveThru != null ? GetOrCreateBuildable("Drive Thru", 600, driveThru) : null,
+                CarPrefab = nightMarket ? null : BuildCarPrefab(),
                 UpgradeDesk = GetOrCreateBuildable("Upgrades", 40, upgradeDesk),
                 Upgrades = upgrades,
                 CustomerPrefab = BuildCustomerPrefab(),
                 Menu = menu,
-                Seating = GetOrCreateBuildable("Seating Area", 500, BuildSeatingPrefab(billPrefab)),
-                // 2 baristas in the Boba Shop, 3 in the Matcha House.
-                Baristas = shop > 1
+                // Six tables at the Night Market, four elsewhere.
+                Seating = GetOrCreateBuildable("Seating Area", 500, BuildSeatingPrefab(billPrefab, nightMarket ? 6 : 4)),
+                // 2 baristas in the Boba Shop, 3 in the Matcha House, 4 at the Night Market.
+                Baristas = nightMarket
+                    ? new[]
+                    {
+                        GetOrCreateBuildable("Hire Barista", 150, barista, keepPriceUpToDate: true),
+                        GetOrCreateBuildable("Hire Barista 2", 500, barista, keepPriceUpToDate: true),
+                        GetOrCreateBuildable("Hire Barista 3", 900, barista),
+                        GetOrCreateBuildable("Hire Barista 4", 1400, barista),
+                    }
+                    : shop > 1
                     ? new[]
                     {
                         GetOrCreateBuildable("Hire Barista", 150, barista, keepPriceUpToDate: true),
@@ -196,8 +224,10 @@ namespace BubbleTea.EditorTools
                     },
                 Cleaner = GetOrCreateBuildable("Hire Cleaner", 400, BuildCleanerPrefab()),
                 Cashier = GetOrCreateBuildable("Hire Cashier", 150, BuildCashierPrefab("Cashier", "Main")),
-                DriveThruCashier = GetOrCreateBuildable("Hire Drive-Thru Cashier", 400,
-                    BuildCashierPrefab("DriveThruCashier", "DriveThru")),
+                Cashier2 = nightMarket ? GetOrCreateBuildable("Hire Cashier 2", 450, BuildCashierPrefab("Cashier2", "Main2")) : null,
+                DriveThruCashier = nightMarket
+                    ? null
+                    : GetOrCreateBuildable("Hire Drive-Thru Cashier", 400, BuildCashierPrefab("DriveThruCashier", "DriveThru")),
                 // Decor that pays: patience, customer flow and happiness (prices x3 in the Matcha House).
                 Decor = new[]
                 {
@@ -223,17 +253,24 @@ namespace BubbleTea.EditorTools
                     BuildDecorPrefab("MenuBoard", new Color(0.3f, 0.32f, 0.3f), new Vector3(1f, 1.4f, 0.6f))),
                 Statue = GetOrCreateBuildable("Boba Statue", 350,
                     BuildDecorPrefab("Statue", new Color(0.85f, 0.7f, 0.55f), new Vector3(1.2f, 1.8f, 1.2f))),
-                // Built once the first shop is finished; the stop it builds leads to the Matcha House.
+                // Built once a shop is finished; the stop it builds leads to the next shop.
                 SecondShop = shop == 1
                     ? GetOrCreateBuildable("Open Matcha House", 5000,
                         BuildTravelPrefab("ToMatchaHouse", "Shop2", "Matcha House", new Color(0.55f, 0.78f, 0.45f)),
                         keepPriceUpToDate: true)
+                    : shop == 2
+                    ? GetOrCreateBuildable("Open Night Market", 6000,
+                        BuildTravelPrefab("ToNightMarket", "Shop3", "Night Market", new Color(0.98f, 0.55f, 0.3f)),
+                        keepPriceUpToDate: true)
                     : null,
-                TravelBack = shop > 1
+                TravelBack = nightMarket
+                    ? BuildTravelPrefab("ToMatchaHouse", "Shop2", "Matcha House", new Color(0.55f, 0.78f, 0.45f))
+                    : shop > 1
                     ? BuildTravelPrefab("ToBobaShop", "Prototype", "Boba Shop", new Color(0.95f, 0.62f, 0.55f))
                     : null,
                 Stocker = set.Supply != null ? GetOrCreateBuildable("Hire Stocker", 200, BuildStockerPrefab()) : null,
                 Crate = set.Supply,
+                Crates = set.Supplies ?? (set.Supply != null ? new[] { set.Supply } : System.Array.Empty<ItemDefinition>()),
             };
         }
 
@@ -319,6 +356,56 @@ namespace BubbleTea.EditorTools
                 FruitShownName = "Sencha Bar",
                 ExtraName = "Yuzu Bar",
                 ExtraShownName = "Tenju Bar",
+            };
+        }
+
+        // Shop 3, the Night Market: an outdoor stall of fruit teas. Every bar uses up its own fruit,
+        // brought in crates by a dinghy on the river behind the stall, unlocked in this order: Winter
+        // Melon Tea, Passion Fruit Green, Lychee Tea and Peach Tea.
+        private static MenuSet BuildNightMarketMenu()
+        {
+            Color winterMelon = new(0.80f, 0.60f, 0.36f);  // caramel-brown winter melon tea
+            Color passion = new(0.98f, 0.76f, 0.20f);      // golden passion fruit with green tea
+            Color lychee = new(0.97f, 0.92f, 0.90f);       // pale, almost white
+            Color peach = new(1f, 0.64f, 0.50f);
+            ItemDefinition winterMelonTea = GetOrCreateItem("Winter Melon Tea", winterMelon, null);
+            ItemDefinition passionGreen = GetOrCreateItem("Passion Fruit Green", passion, new Color(0.30f, 0.20f, 0.12f)); // the seeds
+            ItemDefinition lycheeTea = GetOrCreateItem("Lychee Tea", lychee, null);
+            ItemDefinition peachTea = GetOrCreateItem("Peach Tea", peach, null);
+
+            RecipeStep brewMelon = GetOrCreateStep("Brew Winter Melon Tea", null, winterMelonTea, 2.2f);
+            RecipeStep shakePassion = GetOrCreateStep("Shake Passion Fruit Green", null, passionGreen, 2.6f);
+            RecipeStep brewLychee = GetOrCreateStep("Brew Lychee Tea", null, lycheeTea, 2.8f);
+            RecipeStep brewPeach = GetOrCreateStep("Brew Peach Tea", null, peachTea, 3.2f);
+            ItemDefinition melonCrate = GetOrCreateCrate("Winter Melon", new Color(0.45f, 0.68f, 0.42f));
+            ItemDefinition passionCrate = GetOrCreateCrate("Passion Fruit", new Color(0.50f, 0.26f, 0.52f));
+            ItemDefinition lycheeCrate = GetOrCreateCrate("Lychee", new Color(0.88f, 0.32f, 0.38f));
+            ItemDefinition peachCrate = GetOrCreateCrate("Peach", new Color(1f, 0.62f, 0.45f));
+            Vector3 size = new Vector3(1.4f, 1f, 1f) * BarScale;
+
+            return new MenuSet
+            {
+                Menu = new[]
+                {
+                    GetOrCreateDrink("Winter Melon Tea", winterMelonTea, 44),
+                    GetOrCreateDrink("Passion Fruit Green", passionGreen, 52),
+                    GetOrCreateDrink("Lychee Tea", lycheeTea, 60),
+                    GetOrCreateDrink("Peach Tea", peachTea, 70),
+                },
+                Brewer = BuildStationPrefab("WinterMelonBar", new Color(0.45f, 0.62f, 0.40f), size, winterMelon, new[] { brewMelon },
+                    inputCapacity: 0, supply: melonCrate, supplyName: "MELON"),
+                TaroStation = BuildStationPrefab("PassionFruitBar", new Color(0.48f, 0.28f, 0.50f), size, passion, new[] { shakePassion },
+                    inputCapacity: 0, supply: passionCrate, supplyName: "PASSION FRUIT"),
+                FruitBar = BuildStationPrefab("LycheeBar", new Color(0.82f, 0.32f, 0.38f), size, lychee, new[] { brewLychee },
+                    inputCapacity: 0, supply: lycheeCrate, supplyName: "LYCHEE"),
+                ExtraBar = BuildStationPrefab("PeachBar", new Color(0.98f, 0.62f, 0.46f), size, peach, new[] { brewPeach },
+                    inputCapacity: 0, supply: peachCrate, supplyName: "PEACH"),
+                Supply = melonCrate,
+                Supplies = new[] { melonCrate, passionCrate, lycheeCrate, peachCrate },
+                BrewerName = "Winter Melon Bar",
+                TaroName = "Passion Fruit Bar",
+                FruitName = "Lychee Bar",
+                ExtraName = "Peach Bar",
             };
         }
 
@@ -647,13 +734,16 @@ namespace BubbleTea.EditorTools
         }
 
         // supply: a crate the bar uses up (one scoop per drink). handMade: only works while the player stands at it.
+        // supplyName: what the bar's label calls its supply ("MATCHA" unless set).
         private static GameObject BuildStationPrefab(string name, Color bodyColor, Vector3 bodySize, Color topColor,
-            RecipeStep[] steps, int inputCapacity, string artSlot = null, ItemDefinition supply = null, bool handMade = false)
+            RecipeStep[] steps, int inputCapacity, string artSlot = null, ItemDefinition supply = null, bool handMade = false,
+            string supplyName = null)
         {
             GameObject root = BuildStationBody(name, bodyColor, bodySize, topColor, artSlot);
             var station = root.AddComponent<Station>();
             var serialized = new SerializedObject(station);
             serialized.FindProperty("supplyItem").objectReferenceValue = supply;
+            if (supplyName != null) serialized.FindProperty("supplyName").stringValue = supplyName;
             serialized.FindProperty("needsPlayer").boolValue = handMade;
 
             SerializedProperty stepList = serialized.FindProperty("steps");
@@ -712,10 +802,11 @@ namespace BubbleTea.EditorTools
         // and their money piles up beside it.
         // Used for both the main counter and the drive-through window.
         private static GameObject BuildCounterPrefab(string name, Color color, DrinkRecipe[] menu, CashBill billPrefab,
-            string lane, float priceMultiplier, float queueSpacing, Vector3? queueOffset = null, float queueYaw = 180f)
+            string lane, float priceMultiplier, float queueSpacing, Vector3? queueOffset = null, float queueYaw = 180f,
+            string artSlot = null)
         {
             var bodySize = new Vector3(2.2f, 1f, 1f) * BarScale;
-            GameObject root = BuildStationBody(name, color, bodySize, null);
+            GameObject root = BuildStationBody(name, color, bodySize, null, artSlot);
 
             var cashGo = new GameObject("CashPile");
             cashGo.transform.SetParent(root.transform, false);
@@ -736,7 +827,7 @@ namespace BubbleTea.EditorTools
             SerializedProperty menuList = serialized.FindProperty("menu");
             menuList.arraySize = menu.Length;
             for (int i = 0; i < menu.Length; i++) menuList.GetArrayElementAtIndex(i).objectReferenceValue = menu[i];
-            serialized.FindProperty("maxDrinksPerCustomer").intValue = shopNumber > 1 ? 4 : 3;
+            serialized.FindProperty("maxDrinksPerCustomer").intValue = shopNumber > 2 ? 5 : shopNumber > 1 ? 4 : 3; // bigger orders in each shop
             serialized.FindProperty("cashPile").objectReferenceValue = cashPile;
             serialized.FindProperty("queueStart").objectReferenceValue = queueStart;
             serialized.FindProperty("lane").stringValue = lane;
@@ -845,7 +936,7 @@ namespace BubbleTea.EditorTools
 
         // Two café tables with two seats each. Seated customers leave a little money in the pile
         // and an empty cup that blocks the seat until someone cleans it.
-        private static GameObject BuildSeatingPrefab(CashBill billPrefab)
+        private static GameObject BuildSeatingPrefab(CashBill billPrefab, int tables)
         {
             var root = new GameObject("SeatingArea");
             Material cup = GetOrCreateMaterial("EmptyCup", new Color(0.97f, 0.97f, 0.95f));
@@ -862,12 +953,13 @@ namespace BubbleTea.EditorTools
             serializedPile.FindProperty("maxBills").intValue = 40;
             serializedPile.ApplyModifiedPropertiesWithoutUndo();
 
-            // Four tables in two rows of two, eight seats in all.
-            for (int t = 0; t < 4; t++)
+            // Tables in two rows (two or three across), two seats each.
+            int across = Mathf.Max(1, tables / 2);
+            for (int t = 0; t < tables; t++)
             {
                 GameObject table = BuildStationBody("Table", new Color(0.83f, 0.64f, 0.46f), new Vector3(2.6f, 0.75f, 1.2f), null);
                 table.transform.SetParent(root.transform, false);
-                table.transform.localPosition = new Vector3(t % 2 == 0 ? -1.8f : 1.8f, 0f, t < 2 ? 0f : 2.8f);
+                table.transform.localPosition = new Vector3(((t % across) - (across - 1) / 2f) * 3.6f, 0f, t < across ? 0f : 2.8f);
 
                 var seats = new Transform[2];
                 var messes = new GameObject[2];
@@ -1016,6 +1108,7 @@ namespace BubbleTea.EditorTools
             var customer = root.AddComponent<Customer>();
             var serialized = new SerializedObject(customer);
             serialized.FindProperty("drinkHoldPosition").vector3Value = new Vector3(0f, 0.62f, 0.48f); // in their hands
+            if (shopNumber > 2) serialized.FindProperty("patienceSeconds").floatValue = 12f; // the Night Market's crowd is in a hurry
             serialized.FindProperty("orderBubble").objectReferenceValue = bubble;
             serialized.FindProperty("moodLight").objectReferenceValue = AddMoodLight(bubble);
             serialized.ApplyModifiedPropertiesWithoutUndo();

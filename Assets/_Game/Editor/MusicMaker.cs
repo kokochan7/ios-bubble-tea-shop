@@ -20,7 +20,7 @@ namespace BubbleTea.EditorTools
         private const string Folder = "Assets/_Game/Audio";
         private const int SampleRate = 32000;
 
-        internal enum Track { BobaShop, MatchaHouse }
+        internal enum Track { BobaShop, MatchaHouse, NightMarket }
 
         private enum Quality { Major, Minor, Major7, Minor7, Dominant7, Major6 }
 
@@ -75,18 +75,37 @@ namespace BubbleTea.EditorTools
             Seed = 41,
         };
 
+        // A lazy evening tune for the Night Market, on A minor pentatonic: Am | F | C | G, with an Em7 turn.
+        private static readonly Song NightSong = new()
+        {
+            FileName = "Music_NightMarket_Folk",
+            Style = Style.Folk,
+            Bpm = 92f,
+            Root = 57, // A
+            Chords = new[]
+            {
+                (0, Quality.Minor), (8, Quality.Major), (3, Quality.Major), (10, Quality.Major),
+                (0, Quality.Minor7), (7, Quality.Minor7), (8, Quality.Major7), (10, Quality.Major),
+            },
+            Scale = new[] { 0, 3, 5, 7, 10, 12, 15, 17, 19, 22, 24 }, // A C D E G
+            RestChance = 0.4f,
+            HookBars = 4,
+            Seed = 73,
+        };
+
         [MenuItem("Bubble Tea/Audio/Rebuild Music")]
         public static void RebuildAll()
         {
             Write(BobaSong);
             Write(MatchaSong);
+            Write(NightSong);
             Debug.Log("Bubble Tea: music rebuilt in " + Folder);
         }
 
         /// <summary>The track's clip, written first if it doesn't exist yet.</summary>
         public static AudioClip Get(Track track)
         {
-            Song song = track == Track.BobaShop ? BobaSong : MatchaSong;
+            Song song = track == Track.BobaShop ? BobaSong : track == Track.NightMarket ? NightSong : MatchaSong;
             string path = $"{Folder}/{song.FileName}.wav";
             var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
             return clip != null ? clip : Write(song);

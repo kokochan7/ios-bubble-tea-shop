@@ -4,9 +4,11 @@ using UnityEngine;
 namespace BubbleTea.Cooking
 {
     /// <summary>
-    /// A pallet by the kitchen's side wall where the delivery truck leaves crates of supplies
-    /// (Matcha House). Stand on its spot to pick a crate up, then carry it to a bar that's
-    /// running low. Each carrier takes at most two crates, so the tray still has room for drinks.
+    /// A pallet where crates of supplies are left: by the Matcha House's side wall (the delivery truck
+    /// brings matcha powder) or on the Night Market's river jetty (a dinghy brings four kinds of fruit).
+    /// Stand on its spot to pick a crate up, then carry it to a bar that's running low; with several
+    /// kinds, you're handed the one the neediest bar wants. Each carrier takes at most two crates, so
+    /// the tray still has room for drinks.
     /// </summary>
     public class SupplyDock : MonoBehaviour
     {
@@ -15,6 +17,9 @@ namespace BubbleTea.Cooking
 
         [SerializeField, Tooltip("The crate this dock holds.")]
         private ItemDefinition crate;
+
+        [SerializeField, Tooltip("Other kinds of crate it also holds (the Night Market's fruits).")]
+        private ItemDefinition[] moreCrates = System.Array.Empty<ItemDefinition>();
 
         [SerializeField, Tooltip("Crates waiting to be picked up.")]
         private ItemStack crates = new();
@@ -29,6 +34,12 @@ namespace BubbleTea.Cooking
         private Vector3 waitOffset = new(1.4f, 0f, 0f);
 
         public ItemDefinition Crate => crate;
+
+        /// <summary>True for any kind of crate this dock holds.</summary>
+        public bool IsCrate(ItemDefinition item) => item != null && (item == crate || System.Array.IndexOf(moreCrates, item) >= 0);
+
+        /// <summary>Crates of this kind waiting on the dock.</summary>
+        public int CountOf(ItemDefinition kind) => crates.CountOf(i => i == kind);
         public Vector3 ZoneCenter => zone.Center(transform);
 
         /// <summary>Where an idle stocker waits, out of the way beside the pallet.</summary>
@@ -43,10 +54,13 @@ namespace BubbleTea.Cooking
         private void OnDisable() => active.Remove(this);
 
         /// <summary>The truck drops a crate off, flying in from <paramref name="from"/>. False if the dock is full.</summary>
-        public bool Deliver(Vector3 from)
+        public bool Deliver(Vector3 from) => Deliver(from, crate);
+
+        /// <summary>Drops off a crate of one kind (a dinghy's fruit). False if the dock is full.</summary>
+        public bool Deliver(Vector3 from, ItemDefinition kind)
         {
-            if (crate == null || crates.IsFull) return false;
-            CarriedItem item = crate.Spawn(from);
+            if (kind == null || crates.IsFull) return false;
+            CarriedItem item = kind.Spawn(from);
             if (crates.Push(item)) return true;
             Destroy(item.gameObject);
             return false;
@@ -56,10 +70,25 @@ namespace BubbleTea.Cooking
 
         private bool Handoff(ItemCarrier carrier)
         {
-            if (carrier.Stack.IsFull || carrier.Stack.CountOf(i => i == crate) >= maxPerCarrier) return false;
-            if (!crates.TryTake(carrier.WillTake, out CarriedItem item)) return false;
+            if (carrier.Stack.IsFull || carrier.Stack.CountOf(IsCrate) >= maxPerCarrier) return false;
+            // The kind the emptiest bar is waiting for first, then anything.
+            ItemDefinition wanted = Wanted();
+            if (!(wanted != null && crates.TryTake(i => i == wanted && carrier.WillTake(i), out CarriedItem item))
+                && !crates.TryTake(carrier.WillTake, out item)) return false;
             carrier.Stack.Push(item);
             return true;
+        }
+
+        // The supply the emptiest bar that has room for a crate uses, if this dock has one.
+        private ItemDefinition Wanted()
+        {
+            Station best = null;
+            foreach (Station station in Station.All)
+            {
+                if (station == null || !station.WantsCrate || CountOf(station.SupplyItem) == 0) continue;
+                if (best == null || station.Supplies < best.Supplies) best = station;
+            }
+            return best != null ? best.SupplyItem : null;
         }
 
         private void OnDrawGizmosSelected() => zone.DrawGizmo(transform);

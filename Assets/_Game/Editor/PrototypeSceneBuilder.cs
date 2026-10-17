@@ -30,6 +30,7 @@ namespace BubbleTea.EditorTools
     {
         private const string ScenePath = "Assets/_Game/Scenes/Prototype.unity";
         private const string Shop2ScenePath = "Assets/_Game/Scenes/Shop2.unity";
+        private const string Shop3ScenePath = "Assets/_Game/Scenes/Shop3.unity";
         private const string MenuScenePath = "Assets/_Game/Scenes/MainMenu.unity";
         private const string PrefabFolder = "Assets/_Game/Prefabs";
         private const string MaterialFolder = "Assets/_Game/Materials";
@@ -66,8 +67,13 @@ namespace BubbleTea.EditorTools
             public Vector3 Counter, Seating, DriveThru, TrashCan, FloorCash, PlayerStart;
             public Vector3 TeaBrewer, TaroStation, FruitBar, ExtraBar, UpgradeDesk, Cashier;
             public Vector3 Expansion, Cleaner, DriveThruCashier, SecondShopPad, TravelBack;
-            public Vector3 Stocker, SupplyDock, Chalkboard;      // Matcha House only
+            public Vector3 Stocker, SupplyDock, Chalkboard;      // Matcha House and Night Market
             public Vector3 StaffSofa;                            // where baristas take their breaks
+            // Night Market: a second counter beside the first (with its own cashier), no drive-thru
+            // or expansion, open to the night sky with a river behind the stall (low walls all round).
+            public bool SecondCounter, NoDriveThru, Outdoor;
+            public Vector3 Counter2, Cashier2;
+            public float RiverZ;                                 // middle of the river, behind the back wall
             public Vector3[] Decor;                              // decor pads, in the order they appear
             public Vector3[] Baristas;
             public float[] Windows, Lamps, ExpansionWindows, ExpansionLamps; // x positions on the back wall
@@ -151,9 +157,67 @@ namespace BubbleTea.EditorTools
             Vector3.zero);
 
         // Matcha House: the same room with a fourth bar (the Tenju Bar) at the east end of the row.
-        private static readonly ShopLayout Large = CompactLayout(
+        // Its stop to the Night Market stands west of the bus stop home, in front of the door.
+        private static readonly ShopLayout Large = WithNextShopPad(CompactLayout(
             new Vector3[] { new(-6.6f, 0f, BarRowZ), new(-2.73f, 0f, BarRowZ), new(1.13f, 0f, BarRowZ) },
-            new Vector3(5f, 0f, BarRowZ));
+            new Vector3(5f, 0f, BarRowZ)), new Vector3(-3.6f, 0f, -9.4f));
+
+        private static ShopLayout WithNextShopPad(ShopLayout layout, Vector3 spot)
+        {
+            layout.SecondShopPad = spot;
+            return layout;
+        }
+
+        // The Night Market Stall: an outdoor street stall, 24 x 18 meters, bigger than the cafés.
+        //  - the kitchen (north of the counters): four fruit bars in a row along the back railing, the
+        //    river jetty where the fruit dinghy unloads in the back-east corner, the staff sofa beside
+        //    it, barista pads in front of the bars and the trash can in the front-west corner;
+        //  - two counters side by side across the middle, each with its own line and cashier;
+        //  - the dining area (south): the two lines run down to the entrance, six tables to the east,
+        //    decor and the cleaner down the west side.
+        private static readonly ShopLayout NightMarket = new()
+        {
+            HalfWidth = 12f, HalfDepth = 9f,
+            DoorFrom = -7.5f, DoorTo = 3f,
+            StaffDoorFrom = 7.6f, StaffDoorTo = 10f,
+            LaneWallX = 14f,
+            Outdoor = true, NoDriveThru = true, SecondCounter = true,
+            Counter = new(-5f, 0f, 0f),
+            Counter2 = new(0.5f, 0f, 0f),
+            Cashier = new(-2.4f, 0f, 1.8f),
+            Cashier2 = new(3.1f, 0f, 1.8f),
+            Seating = new(6.8f, 0f, -6f),     // six tables in the front-east, clear of the second line
+            TrashCan = new(-11.3f, 0f, 1.2f),
+            PlayerStart = new(-1.8f, 1f, 4.2f),
+            TeaBrewer = new(-8.4f, 0f, 7.9f),
+            TaroStation = new(-4.2f, 0f, 7.9f),
+            FruitBar = new(0f, 0f, 7.9f),
+            ExtraBar = new(4.2f, 0f, 7.9f),
+            Cleaner = new(-8.6f, 0f, -1.6f),
+            TravelBack = new(4.6f, 0f, -10.8f),  // on the street, just east of the entrance
+            SecondShopPad = new(-6f, 0f, -10.8f),
+            SupplyDock = new(8.6f, 0f, 8f),      // the fruit jetty in the back-east corner
+            Stocker = new(10.8f, 0f, 5.6f),
+            Chalkboard = new(-2.3f, 0f, -7.6f),  // between the two lines, by the entrance
+            Baristas = new Vector3[] { new(-8.8f, 0f, 3.9f), new(-6.2f, 0f, 3.9f), new(6.6f, 0f, 3.9f), new(9.2f, 0f, 3.9f) },
+            StaffSofa = new(10.9f, 0f, 8.3f),
+            RiverZ = 13.5f,
+            // Order: bamboo plants, paper lanterns, lucky cat, koi pond, cherry blossom tree.
+            Decor = new Vector3[]
+            {
+                new(-11.2f, 0f, -8.3f), new(-11.2f, 0f, -4.6f), new(11.3f, 0f, -0.7f), new(-8.4f, 0f, -8.2f), new(-8.6f, 0f, -4.8f),
+            },
+            Windows = new float[0],
+            Lamps = new float[0],
+            ExpansionWindows = new float[0],
+            ExpansionLamps = new float[0],
+            Trees = new Vector3[]
+            {
+                new(-15f, 0f, -11f), new(-15f, 0f, -4f), new(-15f, 0f, 3f), new(-15f, 0f, 9f),
+                new(15f, 0f, -11f), new(15f, 0f, -4f), new(15f, 0f, 3f), new(15f, 0f, 9f),
+                new(-8f, 0f, -14f), new(10f, 0f, -14f),
+            },
+        };
 
         /// <summary>The layout of the shop being built (read by <see cref="ShopDressing"/>).</summary>
         internal static ShopLayout Layout { get; private set; } = Large;
@@ -215,12 +279,46 @@ namespace BubbleTea.EditorTools
             Layout = Large,
         };
 
+        private static readonly ShopPlan ThirdShop = new()
+        {
+            Number = 3,
+            ScenePath = Shop3ScenePath,
+            SaveFile = "save-shop3.json",
+            FloorMaterial = "Shop3Floor",
+            FloorColor = new Color(0.66f, 0.50f, 0.38f),          // a warm wooden deck
+            WallMaterial = "Shop3Wall",
+            WallColor = new Color(0.50f, 0.34f, 0.24f),           // dark wooden railings
+            ExpansionFloorMaterial = "Shop3ExpansionFloor",
+            ExpansionFloorColor = new Color(0.66f, 0.50f, 0.38f),
+            Look = new ShopDressing.Style
+            {
+                // A night market street stall: strings of glowing lanterns, a striped awning, the river behind.
+                Theme = ShopDressing.Theme.NightMarket,
+                ShopName = "Night Market",
+                Prefix = "Shop3",
+                Accent = new Color(0.85f, 0.22f, 0.20f),  // lantern red (awning stripes, sign)
+                Accent2 = new Color(0.98f, 0.80f, 0.35f), // lantern gold
+                Grass = new Color(0.16f, 0.24f, 0.20f),   // dark grass at night
+                Lantern = new Color(0.95f, 0.30f, 0.20f),
+                LanternGlow = new Color(1f, 0.45f, 0.18f),
+                Noren = new Color(0.24f, 0.22f, 0.48f),
+                TeaTin = new Color(0.85f, 0.22f, 0.20f),
+                SignText = new Color(1f, 0.88f, 0.55f),
+            },
+            Music = MusicMaker.Track.NightMarket,
+            Layout = NightMarket,
+        };
+
         [MenuItem("Bubble Tea/Build Prototype Scene")]
         public static void Build() => BuildShop(FirstShop);
 
         /// <summary>Builds the Matcha House, the second shop that the first one unlocks.</summary>
         [MenuItem("Bubble Tea/Build Second Shop Scene")]
         public static void BuildSecondShop() => BuildShop(SecondShop);
+
+        /// <summary>Builds the Night Market Stall, the third shop that the Matcha House unlocks.</summary>
+        [MenuItem("Bubble Tea/Build Third Shop Scene")]
+        public static void BuildThirdShop() => BuildShop(ThirdShop);
 
         /// <summary>
         /// Rebuilds the main menu and every shop in one go (asks once). Later shops come first so the
@@ -238,7 +336,7 @@ namespace BubbleTea.EditorTools
         }
 
         // Every shop, built in this order by Build All Shops.
-        private static ShopPlan[] AllShops => new[] { SecondShop, FirstShop };
+        private static ShopPlan[] AllShops => new[] { ThirdShop, SecondShop, FirstShop };
 
         /// <summary>Builds the title screen the game opens on (BubbleTea House): Play and Settings.</summary>
         [MenuItem("Bubble Tea/Build Main Menu Scene")]
@@ -484,14 +582,18 @@ namespace BubbleTea.EditorTools
             Material wallMat = GetOrCreateMaterial(plan.WallMaterial, plan.WallColor);
             wallMat.color = plan.WallColor;
             GameObject eastWall = CreateWalls(wallMat);
-            GameObject expansionArea = CreateExpansionArea(wallMat,
-                GetOrCreateMaterial(plan.ExpansionFloorMaterial, plan.ExpansionFloorColor));
+            GameObject expansionArea = Layout.NoDriveThru
+                ? null
+                : CreateExpansionArea(wallMat, GetOrCreateMaterial(plan.ExpansionFloorMaterial, plan.ExpansionFloorColor));
             ShopDressing.Dress(plan.Look, floorMat, GetOrCreateMaterial(plan.ExpansionFloorMaterial, plan.ExpansionFloorColor),
                 wallMat, expansionArea);
             CreateMusic(plan.Music);
 
-            // The Matcha House dresses the player in its green uniform (if the Art Set has it).
-            string playerSlot = plan.Number > 1 && ArtLibrary.Load().Get("MatchaPlayer") != null ? "MatchaPlayer" : "Player";
+            // Later shops dress the player in their own uniform (if the Art Set has it): green in the
+            // Matcha House, indigo at the Night Market (whose art is made here, see BobaArtKit).
+            if (plan.Number > 2) BobaArtKit.EnsureNightMarketArt();
+            string uniform = plan.Number > 2 ? "NightPlayer" : "MatchaPlayer";
+            string playerSlot = plan.Number > 1 && ArtLibrary.Load().Get(uniform) != null ? uniform : "Player";
             GameObject player = CreatePlayer(playerMat, playerSlot, plan.Number > 1, plan.Number, out Wallet wallet);
             Camera camera = CreateCamera(player.transform);
             VirtualJoystick joystick = CreateHud(wallet, out Transform hud);
@@ -511,14 +613,20 @@ namespace BubbleTea.EditorTools
             }
             // Customers come in off the sidewalk through the front door and leave the same way.
             float street = Layout.SidewalkZ;
+            // The Night Market is busier: customers come more often, to both counters.
+            bool nightMarket = plan.Number > 2;
             CustomerSpawner mainSpawner = CreateCustomerSpawner("CustomerSpawner", "Main", content.CustomerPrefab,
                 new Vector3(Layout.Counter.x, 0f, street), new Vector3((Layout.DoorFrom + Layout.DoorTo) / 2f, 0f, street),
-                secondsBetween: 3f, max: 4);
+                secondsBetween: nightMarket ? 2.6f : 3f, max: 4);
             // Their order bubble and patience start as they walk in through the front door.
-            var doorSettings = new SerializedObject(mainSpawner);
-            doorSettings.FindProperty("startOrdersAtDoor").boolValue = true;
-            doorSettings.FindProperty("doorZ").floatValue = -Layout.HalfDepth;
-            doorSettings.ApplyModifiedPropertiesWithoutUndo();
+            StartOrdersAtDoor(mainSpawner);
+            if (Layout.SecondCounter)
+            {
+                CustomerSpawner second = CreateCustomerSpawner("CustomerSpawner 2", "Main2", content.CustomerPrefab,
+                    new Vector3(Layout.Counter2.x, 0f, street), new Vector3((Layout.DoorFrom + Layout.DoorTo) / 2f, 0f, street),
+                    secondsBetween: 2.6f, max: 4);
+                StartOrdersAtDoor(second);
+            }
             // Named VIP regulars who drop by once a shop day for their favorite drink.
             var vips = new GameObject("VipRegulars").AddComponent<VipRegulars>();
             SetReference(vips, "spawner", mainSpawner);
@@ -526,7 +634,9 @@ namespace BubbleTea.EditorTools
             {
                 var vipSettings = new SerializedObject(vips);
                 SerializedProperty vipNames = vipSettings.FindProperty("names");
-                string[] matchaRegulars = { "Yui", "Ren", "Sakura", "Haru", "Nana" };
+                string[] matchaRegulars = nightMarket
+                    ? new[] { "Mei", "Jun", "Lin", "Bao", "Kai" }
+                    : new[] { "Yui", "Ren", "Sakura", "Haru", "Nana" };
                 vipNames.arraySize = matchaRegulars.Length;
                 for (int i = 0; i < matchaRegulars.Length; i++) vipNames.GetArrayElementAtIndex(i).stringValue = matchaRegulars[i];
                 vipSettings.ApplyModifiedPropertiesWithoutUndo();
@@ -535,17 +645,23 @@ namespace BubbleTea.EditorTools
             if (plan.Number > 1)
             {
                 var criticSettings = new SerializedObject(mainSpawner);
-                criticSettings.FindProperty("criticChance").floatValue = 0.08f;
+                criticSettings.FindProperty("criticChance").floatValue = nightMarket ? 0.12f : 0.08f;
                 criticSettings.ApplyModifiedPropertiesWithoutUndo();
                 CreateTourBus(mainSpawner);
                 CreateDailySpecialBoard();
             }
-            if (content.Crate != null) CreateSupplyDelivery(content.Crate, padMat);
+            // Supplies: the Night Market's fruit comes by dinghy on the river, the Matcha House's matcha by truck.
+            if (Layout.Outdoor && content.Crates != null && content.Crates.Length > 0) CreateRiverDelivery(content.Crates, padMat);
+            else if (content.Crate != null) CreateSupplyDelivery(content.Crate, padMat);
+            if (Layout.Outdoor) new GameObject("RainShower").AddComponent<RainShower>(); // showers bring big rushes
             CreateStaffSofa();
             // Cars turn in from the road, drive up the lane past the window and out the far end.
-            CreateCustomerSpawner("CarSpawner", "DriveThru", content.CarPrefab,
-                new Vector3(Layout.LaneX, 0f, street - 4f), new Vector3(Layout.LaneX, 0f, Layout.HalfDepth + 9f),
-                secondsBetween: 6f, max: 3);
+            if (content.CarPrefab != null)
+            {
+                CreateCustomerSpawner("CarSpawner", "DriveThru", content.CarPrefab,
+                    new Vector3(Layout.LaneX, 0f, street - 4f), new Vector3(Layout.LaneX, 0f, Layout.HalfDepth + 9f),
+                    secondsBetween: 6f, max: 3);
+            }
             UpgradeManager upgrades = CreateUpgradeManager(wallet, content.Upgrades);
             // The upgrades are bought from the TEAM menu (BubbleTea.Extras.ExtrasHud), not a desk.
             OfflineEarnings offlineEarnings = null; // no reward for time away from the game
@@ -581,6 +697,11 @@ namespace BubbleTea.EditorTools
             {
                 Debug.Log("Bubble Tea: click Bubble Tea > Build Main Menu Scene so the game (and Play) starts at the main menu.");
             }
+            if (plan.Number == 2 && AssetDatabase.LoadAssetAtPath<SceneAsset>(Shop3ScenePath) == null)
+            {
+                Debug.Log("Bubble Tea: the third shop isn't built yet. Click Bubble Tea > Build Third Shop Scene " +
+                          "so the Night Market stop has somewhere to go.");
+            }
             if (plan.Number == 1 && AssetDatabase.LoadAssetAtPath<SceneAsset>(Shop2ScenePath) == null)
             {
                 Debug.Log("Bubble Tea: the second shop isn't built yet. Click Bubble Tea > Build Second Shop Scene " +
@@ -588,8 +709,22 @@ namespace BubbleTea.EditorTools
             }
         }
 
+        // Customers' orders start as they walk in past the front wall.
+        private static void StartOrdersAtDoor(CustomerSpawner spawner)
+        {
+            var doorSettings = new SerializedObject(spawner);
+            doorSettings.FindProperty("startOrdersAtDoor").boolValue = true;
+            doorSettings.FindProperty("doorZ").floatValue = -Layout.HalfDepth;
+            doorSettings.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void CreateLight()
         {
+            if (Layout.Outdoor)
+            {
+                CreateNightLight();
+                return;
+            }
             var go = new GameObject("Sun");
             var light = go.AddComponent<Light>();
             light.type = LightType.Directional;
@@ -604,6 +739,26 @@ namespace BubbleTea.EditorTools
             RenderSettings.ambientSkyColor = new Color(0.96f, 0.93f, 0.92f);
             RenderSettings.ambientEquatorColor = new Color(0.90f, 0.80f, 0.72f);
             RenderSettings.ambientGroundColor = new Color(0.64f, 0.56f, 0.50f);
+        }
+
+        // Night: soft blue moonlight with gentle shadows, and a warm glow from all the lanterns in the
+        // ambient light, bright enough that everything still reads clearly on a phone.
+        private static void CreateNightLight()
+        {
+            var go = new GameObject("Moon");
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = 0.95f;
+            light.color = new Color(0.72f, 0.76f, 1f);
+            light.shadows = LightShadows.Soft;
+            light.shadowStrength = 0.35f;
+            go.transform.rotation = Quaternion.Euler(60f, -30f, 0f);
+            RenderSettings.sun = light;
+
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.55f, 0.52f, 0.78f);
+            RenderSettings.ambientEquatorColor = new Color(0.78f, 0.55f, 0.45f); // lantern glow
+            RenderSettings.ambientGroundColor = new Color(0.32f, 0.26f, 0.30f);
         }
 
         private static void CreateFloor(Material material)
@@ -624,7 +779,9 @@ namespace BubbleTea.EditorTools
             // The front (south) wall has a wide doorway. The player can step out onto a patch of
             // sidewalk in front of it (to reach the travel stop), fenced by invisible walls
             // (customers don't use physics, so they walk through them).
-            CreateWall(root.transform, "North", new Vector3(0f, 1.5f, d + 0.25f), new Vector3(2f * w + 0.5f, 3f, 0.5f), wallMat);
+            // Outdoors (the Night Market) the back is a low railing too, with the river beyond it.
+            float northHeight = Layout.Outdoor ? 1f : 3f;
+            CreateWall(root.transform, "North", new Vector3(0f, northHeight / 2f, d + 0.25f), new Vector3(2f * w + 0.5f, northHeight, 0.5f), wallMat);
             CreateWall(root.transform, "South (west of door)", new Vector3((-w - 0.25f + from) / 2f, 0.5f, -d - 0.25f),
                 new Vector3(from + w + 0.25f, 1f, 0.5f), wallMat);
             CreateWall(root.transform, "South (east of door)", new Vector3((w + 0.25f + to) / 2f, 0.5f, -d - 0.25f),
@@ -764,9 +921,11 @@ namespace BubbleTea.EditorTools
         {
             var go = new GameObject("Main Camera") { tag = "MainCamera" };
             var camera = go.AddComponent<Camera>();
-            camera.fieldOfView = 40f;
+            camera.fieldOfView = Layout.Outdoor ? 44f : 40f; // a little wider for the bigger stall
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.48f, 0.70f, 0.36f); // grass, past the edge of the ground
+            camera.backgroundColor = Layout.Outdoor
+                ? new Color(0.12f, 0.16f, 0.15f)   // dark grass at night
+                : new Color(0.48f, 0.70f, 0.36f); // grass, past the edge of the ground
             camera.allowMSAA = true;
             go.AddComponent<AudioListener>();
 
@@ -1104,16 +1263,30 @@ namespace BubbleTea.EditorTools
                 : null;
             if (secondShopPad != null) ResizePad(secondShopPad, 1.6f); // small, to fit on the sidewalk by the gate
             // The drive-thru cashier's pad sits beside the drive-thru's cash pile, like the main one.
-            UnlockPad driveThruCashierPad = CreatePad(content.DriveThruCashier, Layout.DriveThruCashier, billPrefab, wallet, padMat);
-            ResizePad(driveThruCashierPad, 1.5f);
-            // The drive-thru window sits in the lane wall, its customer side facing the cars outside.
-            UnlockPad driveThruPad = CreatePad(content.DriveThru, Layout.DriveThru, billPrefab, wallet, padMat,
-                driveThruCashierPad);
-            Turn(driveThruPad, -90f);
-            UnlockPad expansionPad = CreatePad(content.Expansion, Layout.Expansion, billPrefab, wallet, padMat,
-                driveThruPad);
-            SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
-            SetObjectList(expansionPad, "hideWhenUnlocked", eastWall);
+            // The Night Market has no drive-thru or expansion, so these three are left out there.
+            UnlockPad driveThruCashierPad = null, driveThruPad = null, expansionPad = null;
+            if (content.DriveThru != null && content.Expansion != null)
+            {
+                driveThruCashierPad = content.DriveThruCashier != null
+                    ? CreatePad(content.DriveThruCashier, Layout.DriveThruCashier, billPrefab, wallet, padMat)
+                    : null;
+                if (driveThruCashierPad != null) ResizePad(driveThruCashierPad, 1.5f);
+                // The drive-thru window sits in the lane wall, its customer side facing the cars outside.
+                driveThruPad = CreatePad(content.DriveThru, Layout.DriveThru, billPrefab, wallet, padMat,
+                    driveThruCashierPad);
+                Turn(driveThruPad, -90f);
+                expansionPad = CreatePad(content.Expansion, Layout.Expansion, billPrefab, wallet, padMat,
+                    driveThruPad);
+                SetObjectList(expansionPad, "showWhenUnlocked", expansionArea);
+                SetObjectList(expansionPad, "hideWhenUnlocked", eastWall);
+            }
+            // Night Market: the fruit bar also brings out the second counter, and that brings out its cashier.
+            UnlockPad cashier2Pad = content.Cashier2 != null
+                ? CreatePad(content.Cashier2, Layout.Cashier2, billPrefab, wallet, padMat)
+                : null;
+            UnlockPad counter2Pad = content.Counter2 != null
+                ? CreatePad(content.Counter2, Layout.Counter2, billPrefab, wallet, padMat, cashier2Pad)
+                : null;
             // The bars stand in a row behind the counter, turned so you serve them from the counter side.
             // A shop with a fifth bar (the Matcha House's Tenju Bar) unlocks it after the fruit bar (the Sencha Bar).
             UnlockPad extraPad = content.ExtraBar != null
@@ -1121,8 +1294,8 @@ namespace BubbleTea.EditorTools
                 : null;
             if (extraPad != null) Turn(extraPad, 180f);
             UnlockPad fruitPad = extraPad != null
-                ? CreatePad(content.FruitBar, Layout.FruitBar, billPrefab, wallet, padMat, expansionPad, extraPad)
-                : CreatePad(content.FruitBar, Layout.FruitBar, billPrefab, wallet, padMat, expansionPad);
+                ? CreatePad(content.FruitBar, Layout.FruitBar, billPrefab, wallet, padMat, expansionPad, extraPad, counter2Pad)
+                : CreatePad(content.FruitBar, Layout.FruitBar, billPrefab, wallet, padMat, expansionPad, counter2Pad);
             Turn(fruitPad, 180f);
             UnlockPad taroPad = CreatePad(content.TaroStation, Layout.TaroStation, billPrefab, wallet, padMat, fruitPad);
             Turn(taroPad, 180f);
@@ -1162,19 +1335,22 @@ namespace BubbleTea.EditorTools
             brewerPad.gameObject.SetActive(false);
             taroPad.gameObject.SetActive(false);
             fruitPad.gameObject.SetActive(false);
-            expansionPad.gameObject.SetActive(false);
-            driveThruPad.gameObject.SetActive(false);
             seatingPad.gameObject.SetActive(false);
             cashierPad.gameObject.SetActive(false);
             cleanerPad.gameObject.SetActive(false);
-            driveThruCashierPad.gameObject.SetActive(false);
             // The tea brewer reveals the first barista; each one reveals the next.
             for (int i = 0; i < baristaPads.Length; i++) baristaPads[i].gameObject.SetActive(false);
             var all = new System.Collections.Generic.List<UnlockPad>
             {
-                counterPad, brewerPad, taroPad, fruitPad,
-                expansionPad, driveThruPad, seatingPad, cashierPad, cleanerPad, driveThruCashierPad,
+                counterPad, brewerPad, taroPad, fruitPad, seatingPad, cashierPad, cleanerPad,
             };
+            // Pads a shop may not have, hidden at the start like the rest.
+            foreach (UnlockPad optional in new[] { expansionPad, driveThruPad, driveThruCashierPad, counter2Pad, cashier2Pad })
+            {
+                if (optional == null) continue;
+                optional.gameObject.SetActive(false);
+                all.Add(optional);
+            }
             all.AddRange(baristaPads);
             if (extraPad != null)
             {
@@ -1188,7 +1364,7 @@ namespace BubbleTea.EditorTools
             }
             if (secondShopPad != null)
             {
-                var reveal = new GameObject("Level 2 Unlock").AddComponent<RevealWhenAllUnlocked>();
+                var reveal = new GameObject("Next Level Unlock").AddComponent<RevealWhenAllUnlocked>();
                 SetReferences(reveal, "required", all.ToArray());
                 SetReference(reveal, "target", secondShopPad);
                 secondShopPad.gameObject.SetActive(false);
@@ -1522,8 +1698,8 @@ namespace BubbleTea.EditorTools
 
         // The shop clock (random customer traffic) and its display in the top-left corner.
         // Size and edge gap of the top-corner HUD widgets (clock, money, stars, MENU, GOALS).
-        // Money each shop starts with (Kenny): $110 in the Boba Shop, $330 in the Matcha House. No floor money pile.
-        private static int StartingMoney(int shopNumber) => shopNumber > 1 ? 330 : 110;
+        // Money each shop starts with (Kenny): $110 in the Boba Shop, $330 in the Matcha House, $900 at the Night Market. No floor money pile.
+        private static int StartingMoney(int shopNumber) => shopNumber > 2 ? 900 : shopNumber > 1 ? 330 : 110;
         // The material runtime models (pets, cars, collectible decor) copy their look from. It lives
         // in Resources so it's always in the phone build with its shader (searching for a shader at
         // runtime found nothing on iPhone, which drew the pets magenta).
@@ -1908,6 +2084,97 @@ namespace BubbleTea.EditorTools
             truckSettings.ApplyModifiedPropertiesWithoutUndo();
             truck.position = points[0];
             truck.gameObject.SetActive(false);
+        }
+
+        // Night Market: a crate pallet on the jetty in the back-east corner (its spot faces south into
+        // the kitchen), and the wooden dinghy that floats down the river now and then and unloads
+        // fruit crates onto it (see RiverDinghy). The river itself is part of the dressing.
+        private static void CreateRiverDelivery(ItemDefinition[] crates, Material spotMaterial)
+        {
+            var go = new GameObject("SupplyDock");
+            go.transform.position = Layout.SupplyDock;
+            go.transform.rotation = Quaternion.Euler(0f, 180f, 0f); // its stand-here spot faces south, into the kitchen
+
+            GameObject pallet = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            pallet.name = "Pallet";
+            pallet.transform.SetParent(go.transform, false);
+            pallet.transform.localPosition = new Vector3(0f, 0.08f, 0f);
+            pallet.transform.localScale = new Vector3(1.95f, 0.16f, 1.45f);
+            pallet.GetComponent<Renderer>().sharedMaterial = GetOrCreateMaterial("Pallet", new Color(0.72f, 0.55f, 0.36f));
+
+            Transform anchor = new GameObject("Crates").transform;
+            anchor.SetParent(go.transform, false);
+            anchor.localPosition = new Vector3(0f, 0.16f, 0f);
+
+            GameObject spot = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            spot.name = "Spot";
+            Object.DestroyImmediate(spot.GetComponent<BoxCollider>());
+            spot.transform.SetParent(go.transform, false);
+            spot.transform.localPosition = new Vector3(0f, 0.005f, 1.45f);
+            spot.transform.localScale = new Vector3(1.4f, 0.01f, 1.2f);
+            spot.GetComponent<Renderer>().sharedMaterial = spotMaterial;
+
+            NameTag.Add(go, "Fruit Crates", 1.1f);
+
+            var dock = go.AddComponent<SupplyDock>();
+            var serialized = new SerializedObject(dock);
+            serialized.FindProperty("crate").objectReferenceValue = crates[0];
+            SerializedProperty more = serialized.FindProperty("moreCrates");
+            more.arraySize = crates.Length - 1;
+            for (int i = 1; i < crates.Length; i++) more.GetArrayElementAtIndex(i - 1).objectReferenceValue = crates[i];
+            serialized.FindProperty("crates.anchor").objectReferenceValue = anchor;
+            serialized.FindProperty("crates.capacity").intValue = 20;
+            serialized.FindProperty("crates.itemHeight").floatValue = 0.235f;
+            SetStackGrid(serialized, "crates", 4, 3, 0.48f, DrinkSize * 0.75f);
+            serialized.FindProperty("zone.offset").vector3Value = new Vector3(0f, 0f, 1.45f);
+            serialized.FindProperty("zone.halfSize").floatValue = 0.7f;
+            serialized.FindProperty("zone.secondsPerHandoff").floatValue = 0.25f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            // The dinghy: a wooden hull with a rim, two benches and room for six crates, built facing +z.
+            var boatGo = new GameObject("RiverDinghy");
+            var dinghy = boatGo.AddComponent<RiverDinghy>();
+            Transform boat = new GameObject("Dinghy").transform;
+            boat.SetParent(boatGo.transform, false);
+            Material hull = GetOrCreateMaterial("DinghyHull", new Color(0.55f, 0.36f, 0.22f));
+            Material rim = GetOrCreateMaterial("DinghyRim", new Color(0.40f, 0.25f, 0.16f));
+            Material stripe = GetOrCreateMaterial("DinghyStripe", new Color(0.85f, 0.22f, 0.20f));
+            Material crateWood = GetOrCreateMaterial("DinghyCrate", new Color(0.80f, 0.62f, 0.40f));
+            BusPart(boat, PrimitiveType.Cube, "Hull", new Vector3(0f, 0.05f, 0f), new Vector3(1.3f, 0.3f, 2.8f), hull);
+            GameObject bow = BusPart(boat, PrimitiveType.Cube, "Bow", new Vector3(0f, 0.08f, 1.5f), new Vector3(0.92f, 0.32f, 0.92f), hull);
+            bow.transform.localRotation = Quaternion.Euler(0f, 45f, 0f);
+            foreach (float x in new[] { -0.68f, 0.68f })
+            {
+                BusPart(boat, PrimitiveType.Cube, "Side", new Vector3(x, 0.3f, 0f), new Vector3(0.1f, 0.3f, 2.8f), rim);
+                BusPart(boat, PrimitiveType.Cube, "Stripe", new Vector3(x * 1.04f, 0.18f, 0f), new Vector3(0.02f, 0.07f, 2.8f), stripe);
+            }
+            BusPart(boat, PrimitiveType.Cube, "Stern", new Vector3(0f, 0.3f, -1.4f), new Vector3(1.4f, 0.3f, 0.1f), rim);
+            BusPart(boat, PrimitiveType.Cube, "Bench", new Vector3(0f, 0.3f, -1.05f), new Vector3(1.26f, 0.06f, 0.3f), rim);
+            GameObject oar = BusPart(boat, PrimitiveType.Cube, "Oar", new Vector3(0.75f, 0.4f, -0.8f), new Vector3(0.06f, 0.06f, 1.8f), rim);
+            oar.transform.localRotation = Quaternion.Euler(0f, 12f, 0f);
+            var cargo = new Transform[6];
+            for (int i = 0; i < cargo.Length; i++)
+            {
+                float x = i % 2 == 0 ? -0.3f : 0.3f, z = -0.55f + (i / 2) * 0.55f;
+                Transform box = BusPart(boat, PrimitiveType.Cube, "Crate", new Vector3(x, 0.42f, z), new Vector3(0.5f, 0.34f, 0.48f), crateWood).transform;
+                BusPart(box, PrimitiveType.Cube, "Slat", new Vector3(0f, 0f, 0.51f), new Vector3(1.02f, 0.25f, 0.02f), rim);
+                cargo[i] = box;
+            }
+
+            float riverZ = Layout.RiverZ;
+            float stopZ = Layout.HalfDepth + 2.3f; // beside the jetty, just behind the back railing
+            SetReference(dinghy, "dock", dock);
+            SetReference(dinghy, "boat", boat);
+            var boatSettings = new SerializedObject(dinghy);
+            SerializedProperty cargoList = boatSettings.FindProperty("cargo");
+            cargoList.arraySize = cargo.Length;
+            for (int i = 0; i < cargo.Length; i++) cargoList.GetArrayElementAtIndex(i).objectReferenceValue = cargo[i];
+            boatSettings.FindProperty("upstream").vector3Value = new Vector3(-40f, 0f, riverZ);
+            boatSettings.FindProperty("jetty").vector3Value = new Vector3(Layout.SupplyDock.x, 0f, stopZ);
+            boatSettings.FindProperty("downstream").vector3Value = new Vector3(40f, 0f, riverZ);
+            boatSettings.ApplyModifiedPropertiesWithoutUndo();
+            boat.position = new Vector3(-40f, 0f, riverZ);
+            boat.gameObject.SetActive(false);
         }
 
         // A comfy two-seat sofa against the kitchen's back wall, where baristas take their breaks.
@@ -2434,6 +2701,7 @@ namespace BubbleTea.EditorTools
         private static UnlockPad CreatePad(BuildableDefinition definition, Vector3 position, CashBill billPrefab,
             Wallet wallet, Material material, params UnlockPad[] next)
         {
+            next = System.Array.FindAll(next, p => p != null); // pads a shop doesn't have (no drive-thru) are left out
             var go = new GameObject($"UnlockPad - {definition.DisplayName}");
             go.transform.position = position;
 

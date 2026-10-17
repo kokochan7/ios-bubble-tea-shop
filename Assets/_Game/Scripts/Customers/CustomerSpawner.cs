@@ -84,8 +84,10 @@ namespace BubbleTea.Customers
             timer += Time.deltaTime * Stats.Get(StatId.CustomerRate, 1f) * GameClock.RushMultiplier
                 * (1f + BubbleTea.Building.ShopDecor.Flow) // decor draws more customers in
                 * BubbleTea.Extras.TeamSkills.CustomerFlow // the cleaners' Welcome Mat perk
-                * trafficRate;
-            int max = Mathf.Max(1, maxCustomers + Mathf.RoundToInt(Stats.Get(StatId.ExtraCustomers, 0f)) + GameClock.RushExtraCustomers + trafficExtra);
+                * RainShower.FlowMultiplier // the Night Market's rain showers send everyone in
+                * (RainShower.Raining ? Mathf.Max(trafficRate, 1f) : trafficRate);
+            int max = Mathf.Max(1, maxCustomers + Mathf.RoundToInt(Stats.Get(StatId.ExtraCustomers, 0f)) + GameClock.RushExtraCustomers + trafficExtra
+                + RainShower.ExtraCustomers);
             if (gap < 0f) gap = secondsBetweenCustomers * UnityEngine.Random.Range(0.5f, 1.6f);
             if (timer < gap || inside.Count >= max) return;
             timer = 0f;

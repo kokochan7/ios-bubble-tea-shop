@@ -1093,6 +1093,143 @@ namespace BubbleTea.EditorTools
             EditorUtility.SetDirty(material);
         }
 
+        // ---------- Night Market ----------
+
+        // Night Market colors: indigo uniforms with a lantern-gold apron, and its four fruits.
+        private static readonly Color NightIndigo = Hex("3E3A7A");
+        private static readonly Color WinterMelon = Hex("8CB86A");
+        private static readonly Color WinterMelonTea = Hex("C99A5C");
+        private static readonly Color PassionPurple = Hex("6B3A73");
+        private static readonly Color PassionGold = Hex("F6C43A");
+        private static readonly Color LycheeRed = Hex("D94B57");
+        private static readonly Color LycheeFlesh = Hex("F7F1EA");
+        private static readonly Color PeachSkin = Hex("FFAA85");
+        private static readonly Color PeachBlush = Hex("F27A6B");
+
+        /// <summary>
+        /// Builds the Night Market's four fruit bars and its indigo-uniformed staff and puts them in
+        /// their art slots (adding the slots if the Art Set is older), so the shop builder can use
+        /// them without running Build Boba Art Kit again. Called each time the Night Market is built.
+        /// </summary>
+        public static void EnsureNightMarketArt()
+        {
+            Materials.Clear();
+            EnsureFolder(KitFolder);
+            EnsureFolder(MaterialFolder);
+            EnsureFolder(MeshFolder);
+            var models = new Dictionary<string, GameObject>
+            {
+                { "WinterMelonBar", Save("WinterMelonBar", BuildWinterMelonBar()) },
+                { "PassionFruitBar", Save("PassionFruitBar", BuildPassionFruitBar()) },
+                { "LycheeBar", Save("LycheeBar", BuildLycheeBar()) },
+                { "PeachBar", Save("PeachBar", BuildPeachBar()) },
+                { "NightPlayer", Save("NightPlayer", BuildCharacter(NightIndigo, Palette.Butter, CharacterStyle.Buns)) },
+                { "NightBarista", Save("NightBarista", BuildCharacter(NightIndigo, Palette.Butter, CharacterStyle.Uniform, randomLook: true)) },
+                { "NightCashier", Save("NightCashier", BuildCharacter(NightIndigo, Palette.Butter, CharacterStyle.Uniform, randomLook: true)) },
+                { "NightCleaner", Save("NightCleaner", BuildCharacter(NightIndigo, Palette.Butter, CharacterStyle.Uniform, randomLook: true)) },
+            };
+            ArtSet set = ArtLibrary.Load();
+            set.EnsureSlots();
+            foreach (ArtSlot slot in set.Slots)
+            {
+                if (slot == null || !models.TryGetValue(slot.name, out GameObject model)) continue;
+                slot.model = model;
+                slot.rotationY = 0f;
+                slot.sizeMultiplier = 1f;
+                slot.offset = Vector3.zero;
+            }
+            EditorUtility.SetDirty(set);
+            AssetDatabase.SaveAssets();
+        }
+
+        // A wooden crate of fruit on the worktop (fruit heaped in two rows).
+        private static void FruitCrate(Transform root, Vector3 at, Color fruit, Color blush, Vector3 fruitSize)
+        {
+            float top = CounterHeight;
+            Box(root, "Crate", at + new Vector3(0f, top + 0.08f, 0f), new Vector3(0.44f, 0.16f, 0.3f), Palette.Bamboo);
+            Box(root, "CrateSlat", at + new Vector3(0f, top + 0.1f, 0.155f), new Vector3(0.44f, 0.03f, 0.01f), Palette.DarkWood);
+            for (int i = 0; i < 6; i++)
+            {
+                float x = -0.15f + (i % 3) * 0.15f;
+                float z = -0.06f + (i / 3) * 0.12f;
+                Transform piece = Sphere(root, "Fruit", at + new Vector3(x, top + 0.2f + (i / 3) * 0.02f, z), fruitSize, i % 2 == 0 ? fruit : blush);
+                piece.localRotation = Quaternion.Euler(0f, i * 41f, 0f);
+            }
+        }
+
+        // A tall glass dispenser of the bar's tea with a tap.
+        private static void TeaDispenser(Transform root, Vector3 at, Color tea)
+        {
+            float top = CounterHeight;
+            Transform jar = Cylinder(root, "Dispenser", at + new Vector3(0f, top + 0.24f, 0f), 0.12f, 0.42f, Palette.Glass);
+            jar.GetComponent<Renderer>().sharedMaterial = GetClearMaterial(Palette.Glass, 0.35f);
+            Cylinder(root, "Tea", at + new Vector3(0f, top + 0.2f, 0f), 0.11f, 0.32f, tea);
+            Cylinder(root, "Lid", at + new Vector3(0f, top + 0.46f, 0f), 0.125f, 0.03f, Palette.Steel);
+            Box(root, "Tap", at + new Vector3(0f, top + 0.08f, 0.13f), new Vector3(0.05f, 0.05f, 0.08f), Palette.Steel);
+        }
+
+        // Winter melon tea: a whole striped winter melon, slices on a board and a dispenser of the caramel tea.
+        private static GameObject BuildWinterMelonBar()
+        {
+            Transform root = CounterBase("WinterMelonBar", 1.4f, 1f, WinterMelon, Palette.Cream);
+            float top = CounterHeight;
+            Transform melon = Sphere(root, "Melon", new Vector3(-0.32f, top + 0.15f, -0.22f), new Vector3(0.42f, 0.3f, 0.3f), WinterMelon);
+            for (int i = 0; i < 3; i++)
+                Box(melon, "Stripe", new Vector3(-0.3f + i * 0.3f, 0f, 0f), new Vector3(0.06f, 1.01f, 1.01f), Hex("5E8A48"));
+            Box(root, "Board", new Vector3(0.05f, top + 0.015f, -0.12f), new Vector3(0.3f, 0.03f, 0.2f), Palette.LightWood);
+            for (int i = 0; i < 3; i++)
+                Box(root, "Slice", new Vector3(-0.03f + i * 0.08f, top + 0.05f, -0.12f), new Vector3(0.05f, 0.05f, 0.14f), Palette.Cream);
+            TeaDispenser(root, new Vector3(0.42f, 0f, -0.25f), WinterMelonTea);
+            return root.gameObject;
+        }
+
+        // Passion fruit green: a crate of purple passion fruit, a halved one showing its golden seeds and a cocktail shaker.
+        private static GameObject BuildPassionFruitBar()
+        {
+            Transform root = CounterBase("PassionFruitBar", 1.4f, 1f, PassionPurple, PassionGold);
+            float top = CounterHeight;
+            FruitCrate(root, new Vector3(-0.28f, 0f, -0.25f), PassionPurple, Hex("8A4C8F"), Vector3.one * 0.12f);
+            Sphere(root, "Half", new Vector3(0.12f, top + 0.04f, -0.08f), new Vector3(0.13f, 0.06f, 0.13f), PassionPurple);
+            Cylinder(root, "Pulp", new Vector3(0.12f, top + 0.075f, -0.08f), 0.055f, 0.01f, PassionGold);
+            Cylinder(root, "Shaker", new Vector3(0.42f, top + 0.16f, -0.25f), 0.08f, 0.3f, Palette.Steel);
+            Cylinder(root, "ShakerCap", new Vector3(0.42f, top + 0.34f, -0.25f), 0.06f, 0.08f, Palette.Steel);
+            Cylinder(root, "GreenTea", new Vector3(0.2f, top + 0.12f, -0.36f), 0.07f, 0.24f, Palette.GreenTea);
+            return root.gameObject;
+        }
+
+        // Lychee tea: a crate of bumpy red lychees, a bowl of peeled ones and a dispenser of pale tea.
+        private static GameObject BuildLycheeBar()
+        {
+            Transform root = CounterBase("LycheeBar", 1.4f, 1f, LycheeRed, Palette.Cream);
+            float top = CounterHeight;
+            FruitCrate(root, new Vector3(-0.28f, 0f, -0.25f), LycheeRed, Hex("B8343F"), Vector3.one * 0.1f);
+            Cylinder(root, "Bowl", new Vector3(0.1f, top + 0.04f, -0.08f), 0.1f, 0.08f, Palette.Ceramic);
+            for (int i = 0; i < 4; i++)
+            {
+                float angle = i * 1.6f;
+                Sphere(root, "Peeled", new Vector3(0.1f + Mathf.Cos(angle) * 0.04f, top + 0.1f, -0.08f + Mathf.Sin(angle) * 0.04f),
+                    Vector3.one * 0.07f, LycheeFlesh);
+            }
+            TeaDispenser(root, new Vector3(0.42f, 0f, -0.25f), Hex("F3E6DA"));
+            return root.gameObject;
+        }
+
+        // Peach tea: a crate of blushing peaches, a sliced peach and a dispenser of peach tea.
+        private static GameObject BuildPeachBar()
+        {
+            Transform root = CounterBase("PeachBar", 1.4f, 1f, PeachSkin, Palette.Leaf);
+            float top = CounterHeight;
+            FruitCrate(root, new Vector3(-0.28f, 0f, -0.25f), PeachSkin, PeachBlush, Vector3.one * 0.13f);
+            Box(root, "Board", new Vector3(0.1f, top + 0.015f, -0.1f), new Vector3(0.26f, 0.03f, 0.18f), Palette.LightWood);
+            for (int i = 0; i < 4; i++)
+            {
+                Transform slice = Box(root, "Slice", new Vector3(0.02f + i * 0.055f, top + 0.05f, -0.1f), new Vector3(0.04f, 0.05f, 0.12f), Hex("FFD09A"));
+                slice.localRotation = Quaternion.Euler(0f, 0f, 12f);
+            }
+            TeaDispenser(root, new Vector3(0.42f, 0f, -0.25f), Hex("FFB08C"));
+            return root.gameObject;
+        }
+
         // ---------- Shape helpers ----------
 
         // A box with softly rounded edges (scaled like a cube, so children keep working the same way).

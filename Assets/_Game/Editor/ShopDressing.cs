@@ -12,7 +12,10 @@ namespace BubbleTea.EditorTools
     ///    and white subway tiles in the kitchen.
     ///  - Tea house (Matcha House), a Japanese tea room: tatami-mat floor, shoji walls (paper
     ///    panels in a dark wood grid), lattice windows, a noren over the door and slate in the kitchen.
-    /// Both also get glass walls between the dining room and the kitchen, shelves of cups and tins,
+    ///  - Night market (Night Market Stall), an outdoor street stall at night: a wooden deck, low
+    ///    railings, strings of glowing lanterns over the tables, a striped awning along the back
+    ///    and a river with a jetty behind it, where the fruit dinghy stops.
+    /// The cafés also get glass walls between the dining room and the kitchen, shelves of cups and tins,
     /// wall lamps, swing doors on the staff entrance, sliding glass front doors, the drive-thru lane
     /// and a street with trees outside. Everything is built from primitives and textures drawn in
     /// code, so nothing needs downloading.
@@ -23,7 +26,7 @@ namespace BubbleTea.EditorTools
         private const string TextureFolder = "Assets/_Game/Art/Generated";
         private const string MaterialFolder = "Assets/_Game/Materials";
 
-        internal enum Theme { FreshCafe, TeaHouse }
+        internal enum Theme { FreshCafe, TeaHouse, NightMarket }
 
         /// <summary>What changes between shops.</summary>
         internal sealed class Style
@@ -56,27 +59,45 @@ namespace BubbleTea.EditorTools
             // Textures are drawn in near-white, so each material's own color still tints them.
             // Wooden planks everywhere you walk (half-meter boards), wood paneling on the walls.
             bool teaHouse = style.Theme == Theme.TeaHouse;
+            bool night = style.Theme == Theme.NightMarket;
             Texture2D floorTexture = teaHouse ? TatamiTexture() : PlankTexture(); // both cover 2 x 2 m
             ApplyTexture(floor, floorTexture, new Vector2(w, d));
             ApplyTexture(expansionFloor, floorTexture, new Vector2((layout.LaneOuterX - w) / 2f, d));
-            ApplyTexture(wall, teaHouse ? ShojiTexture() : PlasterTexture(), new Vector2(w, 1f));
+            ApplyTexture(wall, teaHouse ? ShojiTexture() : night ? PlankTexture() : PlasterTexture(), new Vector2(w, 1f));
 
             var root = new GameObject("Dressing").transform;
             CreateStreet(root, style, layout);
-            CreateTrim(root, style, 2f * w + 0.5f, 0f, d, 3f);
             CreateWallCaps(GameObject.Find("Walls"));
             CreateWallCaps(expansionArea);
-            CreateShelves(root, layout.Lamps, d);
-            CreateWindows(root, style, layout.Windows, d);
-            if (teaHouse) CreateSign(root, style, d);
-            else CreateSlatWall(root, style, d);
-            CreateLamps(root, style, layout.Lamps, d);
+            if (night)
+            {
+                // Out in the open: no windows, shelves or wall lamps, just lanterns, an awning and the river.
+                CreateRiver(root, layout);
+                CreateBackAwning(root, style, layout);
+                CreateLanternStrings(root, layout);
+            }
+            else
+            {
+                CreateTrim(root, style, 2f * w + 0.5f, 0f, d, 3f);
+                CreateShelves(root, layout.Lamps, d);
+                CreateWindows(root, style, layout.Windows, d);
+                if (teaHouse) CreateSign(root, style, d);
+                else CreateSlatWall(root, style, d);
+                CreateLamps(root, style, layout.Lamps, d);
+            }
             CreateFrontDoor(root, style, layout);
-            CreateFestiveDecor(root, style, layout);
+            if (night) CreateEntranceSign(root, style, layout);
+            else CreateFestiveDecor(root, style, layout);
             CreateKitchenFloor(root, "KitchenFloor", -w, w, layout);
-            float counterX = layout.Counter.x;
-            CreatePartition(root, -w, counterX - 1.4f, layout); // the counter is 2.75 m wide
-            CreatePartition(root, counterX + 1.4f, layout.StaffDoorFrom, layout);
+            // Glass either side of each counter (a counter is 2.75 m wide), and the staff door.
+            float from = -w;
+            float[] counters = layout.SecondCounter ? new[] { layout.Counter.x, layout.Counter2.x } : new[] { layout.Counter.x };
+            foreach (float counterX in counters)
+            {
+                CreatePartition(root, from, counterX - 1.4f, layout);
+                from = counterX + 1.4f;
+            }
+            CreatePartition(root, from, layout.StaffDoorFrom, layout);
             CreatePartition(root, layout.StaffDoorTo, w, layout);
             CreateStaffDoor(root, layout);
 
@@ -372,6 +393,153 @@ namespace BubbleTea.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        // ---------- Night market ----------
+
+        // The river behind the stall: dark water with a soft shine, stone banks either side, a
+        // wooden jetty out from the back railing by the fruit crates (where the dinghy stops) and
+        // reeds along the far bank.
+        private static void CreateRiver(Transform root, PrototypeSceneBuilder.ShopLayout layout)
+        {
+            float d = layout.HalfDepth, riverZ = layout.RiverZ;
+            float near = d + 0.9f, far = riverZ + (riverZ - near);
+            Material water = Mat("RiverWater", new Color(0.12f, 0.22f, 0.36f), 0.95f, new Color(0.03f, 0.07f, 0.14f));
+            Material stone = Mat("RiverBank", new Color(0.42f, 0.42f, 0.46f), 0.2f);
+            ApplyTexture(stone, CobbleTexture(), new Vector2(60f, 1f));
+            Part(root, PrimitiveType.Cube, "River", new Vector3(10f, -0.01f, riverZ), new Vector3(150f, 0.04f, far - near), water);
+            Part(root, PrimitiveType.Cube, "Bank", new Vector3(10f, 0.02f, d + 0.6f), new Vector3(150f, 0.08f, 0.7f), stone);
+            Part(root, PrimitiveType.Cube, "Far Bank", new Vector3(10f, 0.02f, far + 0.3f), new Vector3(150f, 0.08f, 0.7f), stone);
+
+            // Moonlight glinting on the water.
+            Material glint = Mat("RiverGlint", new Color(0.70f, 0.78f, 1f), 0.9f, new Color(0.35f, 0.40f, 0.6f));
+            for (int i = 0; i < 26; i++)
+            {
+                float x = -30f + i * 3.1f + Mathf.Repeat(i * 1.7f, 1.4f);
+                float z = Mathf.Lerp(near + 0.6f, far - 0.6f, Mathf.Repeat(i * 0.618f, 1f));
+                Part(root, PrimitiveType.Cube, "Glint", new Vector3(x, 0.015f, z), new Vector3(0.9f, 0.01f, 0.06f), glint);
+            }
+
+            // The jetty: planks on posts from the railing out over the water, beside the crate pallet.
+            Material plank = Mat("JettyWood", new Color(0.58f, 0.42f, 0.28f), 0.25f);
+            Material post = Mat("TrimWood", new Color(0.62f, 0.43f, 0.30f), 0.3f);
+            float jettyX = layout.SupplyDock.x, from = d + 0.5f, to = d + 1.7f;
+            for (float z = from; z < to; z += 0.3f)
+                Part(root, PrimitiveType.Cube, "Jetty Plank", new Vector3(jettyX, 0.1f, z + 0.13f), new Vector3(2.6f, 0.06f, 0.26f), plank);
+            foreach (float x in new[] { jettyX - 1.2f, jettyX + 1.2f })
+            {
+                Part(root, PrimitiveType.Cylinder, "Jetty Post", new Vector3(x, 0.3f, to), new Vector3(0.16f, 0.45f, 0.16f), post);
+                Part(root, PrimitiveType.Cylinder, "Jetty Post", new Vector3(x, 0.3f, from + 0.2f), new Vector3(0.16f, 0.45f, 0.16f), post);
+            }
+
+            // Reeds and a few stalls' lights twinkling on the far bank.
+            Material reed = Mat("Reeds", new Color(0.22f, 0.36f, 0.24f), 0.1f);
+            Material warm = Mat("FarLight", new Color(1f, 0.8f, 0.45f), 0.5f, new Color(1f, 0.65f, 0.3f) * 1.6f);
+            for (int i = 0; i < 40; i++)
+            {
+                float x = -30f + i * 2.1f + Mathf.Repeat(i * 0.77f, 1f);
+                GameObject blade = Part(root, PrimitiveType.Cube, "Reed", new Vector3(x, 0.4f, far + 0.8f + Mathf.Repeat(i * 0.41f, 0.6f)),
+                    new Vector3(0.06f, 0.8f + Mathf.Repeat(i * 0.53f, 0.5f), 0.06f), reed);
+                blade.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Repeat(i * 37f, 24f) - 12f);
+                if (i % 3 == 0)
+                    Part(root, PrimitiveType.Sphere, "Far Lantern", new Vector3(x, 1.6f, far + 2.2f), Vector3.one * 0.32f, warm);
+            }
+        }
+
+        // A red-and-cream striped awning along the back of the stall, just behind the bars (so it
+        // never hides them from the camera), on posts, with a scalloped edge and the stall's name.
+        private static void CreateBackAwning(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
+        {
+            float w = layout.HalfWidth, d = layout.HalfDepth;
+            Transform awning = new GameObject("Back Awning").transform;
+            awning.SetParent(root, false);
+            Material red = Mat(style.Prefix + "Accent", style.Accent, 0.4f);
+            Material cream = Mat("AwningCream", new Color(0.98f, 0.93f, 0.82f), 0.3f);
+            Material post = Mat("WallCap", new Color(0.33f, 0.22f, 0.19f), 0.25f);
+            const float top = 3.3f, stripe = 1f;
+            float frontZ = d - 0.5f;
+            int stripes = Mathf.CeilToInt(2f * w / stripe);
+            for (int i = 0; i < stripes; i++)
+            {
+                float x = -w + (i + 0.5f) * stripe;
+                GameObject cloth = Part(awning, PrimitiveType.Cube, "Stripe", new Vector3(x, top, d + 0.3f),
+                    new Vector3(stripe, 0.05f, 1.8f), i % 2 == 0 ? red : cream);
+                cloth.transform.localRotation = Quaternion.Euler(-14f, 0f, 0f); // sloping down toward the kitchen
+                // Scalloped edge: a half-disc hanging under each stripe.
+                GameObject scallop = Part(awning, PrimitiveType.Cylinder, "Scallop", new Vector3(x, top - 0.28f, frontZ - 0.05f),
+                    new Vector3(stripe * 0.95f, 0.02f, 0.5f), i % 2 == 0 ? red : cream);
+                scallop.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            }
+            for (float x = -w; x <= w + 0.01f; x += w / 2f)
+                Part(awning, PrimitiveType.Cylinder, "Awning Post", new Vector3(x, top / 2f, d + 0.25f), new Vector3(0.14f, top / 2f, 0.14f), post);
+            Label(awning, style.ShopName.ToUpperInvariant(), new Vector3(-w / 2f, top + 0.62f, d + 0.1f), 0.07f, style.SignText);
+            Part(awning, PrimitiveType.Cube, "Name Board", new Vector3(-w / 2f, top + 0.62f, d + 0.16f), new Vector3(5.6f, 0.9f, 0.08f),
+                Mat("WallCap", new Color(0.33f, 0.22f, 0.19f), 0.25f));
+            // A row of little glowing bulbs along the edge.
+            Material bulb = Mat("StringBulb", new Color(1f, 0.92f, 0.70f), 0.5f, new Color(1f, 0.78f, 0.4f) * 1.8f);
+            for (float x = -w + 0.25f; x < w; x += 0.5f)
+                Part(awning, PrimitiveType.Sphere, "Bulb", new Vector3(x, top - 0.18f, frontZ - 0.1f), Vector3.one * 0.12f, bulb);
+        }
+
+        // Strings of glowing paper lanterns over the dining area, sagging between tall poles on the
+        // side railings. High enough to stay clear of the player's view of the tables and lines.
+        private static void CreateLanternStrings(Transform root, PrototypeSceneBuilder.ShopLayout layout)
+        {
+            float w = layout.HalfWidth, d = layout.HalfDepth;
+            Transform strings = new GameObject("Lantern Strings").transform;
+            strings.SetParent(root, false);
+            Material pole = Mat("WallCap", new Color(0.33f, 0.22f, 0.19f), 0.25f);
+            Material cord = Mat("Cord", new Color(0.30f, 0.20f, 0.16f), 0.2f);
+            Material[] paper =
+            {
+                Mat("NightLanternRed", new Color(0.95f, 0.30f, 0.20f), 0.4f, new Color(1f, 0.30f, 0.12f) * 1.2f),
+                Mat("NightLanternGold", new Color(1f, 0.80f, 0.35f), 0.4f, new Color(1f, 0.65f, 0.2f) * 1.2f),
+                Mat("NightLanternPink", new Color(1f, 0.55f, 0.65f), 0.4f, new Color(1f, 0.35f, 0.45f) * 1.1f),
+            };
+            const float top = 3.6f, sag = 0.5f;
+            foreach (float z in new[] { -d * 0.25f, -d * 0.7f })
+            {
+                foreach (float x in new[] { -w - 0.3f, w + 0.3f })
+                    Part(strings, PrimitiveType.Cylinder, "Lantern Pole", new Vector3(x, top / 2f, z), new Vector3(0.14f, top / 2f, 0.14f), pole);
+                const int count = 16;
+                Vector3 last = new(-w - 0.3f, top, z);
+                for (int i = 1; i <= count; i++)
+                {
+                    float t = i / (float)count;
+                    Vector3 point = new(Mathf.Lerp(-w - 0.3f, w + 0.3f, t), top - sag * (1f - Mathf.Pow(2f * t - 1f, 2f)), z);
+                    Vector3 mid = (last + point) / 2f;
+                    GameObject segment = Part(strings, PrimitiveType.Cube, "String", mid, new Vector3(0.025f, 0.025f, Vector3.Distance(last, point)), cord);
+                    segment.transform.localRotation = Quaternion.LookRotation(point - last);
+                    if (i < count)
+                    {
+                        Transform lantern = new GameObject("Lantern").transform;
+                        lantern.SetParent(strings, false);
+                        lantern.localPosition = point + Vector3.down * 0.22f;
+                        Material color = paper[i % paper.Length];
+                        Part(lantern, PrimitiveType.Sphere, "Paper", Vector3.zero, new Vector3(0.34f, 0.38f, 0.34f), color);
+                        Part(lantern, PrimitiveType.Cylinder, "Cap", new Vector3(0f, 0.19f, 0f), new Vector3(0.16f, 0.02f, 0.16f), Gold());
+                        Part(lantern, PrimitiveType.Cylinder, "Cap", new Vector3(0f, -0.19f, 0f), new Vector3(0.16f, 0.02f, 0.16f), Gold());
+                    }
+                    last = point;
+                }
+            }
+        }
+
+        // A lit gateway over the entrance: two tall posts, a board with the stall's name and a row of lanterns.
+        private static void CreateEntranceSign(Transform root, Style style, PrototypeSceneBuilder.ShopLayout layout)
+        {
+            float from = layout.DoorFrom, to = layout.DoorTo, z = -layout.HalfDepth - 1.1f;
+            float center = (from + to) / 2f;
+            Material post = Mat("WallCap", new Color(0.33f, 0.22f, 0.19f), 0.25f);
+            Material board = Mat(style.Prefix + "Accent", style.Accent, 0.4f);
+            foreach (float x in new[] { from - 0.4f, to + 0.4f })
+                Part(root, PrimitiveType.Cylinder, "Gate Post", new Vector3(x, 1.75f, z), new Vector3(0.22f, 1.75f, 0.22f), post);
+            Part(root, PrimitiveType.Cube, "Gate Beam", new Vector3(center, 3.4f, z), new Vector3(to - from + 1.4f, 0.16f, 0.2f), post);
+            Part(root, PrimitiveType.Cube, "Gate Board", new Vector3(center, 3.95f, z), new Vector3(5.2f, 0.9f, 0.1f), board);
+            Part(root, PrimitiveType.Cube, "Gate Border", new Vector3(center, 3.95f, z + 0.03f), new Vector3(5.45f, 1.1f, 0.06f), Gold());
+            Label(root, style.ShopName.ToUpperInvariant(), new Vector3(center, 3.95f, z - 0.07f), 0.065f, style.SignText);
+            for (float x = from; x <= to + 0.01f; x += (to - from) / 6f)
+                Lantern(root, new Vector3(x, 2.85f, z - 0.05f), 0.7f);
+        }
+
         // ---------- Floor plan ----------
 
         // Waist-high glass between the dining room and the kitchen, on a wooden base. Solid, so the
@@ -446,8 +614,8 @@ namespace BubbleTea.EditorTools
             PrototypeSceneBuilder.ShopLayout layout)
         {
             float z0 = layout.PartitionZ, z1 = layout.HalfDepth;
-            // White subway tiles in the café, gray slate in the tea house (each texture covers 2 x 2 m).
-            bool teaHouse = current.Theme == Theme.TeaHouse;
+            // White subway tiles in the café, gray slate in the tea house and the night market (each texture covers 2 x 2 m).
+            bool teaHouse = current.Theme != Theme.FreshCafe;
             Material kitchen = teaHouse
                 ? Mat(current.Prefix + materialName, new Color(0.62f, 0.65f, 0.67f), 0.3f)
                 : Mat(current.Prefix + materialName, new Color(0.98f, 0.98f, 0.97f), 0.55f);

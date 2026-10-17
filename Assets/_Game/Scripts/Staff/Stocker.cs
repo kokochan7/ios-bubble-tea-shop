@@ -5,9 +5,9 @@ using UnityEngine;
 namespace BubbleTea.Staff
 {
     /// <summary>
-    /// A hired stocker (Matcha House) who keeps the bars supplied: when a bar has room for a whole
-    /// crate, they fetch one from the supply dock and carry it there, emptiest bar first. With
-    /// nothing to do they stand still beside the dock.
+    /// A hired stocker (Matcha House, Night Market) who keeps the bars supplied: when a bar has room
+    /// for a whole crate, they fetch one of the kind it uses from the supply dock and carry it there,
+    /// emptiest bar first. With nothing to do they stand still beside the dock.
     /// </summary>
     [RequireComponent(typeof(ItemCarrier))]
     public class Stocker : MonoBehaviour
@@ -58,21 +58,29 @@ namespace BubbleTea.Staff
             }
             timer = 0f;
 
-            Station neediest = Neediest();
-            bool holding = dock != null && carrier.Stack.Contains(i => i == dock.Crate);
-            if (holding && neediest != null)
+            ItemDefinition held = HeldCrate(dock);
+            if (held != null)
             {
-                target = neediest;
-                carrier.GiveOnlyTo = target;
-                job = Job.Deliver;
-                return;
+                // Take it to the emptiest bar that uses this kind (or hold on to it until one does).
+                Station needs = Neediest(s => s.SupplyItem == held);
+                if (needs != null)
+                {
+                    target = needs;
+                    carrier.GiveOnlyTo = target;
+                    job = Job.Deliver;
+                    return;
+                }
             }
-            if (!holding && neediest != null && dock != null && dock.Count > 0)
+            else if (dock != null && dock.Count > 0)
             {
-                ItemDefinition crate = dock.Crate;
-                carrier.TakeFilter = i => i == crate && carrier.Stack.Count == 0;
-                job = Job.Fetch;
-                return;
+                Station needs = Neediest(s => dock.CountOf(s.SupplyItem) > 0);
+                if (needs != null)
+                {
+                    ItemDefinition crate = needs.SupplyItem;
+                    carrier.TakeFilter = i => i == crate && carrier.Stack.Count == 0;
+                    job = Job.Fetch;
+                    return;
+                }
             }
             WaitByDock(dock);
         }
@@ -102,8 +110,8 @@ namespace BubbleTea.Staff
 
         private void Deliver()
         {
-            SupplyDock dock = SupplyDock.First;
-            bool holding = dock != null && carrier.Stack.Contains(i => i == dock.Crate);
+            ItemDefinition supply = target != null ? target.SupplyItem : null;
+            bool holding = supply != null && carrier.Stack.Contains(i => i == supply);
             // Handed over, or someone else filled the bar first: think again.
             if (target == null || !holding || !target.WantsCrate)
             {
@@ -130,13 +138,25 @@ namespace BubbleTea.Staff
             carrier.GiveOnlyTo = this;
         }
 
-        // The bar with room for a crate that has the least left.
-        private static Station Neediest()
+        // The first crate being carried, or null.
+        private ItemDefinition HeldCrate(SupplyDock dock)
+        {
+            if (dock == null) return null;
+            for (int i = 0; i < carrier.Stack.Count; i++)
+            {
+                CarriedItem item = carrier.Stack.At(i);
+                if (item != null && dock.IsCrate(item.Definition)) return item.Definition;
+            }
+            return null;
+        }
+
+        // The bar with room for a crate (that also passes the check) that has the least left.
+        private static Station Neediest(System.Func<Station, bool> also)
         {
             Station best = null;
             foreach (Station station in Station.All)
             {
-                if (station == null || !station.WantsCrate) continue;
+                if (station == null || !station.WantsCrate || !also(station)) continue;
                 if (best == null || station.Supplies < best.Supplies) best = station;
             }
             return best;
