@@ -27,14 +27,15 @@ namespace BubbleTea.Extras
             public bool LongEars;   // bunny
             public bool Patches;    // panda eye patches
             public bool CurlyTail;  // shiba
+            public float Size = 1f; // the cat is the smallest; the panda is the biggest
         }
 
         public static readonly Pet[] Pets =
         {
             new Pet { Id = "cat", Name = "Mango the Cat", Price = 15, Fur = new Color(0.98f, 0.66f, 0.32f), Belly = new Color(1f, 0.93f, 0.82f), Ears = new Color(0.98f, 0.66f, 0.32f) },
-            new Pet { Id = "shiba", Name = "Kuma the Shiba", Price = 20, Fur = new Color(0.86f, 0.55f, 0.3f), Belly = new Color(1f, 0.97f, 0.92f), Ears = new Color(0.86f, 0.55f, 0.3f), CurlyTail = true },
-            new Pet { Id = "bunny", Name = "Mochi the Bunny", Price = 20, Fur = new Color(0.97f, 0.96f, 0.95f), Belly = new Color(1f, 0.85f, 0.88f), Ears = new Color(0.97f, 0.96f, 0.95f), LongEars = true },
-            new Pet { Id = "panda", Name = "Bao the Panda", Price = 30, Fur = new Color(0.97f, 0.97f, 0.97f), Belly = new Color(0.97f, 0.97f, 0.97f), Ears = new Color(0.15f, 0.15f, 0.17f), Patches = true },
+            new Pet { Id = "shiba", Name = "Kuma the Shiba", Price = 20, Fur = new Color(0.86f, 0.55f, 0.3f), Belly = new Color(1f, 0.97f, 0.92f), Ears = new Color(0.86f, 0.55f, 0.3f), CurlyTail = true, Size = 1.3f },
+            new Pet { Id = "bunny", Name = "Mochi the Bunny", Price = 20, Fur = new Color(0.97f, 0.96f, 0.95f), Belly = new Color(1f, 0.85f, 0.88f), Ears = new Color(0.97f, 0.96f, 0.95f), LongEars = true, Size = 1.15f },
+            new Pet { Id = "panda", Name = "Bao the Panda", Price = 30, Fur = new Color(0.97f, 0.97f, 0.97f), Belly = new Color(0.97f, 0.97f, 0.97f), Ears = new Color(0.15f, 0.15f, 0.17f), Patches = true, Size = 1.7f },
         };
 
         private enum State { Roam, Visit, Nap, Sniff }
@@ -51,6 +52,7 @@ namespace BubbleTea.Extras
         private static PetCompanion current;
 
         private Transform body;          // the whole model: bobs, sits back and lies down
+        private float size = 1f;         // the pet's scale
         private Transform head;
         private Transform tail;
         private readonly Transform[] legs = new Transform[4]; // front left, front right, back left, back right
@@ -126,7 +128,7 @@ namespace BubbleTea.Extras
             }
             if (staffDoor != null && sofa != null) kitchenSide = sofa.transform.position.z >= staffDoor.position.z ? 1f : -1f;
 
-            label = FloatingText.Create(transform, Vector3.up * 1.1f, 0.035f);
+            label = FloatingText.Create(transform, Vector3.up * (0.3f + 0.8f * size), 0.035f);
             sniffTimer = UnityEngine.Random.Range(SniffEvery.x, SniffEvery.y);
             breakTimer = UnityEngine.Random.Range(BreakEvery.x, BreakEvery.y);
             pause = 1f;
@@ -470,7 +472,7 @@ namespace BubbleTea.Extras
             Vector3 position = hips - tilt * hips;
             float bob = walking ? Mathf.Abs(Mathf.Sin(stride)) * 0.035f : 0f;
             position.y += bob - 0.12f * lie;
-            body.localPosition = position;
+            body.localPosition = position * size;
             body.localRotation = tilt;
 
             // Legs: a trot while walking; sitting folds the back legs and straightens the front ones.
@@ -518,6 +520,8 @@ namespace BubbleTea.Extras
         {
             body = new GameObject("Body").transform;
             body.SetParent(transform, false);
+            size = Mathf.Max(1f, pet.Size);
+            body.localScale = Vector3.one * size;
             lastPosition = transform.position;
             Color dark = new(0.12f, 0.1f, 0.1f);
             Color pink = new(1f, 0.6f, 0.65f);

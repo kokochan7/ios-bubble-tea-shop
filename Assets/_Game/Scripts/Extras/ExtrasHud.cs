@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace BubbleTea.Extras
 {
     /// <summary>
-    /// The pearl counter, SHOP under STATS on the right and TEAM, PETS and PLAY down the left side,
+    /// The pearl counter beside the money, SHOP under STATS on the right and TEAM, PETS and PLAY down the left side,
     /// with their pop-ups: the decor shop and collections, the staff skill trees, pets, and the
     /// mini-games (only once the whole shop is built). Built in code when a shop opens (the save manager asks for it), so the
     /// scenes don't need anything extra. The game keeps running behind SHOP, TEAM and PETS; PLAY pauses it.
@@ -63,6 +63,14 @@ namespace BubbleTea.Extras
             saveManager = FindObjectOfType<BubbleTea.Saving.SaveManager>();
 #endif
             PetCompanion.Refresh();
+            StartCoroutine(SetUpMenus());
+        }
+
+        // A frame in, once every menu has hidden itself: front of the HUD, one at a time, red X.
+        private System.Collections.IEnumerator SetUpMenus()
+        {
+            yield return null;
+            MenuLayers.Scan();
         }
 
         private void OnEnable()
@@ -143,11 +151,11 @@ namespace BubbleTea.Extras
             UiKit.Fill(column);
             column.gameObject.AddComponent<BubbleTea.UI.SafeArea>();
 
-            // Pearls, centered just under the money (beside it, it ran into MENU on narrow phones).
+            // Pearls just right of the money (330 wide, centered); MENU and the right column start a slot lower to make room.
             RectTransform counter = UiKit.Box(column, "Pearls", new Color(0.15f, 0.15f, 0.2f, 0.75f));
-            UiKit.Pin(counter, new Vector2(0.5f, 1f), new Vector2(0f, -Margin), new Vector2(240f, 100f));
-            counter.pivot = new Vector2(0.5f, 1f);
-            counter.anchoredPosition = new Vector2(0f, -Margin - 120f * Scale - 10f);
+            UiKit.Pin(counter, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(240f, 100f));
+            counter.pivot = new Vector2(0f, 1f);
+            counter.anchoredPosition = new Vector2(165f * Scale + 10f, -Margin - 10f * Scale);
             counter.localScale = Vector3.one * Scale;
             counter.GetComponent<Image>().raycastTarget = false;
             RectTransform pearl = UiKit.PearlIcon(counter, 64f);
@@ -158,7 +166,7 @@ namespace BubbleTea.Extras
             pearlLabel.rectTransform.offsetMin = new Vector2(84f, 0f);
             pearlLabel.rectTransform.offsetMax = new Vector2(-18f, 0f);
 
-            Place((RectTransform)UiKit.Button(column, "SHOP", new Color(0.95f, 0.66f, 0.3f, 0.92f), Vector2.zero, () => Open(DecorShop), 50).transform, 3, false);
+            Place((RectTransform)UiKit.Button(column, "SHOP", new Color(0.95f, 0.66f, 0.3f, 0.92f), Vector2.zero, () => Open(DecorShop), 50).transform, 4, false);
             Button team = UiKit.Button(column, "TEAM", new Color(0.62f, 0.45f, 0.88f, 0.92f), Vector2.zero, () => Open(Team), 50);
             Place((RectTransform)team.transform, 2, true);
             // A red "+1" bubble on the top-left corner while there are skill points to spend.
@@ -258,6 +266,7 @@ namespace BubbleTea.Extras
             Close();
             tab = 0;
             popup = UiKit.Popup(canvas, "", new Vector2(940f, 1560f), Close, out RectTransform body, out Text title).gameObject;
+            MenuLayers.Watch(popup, Close); // in front of the HUD; closes any other menu; tap outside to close
             refresh = () =>
             {
                 for (int i = body.childCount - 1; i >= 0; i--) Destroy(body.GetChild(i).gameObject);
@@ -273,6 +282,7 @@ namespace BubbleTea.Extras
         {
             refresh = null;
             if (popup == null) return;
+            popup.SetActive(false); // right away, so it no longer counts as an open menu
             Destroy(popup);
             popup = null;
             if (paused) Time.timeScale = 1f;

@@ -1042,7 +1042,7 @@ namespace BubbleTea.EditorTools
             hud = safeArea;
 
             // The top bar is kept small so it doesn't hide the shop: money at the top center,
-            // clock and stars down the top-left, MENU and GOALS down the top-right.
+            // clock and stars down the top-left, pearls beside the money, then MENU, GOALS and STATS down the top-right.
             RectTransform panel = CreateUiObject("MoneyCounter", safeArea);
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 1f);
             panel.pivot = new Vector2(0.5f, 1f);
@@ -1275,7 +1275,7 @@ namespace BubbleTea.EditorTools
             var openRect = (RectTransform)openButton.transform;
             openRect.anchorMin = openRect.anchorMax = new Vector2(1f, 1f);
             openRect.pivot = new Vector2(1f, 1f);
-            openRect.anchoredPosition = new Vector2(-HudMargin, -HudMargin - 110f * HudScale - 10f);
+            openRect.anchoredPosition = new Vector2(-HudMargin, -HudMargin - 2f * (110f * HudScale + 10f));
             openRect.sizeDelta = new Vector2(200f, 110f);
             openRect.localScale = Vector3.one * HudScale;
 
@@ -1376,7 +1376,7 @@ namespace BubbleTea.EditorTools
             var openRect = (RectTransform)openButton.transform;
             openRect.anchorMin = openRect.anchorMax = new Vector2(1f, 1f);
             openRect.pivot = new Vector2(1f, 1f);
-            openRect.anchoredPosition = new Vector2(-HudMargin, -HudMargin - 2f * (110f * HudScale + 10f));
+            openRect.anchoredPosition = new Vector2(-HudMargin, -HudMargin - 3f * (110f * HudScale + 10f));
             openRect.sizeDelta = new Vector2(200f, 110f);
             openRect.localScale = Vector3.one * HudScale;
 
@@ -2061,7 +2061,7 @@ namespace BubbleTea.EditorTools
             var openRect = (RectTransform)openButton.transform;
             openRect.anchorMin = openRect.anchorMax = new Vector2(1f, 1f);
             openRect.pivot = new Vector2(1f, 1f);
-            openRect.anchoredPosition = new Vector2(-HudMargin, -HudMargin);
+            openRect.anchoredPosition = new Vector2(-HudMargin, -HudMargin - (110f * HudScale + 10f)); // a slot down: pearls sit beside the money
             openRect.sizeDelta = new Vector2(200f, 110f);
             openRect.localScale = Vector3.one * HudScale;
 

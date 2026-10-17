@@ -120,7 +120,7 @@ namespace BubbleTea.Extras
         }
 
         /// <summary>
-        /// A centered pop-up panel with a title and a close button, over a dark backdrop that blocks taps.
+        /// A centered pop-up panel with a title and a close X, over a dark backdrop that blocks taps.
         /// Returns the panel; <paramref name="body"/> is the area under the title.
         /// </summary>
         public static RectTransform Popup(Transform canvas, string title, Vector2 size, UnityAction onClose, out RectTransform body, out Text titleLabel)
@@ -130,7 +130,7 @@ namespace BubbleTea.Extras
             backdrop.GetComponent<Image>().sprite = null;
             Fill(backdrop);
 
-            // Laid out like the GOALS and STATS pop-ups: title on top, a gray Close button at the bottom,
+            // Laid out like the GOALS and STATS pop-ups: title on top, a red X in the top right corner,
             // and shrunk to fit short screens.
             RectTransform panel = Box(backdrop, "Panel", PanelColor);
             Pin(panel, new Vector2(0.5f, 0.5f), Vector2.zero, size);
@@ -140,16 +140,12 @@ namespace BubbleTea.Extras
             titleLabel = Label(panel, title, 60, Color.white);
             Pin(titleLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -20f), new Vector2(size.x - 80f, 100f));
 
-            if (onClose != null)
-            {
-                Button close = Button(panel, "Close", Gray, new Vector2(440f, 110f), onClose, 50);
-                Pin((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(0f, 30f), new Vector2(440f, 110f));
-            }
+            if (onClose != null) MenuLayers.CloseX(panel, onClose);
 
             body = Group(panel, "Body");
             body.anchorMin = Vector2.zero;
             body.anchorMax = Vector2.one;
-            body.offsetMin = new Vector2(40f, onClose != null ? 170f : 40f);
+            body.offsetMin = new Vector2(40f, 40f);
             body.offsetMax = new Vector2(-40f, -140f);
             return backdrop;
         }
