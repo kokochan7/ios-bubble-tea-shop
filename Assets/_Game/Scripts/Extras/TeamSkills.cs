@@ -35,19 +35,19 @@ namespace BubbleTea.Extras
             },
             new[]
             {
-                new Perk { Name = "Speedy Till", Description = "Cashiers work 15% faster" },
+                new Perk { Name = "Friendly Smile", Description = "Customers wait 15% longer before giving up" },
                 new Perk { Name = "Charm", Description = "Customers tip 8% more" },
                 new Perk { Name = "Lucky Register", Description = "5% chance a sale pays double" },
             },
             new[]
             {
-                new Perk { Name = "Hustle", Description = "Cleaners work 15% faster" },
-                new Perk { Name = "Spotless", Description = "Tables are wiped 50% faster" },
+                new Perk { Name = "Welcome Mat", Description = "A clean shop draws 8% more customers" },
+                new Perk { Name = "Lost & Found", Description = "4% chance a wiped seat has a pearl under it" },
                 new Perk { Name = "Tidy Tips", Description = "Tables leave 20% more money" },
             },
             new[]
             {
-                new Perk { Name = "Hustle", Description = "Stockers walk 15% faster" },
+                new Perk { Name = "Full Shelves", Description = "Every bar holds 5 more scoops" },
                 new Perk { Name = "Big Crates", Description = "Each crate holds 3 more scoops" },
                 new Perk { Name = "Fresh Stock", Description = "Stocked bars work 5% faster" },
             },
@@ -103,18 +103,9 @@ namespace BubbleTea.Extras
 
         // ---------------------------------------------------------------- what the perks do
 
-        /// <summary>Speed for a worker of this type (walking and working), from Quick Feet / Speedy Till / Hustle.</summary>
-        public static float SpeedFor(Component worker)
-        {
-            switch (worker)
-            {
-                case BubbleTea.Staff.Barista _: return 1f + 0.10f * Rank(Role.Barista, 0);
-                case BubbleTea.Staff.Cashier _: return 1f + 0.15f * Rank(Role.Cashier, 0);
-                case BubbleTea.Staff.Cleaner _: return 1f + 0.15f * Rank(Role.Cleaner, 0);
-                case BubbleTea.Staff.Stocker _: return 1f + 0.15f * Rank(Role.Stocker, 0);
-                default: return 1f;
-            }
-        }
+        /// <summary>Speed for a worker (walking and working): baristas get Quick Feet, everyone else 1.</summary>
+        public static float SpeedFor(Component worker) =>
+            worker is BubbleTea.Staff.Barista ? 1f + 0.10f * Rank(Role.Barista, 0) : 1f;
 
         /// <summary>How much longer baristas work between breaks (infinite once Tireless is maxed).</summary>
         public static float BreakSpacing
@@ -138,7 +129,14 @@ namespace BubbleTea.Extras
 
         public static float TipBonus => 0.08f * Rank(Role.Cashier, 1);
         public static float DoubleSaleChance => 0.05f * Rank(Role.Cashier, 2);
-        public static float CleanSpeed => 1f + 0.5f * Rank(Role.Cleaner, 1);
+        /// <summary>Multiplies customers' patience (cashiers' Friendly Smile).</summary>
+        public static float CustomerPatience => 1f + 0.15f * Rank(Role.Cashier, 0);
+        /// <summary>Multiplies how fast customers arrive (cleaners' Welcome Mat).</summary>
+        public static float CustomerFlow => 1f + 0.08f * Rank(Role.Cleaner, 0);
+        /// <summary>Chance a seat the cleaner wipes gives a pearl (cleaners' Lost &amp; Found).</summary>
+        public static float PearlFindChance => 0.04f * Rank(Role.Cleaner, 1);
+        /// <summary>Extra scoops every bar holds (stockers' Full Shelves).</summary>
+        public static int ExtraBarScoops => 5 * Rank(Role.Stocker, 0);
         public static float TableCashBonus => 0.2f * Rank(Role.Cleaner, 2);
         public static int ExtraCrateScoops => 3 * Rank(Role.Stocker, 1);
         public static float StockedBarSpeed => 1f + 0.05f * Rank(Role.Stocker, 2);

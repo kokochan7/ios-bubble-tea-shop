@@ -170,8 +170,11 @@ namespace BubbleTea.Customers
         public bool TryCleanOne()
         {
             if (Time.time < cleanTimer) return false;
-            cleanTimer = Time.time + 0.4f / BubbleTea.Extras.TeamSkills.CleanSpeed;
-            return Clean(null);
+            cleanTimer = Time.time + 0.4f;
+            if (!Clean(null)) return false;
+            if (UnityEngine.Random.value < BubbleTea.Extras.TeamSkills.PearlFindChance) // the cleaners' Lost & Found perk
+                BubbleTea.Extras.Profile.AddPearls(1, "Your cleaner found a pearl!");
+            return true;
         }
 
         // Anyone standing at the table clears one empty seat's mess at a time.

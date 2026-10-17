@@ -102,11 +102,14 @@ namespace BubbleTea.Cooking
         /// <summary>The crate this bar takes, or null.</summary>
         public ItemDefinition SupplyItem => supplyItem;
 
+        /// <summary>Most supplies the bar holds, with the stockers' Full Shelves perk.</summary>
+        private int MaxSupplies => maxSupplies + BubbleTea.Extras.TeamSkills.ExtraBarScoops;
+
         /// <summary>Drinks' worth of supplies left. Saved with the game.</summary>
         public int Supplies => supplies;
 
         /// <summary>True if a crate fits right now (the bar has room for a whole crate).</summary>
-        public bool WantsCrate => UsesSupplies && supplies + suppliesPerCrate <= maxSupplies;
+        public bool WantsCrate => UsesSupplies && supplies + suppliesPerCrate <= MaxSupplies;
 
         /// <summary>True if any bar in the shop uses supplies.</summary>
         public static bool AnyUsesSupplies
@@ -122,7 +125,7 @@ namespace BubbleTea.Cooking
         }
 
         /// <summary>Puts back the saved supplies (called when a game loads).</summary>
-        public void RestoreSupplies(int amount) => supplies = Mathf.Clamp(amount, 0, maxSupplies);
+        public void RestoreSupplies(int amount) => supplies = Mathf.Clamp(amount, 0, MaxSupplies);
 
         // Hand-whisked and Whisk Master not bought yet.
         private bool NeedsHands => needsPlayer && Stats.Get(StatId.AutoWhisk, 0f) < 0.5f;
@@ -134,7 +137,7 @@ namespace BubbleTea.Cooking
 
         private void Awake()
         {
-            supplies = maxSupplies;
+            supplies = MaxSupplies;
             zone.SetPace(pickupDelay, secondsPerItem); // drinks go onto a tray one at a time, not all at once
         }
 
@@ -435,7 +438,7 @@ namespace BubbleTea.Cooking
             if (supplyLabel != null)
             {
                 if (supplies <= 0) supplyLabel.Show($"OUT OF {supplyName}!\nBring a crate", LabelRed);
-                else supplyLabel.Show($"{supplyName} {supplies}/{maxSupplies}", supplies <= suppliesPerCrate / 2 ? LabelOrange : LabelWhite);
+                else supplyLabel.Show($"{supplyName} {supplies}/{MaxSupplies}", supplies <= suppliesPerCrate / 2 ? LabelOrange : LabelWhite);
             }
             if (handLabel != null)
             {
@@ -450,7 +453,7 @@ namespace BubbleTea.Cooking
         {
             if (WantsCrate && carrier.WillGiveTo(this) && carrier.Stack.TryTake(i => i == supplyItem, out CarriedItem crate))
             {
-                supplies = Mathf.Min(maxSupplies, supplies + suppliesPerCrate + BubbleTea.Extras.TeamSkills.ExtraCrateScoops);
+                supplies = Mathf.Min(MaxSupplies, supplies + suppliesPerCrate + BubbleTea.Extras.TeamSkills.ExtraCrateScoops);
                 if (carrier.GetComponent<BubbleTea.Staff.Stocker>() != null)
                     BubbleTea.Extras.TeamSkills.AddXp(BubbleTea.Extras.TeamSkills.Role.Stocker, 3);
                 crate.MoveTo(transform, Vector3.up * 1.2f, 0.5f);

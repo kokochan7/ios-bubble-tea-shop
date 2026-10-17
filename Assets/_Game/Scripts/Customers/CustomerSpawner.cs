@@ -83,6 +83,7 @@ namespace BubbleTea.Customers
             UpdateTraffic();
             timer += Time.deltaTime * Stats.Get(StatId.CustomerRate, 1f) * GameClock.RushMultiplier
                 * (1f + BubbleTea.Building.ShopDecor.Flow) // decor draws more customers in
+                * BubbleTea.Extras.TeamSkills.CustomerFlow // the cleaners' Welcome Mat perk
                 * trafficRate;
             int max = Mathf.Max(1, maxCustomers + Mathf.RoundToInt(Stats.Get(StatId.ExtraCustomers, 0f)) + GameClock.RushExtraCustomers + trafficExtra);
             if (gap < 0f) gap = secondsBetweenCustomers * UnityEngine.Random.Range(0.5f, 1.6f);

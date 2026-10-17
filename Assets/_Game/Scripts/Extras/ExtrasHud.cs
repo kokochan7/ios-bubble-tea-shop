@@ -386,15 +386,15 @@ namespace BubbleTea.Extras
         {
             title.text = "STAFF SKILLS";
             var names = new string[TeamSkills.RoleNames.Length + 1];
-            TeamSkills.RoleNames.CopyTo(names, 0);
-            names[names.Length - 1] = "KITCHEN"; // the shop's cash upgrades
+            names[0] = "KITCHEN"; // the shop's cash upgrades come first
+            TeamSkills.RoleNames.CopyTo(names, 1);
             Tabs(body, names, 28);
-            if (tab >= TeamSkills.RoleNames.Length)
+            if (tab == 0)
             {
                 Kitchen(body);
                 return;
             }
-            var role = (TeamSkills.Role)tab;
+            var role = (TeamSkills.Role)(tab - 1);
             int level = TeamSkills.Level(role);
             int points = TeamSkills.PointsLeft(role);
             Color soft = new(0.8f, 0.8f, 0.88f);
@@ -413,21 +413,58 @@ namespace BubbleTea.Extras
             for (int p = 0; p < 3; p++)
             {
                 int perk = p;
-                TeamSkills.Perk info = TeamSkills.Perks[tab][p];
+                TeamSkills.Perk info = TeamSkills.Perks[(int)role][p];
                 int rank = TeamSkills.Rank(role, p);
                 RectTransform row = Row(body, top, 160f);
                 top += 170f;
-                string pips = new string('\u25CF', rank) + new string('\u25CB', TeamSkills.MaxRank - rank);
-                RowText(row, $"{info.Name}   {pips}", 38, 0f, 0.68f, Color.white, 10f, 90f);
+                RowText(row, info.Name, 38, 0f, 0.68f, Color.white, 10f, 90f);
+                RankMeter(row, rank, TeamSkills.MaxRank, 40f, new Color(0.72f, 0.45f, 1f));
                 RowText(row, info.Description, 28, 0f, 0.68f, soft, 70f, 8f);
                 if (rank >= TeamSkills.MaxRank) RowButton(row, "MAXED", UiKit.Gray, () => { }, false);
                 else RowButton(row, "LEARN", UiKit.Purple, () => TeamSkills.Learn(role, perk), points > 0);
             }
-            if (role == TeamSkills.Role.Barista)
+        }
+
+        // How many ranks a skill or upgrade has: a row of rounded segments, lit up (with a shine)
+        // for the ranks owned and dark for the rest, and the count written beside them.
+        private static void RankMeter(RectTransform row, int rank, int max, float centerFromTop, Color lit)
+        {
+            if (max <= 0) return;
+            const float Width = 210f, Height = 22f, Gap = 7f, CountWidth = 62f;
+            bool full = rank >= max;
+            if (full) lit = new Color(1f, 0.78f, 0.25f); // gold once maxed
+            float segment = (Width - Gap * (max - 1)) / max;
+
+            RectTransform meter = UiKit.Group(row, "Rank Meter");
+            meter.anchorMin = meter.anchorMax = new Vector2(0.68f, 1f);
+            meter.pivot = new Vector2(1f, 0.5f);
+            meter.sizeDelta = new Vector2(Width + CountWidth, Height);
+            meter.anchoredPosition = new Vector2(-16f, -centerFromTop);
+
+            for (int i = 0; i < max; i++)
             {
-                Text hint = UiKit.Label(body, "Kitchen upgrades (paid in cash) are on the KITCHEN tab.", 30, soft);
-                UiKit.Pin(hint.rectTransform, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(900f, 90f));
+                bool on = i < rank;
+                RectTransform piece = UiKit.Box(meter, "Rank " + (i + 1), on ? lit : new Color(1f, 1f, 1f, 0.12f));
+                piece.anchorMin = piece.anchorMax = new Vector2(0f, 0.5f);
+                piece.pivot = new Vector2(0f, 0.5f);
+                piece.sizeDelta = new Vector2(segment, Height);
+                piece.anchoredPosition = new Vector2(i * (segment + Gap), 0f);
+                if (!on) continue;
+                piece.gameObject.AddComponent<Shadow>().effectColor = new Color(lit.r, lit.g, lit.b, 0.45f);
+                RectTransform shine = UiKit.Box(piece, "Shine", new Color(1f, 1f, 1f, 0.35f));
+                shine.anchorMin = new Vector2(0f, 0.55f);
+                shine.anchorMax = new Vector2(1f, 0.9f);
+                shine.offsetMin = new Vector2(5f, 0f);
+                shine.offsetMax = new Vector2(-5f, 0f);
             }
+
+            Text count = UiKit.Label(meter, $"{rank}/{max}", 26, full ? lit : new Color(0.8f, 0.8f, 0.88f), TextAnchor.MiddleRight);
+            RectTransform rect = count.rectTransform;
+            rect.anchorMin = new Vector2(1f, 0f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 0.5f);
+            rect.sizeDelta = new Vector2(CountWidth, 20f);
+            rect.anchoredPosition = Vector2.zero;
         }
 
         // A chunky level bar: a gold level badge on the left and a glossy purple fill with the XP written on it.
@@ -496,8 +533,8 @@ namespace BubbleTea.Extras
                 int level = upgrades.LevelOf(item);
                 RectTransform row = Row(body, top, height);
                 top += height + 8f;
-                string pips = new string('\u25CF', level) + new string('\u25CB', Mathf.Max(0, item.MaxLevel - level));
-                RowText(row, $"{item.DisplayName}   {pips}", 34, 0f, 0.68f, Color.white, 8f, height * 0.55f);
+                RowText(row, item.DisplayName, 34, 0f, 0.68f, Color.white, 8f, height * 0.55f);
+                RankMeter(row, level, item.MaxLevel, 4f + height * 0.225f, new Color(0.35f, 0.85f, 0.55f));
                 RowText(row, UpgradeInfo.Describe(item, level), 24, 0f, 0.68f, soft, height * 0.42f, 6f);
                 int cost = upgrades.NextCost(item);
                 if (cost < 0) RowButton(row, "MAX", UiKit.Gray, () => { }, false);

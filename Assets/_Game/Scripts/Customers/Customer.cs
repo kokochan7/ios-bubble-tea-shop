@@ -195,6 +195,7 @@ namespace BubbleTea.Customers
             else if (kind == Visit.Critic) patience *= criticPatience;
             patience *= 1f + ShopDecor.Patience; // a nicely decorated shop is worth the wait
             patience *= Stats.Get(StatId.Patience, 1f); // Chill Music
+            patience *= BubbleTea.Extras.TeamSkills.CustomerPatience; // the cashiers' Friendly Smile perk
             if (kind == Visit.Tourist || kind == Visit.Critic) AddHat(kind == Visit.Critic);
             ShowOrder();
             // The order stays hidden until they reach the counter.
