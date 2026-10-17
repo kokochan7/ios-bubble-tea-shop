@@ -42,6 +42,9 @@ namespace BubbleTea.Building
         private RectTransform moveButton;
         private GameObject bar;
         private Text hint;
+        private RectTransform rotateButton, doneButton, cancelButton, deleteButton;
+        private Text deleteLabel;
+        private bool deleteArmed;        // DELETE was tapped once; a second tap throws it away
 
         /// <summary>Starts moving something straight away (the upgrade desk's menu button does this).</summary>
         /// <param name="mustFit">DONE only works where it fits (for something new being put out).</param>
@@ -193,6 +196,7 @@ namespace BubbleTea.Building
             moveButton.gameObject.SetActive(false);
             bar.SetActive(true);
             hint.text = HowTo;
+            LayOutBar(target.Delete != null);
         }
 
         private void Steer()
@@ -262,6 +266,41 @@ namespace BubbleTea.Building
             if (target == null) return;
             target.transform.SetPositionAndRotation(startPosition, startRotation);
             End(false);
+        }
+
+        // DELETE asks once ("SURE?"), then throws the piece away for good.
+        private void Delete()
+        {
+            if (target == null || target.Delete == null) return;
+            if (!deleteArmed)
+            {
+                deleteArmed = true;
+                deleteLabel.text = "SURE?";
+                hint.text = "Tap again to delete it";
+                hintTimer = 2f;
+                return;
+            }
+            System.Action delete = target.Delete;
+            End(false);
+            delete();
+        }
+
+        // ROTATE, DONE and CANCEL, plus DELETE for things that can be thrown away.
+        private void LayOutBar(bool canDelete)
+        {
+            deleteArmed = false;
+            deleteLabel.text = "DELETE";
+            deleteButton.gameObject.SetActive(canDelete);
+            Vector2 size = new(canDelete ? 220f : 290f, 110f);
+            RectTransform[] buttons = canDelete
+                ? new[] { rotateButton, doneButton, cancelButton, deleteButton }
+                : new[] { rotateButton, doneButton, cancelButton };
+            float step = canDelete ? 235f : 310f;
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                buttons[i].sizeDelta = size;
+                Place(buttons[i], (i - (buttons.Length - 1) * 0.5f) * step);
+            }
         }
 
         private void End(bool kept = false)
@@ -370,9 +409,12 @@ namespace BubbleTea.Building
             hintRect.anchoredPosition = new Vector2(0f, -14f);
             hint.text = HowTo;
 
-            Place(MakeButton(barRect, "ROTATE", new Vector2(290f, 110f), new Color(0.45f, 0.62f, 0.9f), rounded, font, Rotate), -310f);
-            Place(MakeButton(barRect, "DONE", new Vector2(290f, 110f), new Color(0.35f, 0.78f, 0.38f), rounded, font, Done), 0f);
-            Place(MakeButton(barRect, "CANCEL", new Vector2(290f, 110f), new Color(0.45f, 0.45f, 0.55f), rounded, font, Cancel), 310f);
+            rotateButton = MakeButton(barRect, "ROTATE", new Vector2(290f, 110f), new Color(0.45f, 0.62f, 0.9f), rounded, font, Rotate);
+            doneButton = MakeButton(barRect, "DONE", new Vector2(290f, 110f), new Color(0.35f, 0.78f, 0.38f), rounded, font, Done);
+            cancelButton = MakeButton(barRect, "CANCEL", new Vector2(290f, 110f), new Color(0.45f, 0.45f, 0.55f), rounded, font, Cancel);
+            deleteButton = MakeButton(barRect, "DELETE", new Vector2(220f, 110f), new Color(0.85f, 0.3f, 0.3f), rounded, font, Delete);
+            deleteLabel = deleteButton.GetComponentInChildren<Text>();
+            LayOutBar(false);
             bar.SetActive(false);
         }
 

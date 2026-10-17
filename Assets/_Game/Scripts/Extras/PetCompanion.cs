@@ -615,8 +615,8 @@ namespace BubbleTea.Extras
                 ModelKit.Part(tail, PrimitiveType.Capsule, new Vector3(0f, 0.08f, -0.06f), new Vector3(0.06f, 0.16f, 0.06f), pet.Fur, new Vector3(-30f, 0f, 0f));
         }
 
-        // A chibi panda standing up: a big round white head with round black ears, black eye patches
-        // with shiny eyes, pink cheeks and a little smile; a white tummy, black arms and legs.
+        // A chibi panda standing up: a big round white head with round black ears, round black eyes
+        // (no patches: Kenny found them scary), pink cheeks and a little smile; a white tummy, black arms and legs.
         private void BuildPanda(Pet pet)
         {
             Color white = pet.Fur;
@@ -652,10 +652,7 @@ namespace BubbleTea.Extras
             foreach (float x in new[] { -1f, 1f })
             {
                 ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.19f, 0.17f, -0.03f), new Vector3(0.15f, 0.15f, 0.08f), black); // ear
-                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.1f, 0.01f, 0.18f), new Vector3(0.12f, 0.15f, 0.06f), black, new Vector3(0f, 0f, x * 28f)); // patch
-                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.095f, 0.025f, 0.205f), new Vector3(0.06f, 0.07f, 0.03f), white); // eye
-                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.093f, 0.022f, 0.218f), new Vector3(0.04f, 0.05f, 0.02f), black); // pupil
-                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.085f, 0.04f, 0.226f), new Vector3(0.014f, 0.014f, 0.01f), white); // shine
+                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.1f, 0.02f, 0.195f), new Vector3(0.065f, 0.065f, 0.03f), black); // eye: a plain black dot
                 ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.17f, -0.07f, 0.16f), new Vector3(0.09f, 0.06f, 0.03f), pink); // cheek
                 ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.022f, -0.085f, 0.205f), new Vector3(0.04f, 0.013f, 0.012f), black, new Vector3(0f, 0f, x * -25f)); // smile
             }

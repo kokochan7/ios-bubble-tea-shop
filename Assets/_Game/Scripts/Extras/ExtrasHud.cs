@@ -335,13 +335,13 @@ namespace BubbleTea.Extras
             pearl.pivot = new Vector2(0.5f, 0.5f);
         }
 
-        private void Tabs(RectTransform body, string[] names)
+        private void Tabs(RectTransform body, string[] names, int fontSize = 36)
         {
             Button[] tabs = UiKit.Tabs(body, names, i =>
             {
                 tab = i;
                 Redraw();
-            });
+            }, fontSize);
             for (int i = 0; i < tabs.Length; i++) tabs[i].GetComponent<Image>().color = i == tab ? UiKit.Pink : UiKit.Gray;
         }
 
@@ -350,7 +350,7 @@ namespace BubbleTea.Extras
         private void DecorShop(RectTransform body, Text title)
         {
             title.text = "DECOR SHOP";
-            Tabs(body, new[] { "COZY", "NEON", "GREEN", "CUPS" });
+            Tabs(body, new[] { "FURNITURE", "LED SIGNS", "PLANTS", "MISC" }, 30);
             string collection = Collections.Names[tab];
 
             RectTransform header = Row(body, 100f, 130f);
@@ -363,10 +363,10 @@ namespace BubbleTea.Extras
             foreach (Collections.Item item in Collections.All)
             {
                 if (item.Collection != collection) continue;
-                RectTransform row = Row(body, top, 150f);
-                top += 165f;
+                RectTransform row = Row(body, top, 108f);
+                top += 118f;
                 int here = Collections.CountPlaced(item.Id);
-                RowText(row, here > 0 ? $"{item.Name}  x{here}" : item.Name, 40, 0f, 0.68f, Color.white);
+                RowText(row, here > 0 ? $"{item.Name}  x{here}" : item.Name, 36, 0f, 0.68f, Color.white);
                 PriceButton(row, item.Price, () =>
                 {
                     if (Profile.Pearls < item.Price) return;

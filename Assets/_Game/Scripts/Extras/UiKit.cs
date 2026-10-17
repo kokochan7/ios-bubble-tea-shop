@@ -151,14 +151,14 @@ namespace BubbleTea.Extras
         }
 
         /// <summary>A row of tab buttons along the top of an area; returns the buttons.</summary>
-        public static Button[] Tabs(RectTransform parent, string[] names, UnityAction<int> onPick)
+        public static Button[] Tabs(RectTransform parent, string[] names, UnityAction<int> onPick, int fontSize = 36)
         {
             var buttons = new Button[names.Length];
             float width = (parent.rect.width > 1f ? parent.rect.width : 900f) / names.Length;
             for (int i = 0; i < names.Length; i++)
             {
                 int index = i;
-                buttons[i] = Button(parent, names[i], Gray, new Vector2(width - 12f, 80f), () => onPick(index), 36);
+                buttons[i] = Button(parent, names[i], Gray, new Vector2(width - 12f, 80f), () => onPick(index), fontSize);
                 var rect = (RectTransform)buttons[i].transform;
                 rect.anchorMin = new Vector2((float)i / names.Length, 1f);
                 rect.anchorMax = new Vector2((float)(i + 1) / names.Length, 1f);

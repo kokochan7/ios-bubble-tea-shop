@@ -30,6 +30,9 @@ namespace BubbleTea.Building
         /// <summary>False for things moved another way (the upgrade desk moves from its menu, since a tap opens it).</summary>
         public bool TapToMove { get; private set; } = true;
 
+        /// <summary>Set for things that can be thrown away from the move bar (decor-shop pieces); null otherwise.</summary>
+        public Action Delete { get; set; }
+
         /// <summary>True once it stands somewhere other than where its pad built it.</summary>
         public bool HasMoved { get; private set; }
 
