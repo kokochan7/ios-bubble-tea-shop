@@ -27,25 +27,31 @@ namespace BubbleTea.Extras
             public bool LongEars;   // bunny
             public bool Patches;    // panda eye patches
             public bool CurlyTail;  // shiba
+            public bool Upright;    // stands on two legs, chibi style (the panda)
             public float Size = 1f; // the cat is the smallest; the panda is the biggest
+            public float PatienceBack;  // share of a visited customer's patience it gives back
+            public float Joy;           // extra happiness from a visit (likelier and bigger tips)
+            public float TipChance;     // chance a visited customer tips the pet
         }
 
+        // Cat and shiba help customers the least, the bunny a bit more, the panda the most.
         public static readonly Pet[] Pets =
         {
-            new Pet { Id = "cat", Name = "Mango the Cat", Price = 15, Fur = new Color(0.98f, 0.66f, 0.32f), Belly = new Color(1f, 0.93f, 0.82f), Ears = new Color(0.98f, 0.66f, 0.32f) },
-            new Pet { Id = "shiba", Name = "Kuma the Shiba", Price = 20, Fur = new Color(0.86f, 0.55f, 0.3f), Belly = new Color(1f, 0.97f, 0.92f), Ears = new Color(0.86f, 0.55f, 0.3f), CurlyTail = true, Size = 1.3f },
-            new Pet { Id = "bunny", Name = "Mochi the Bunny", Price = 20, Fur = new Color(0.97f, 0.96f, 0.95f), Belly = new Color(1f, 0.85f, 0.88f), Ears = new Color(0.97f, 0.96f, 0.95f), LongEars = true, Size = 1.15f },
-            new Pet { Id = "panda", Name = "Bao the Panda", Price = 30, Fur = new Color(0.97f, 0.97f, 0.97f), Belly = new Color(0.97f, 0.97f, 0.97f), Ears = new Color(0.15f, 0.15f, 0.17f), Patches = true, Size = 1.7f },
+            new Pet { Id = "cat", Name = "Mango the Cat", Price = 25, Fur = new Color(0.98f, 0.66f, 0.32f), Belly = new Color(1f, 0.93f, 0.82f), Ears = new Color(0.98f, 0.66f, 0.32f),
+                PatienceBack = 0.15f, Joy = 0.15f, TipChance = 0.25f },
+            new Pet { Id = "shiba", Name = "Kuma the Shiba", Price = 25, Fur = new Color(0.86f, 0.55f, 0.3f), Belly = new Color(1f, 0.97f, 0.92f), Ears = new Color(0.86f, 0.55f, 0.3f), CurlyTail = true, Size = 1.3f,
+                PatienceBack = 0.15f, Joy = 0.15f, TipChance = 0.25f },
+            new Pet { Id = "bunny", Name = "Mochi the Bunny", Price = 30, Fur = new Color(0.97f, 0.96f, 0.95f), Belly = new Color(1f, 0.85f, 0.88f), Ears = new Color(0.97f, 0.96f, 0.95f), LongEars = true, Size = 1.15f,
+                PatienceBack = 0.25f, Joy = 0.25f, TipChance = 0.35f },
+            new Pet { Id = "panda", Name = "Bao the Panda", Price = 50, Fur = new Color(0.97f, 0.97f, 0.97f), Belly = new Color(0.97f, 0.97f, 0.97f), Ears = new Color(0.1f, 0.1f, 0.12f), Patches = true, Upright = true, Size = 1.5f,
+                PatienceBack = 0.35f, Joy = 0.4f, TipChance = 0.5f },
         };
 
         private enum State { Roam, Visit, Nap, Sniff }
 
-        private const float PatienceBack = 0.25f;               // share of a customer's patience a visit gives back
-        private const float Joy = 0.25f;                        // extra happiness from a visit (likelier and bigger tips)
-        private const float TipChance = 0.35f;                  // chance a visited customer tips the pet
         private const float DoorApproach = 1.2f;                // meters either side of the staff door to line up on
         private static readonly Vector2 SniffEvery = new(40f, 70f);
-        private static readonly Vector2 BreakEvery = new(90f, 150f);
+        private static readonly Vector2 BreakEvery = new(40f, 70f);
         private static readonly Vector2 BreakSeconds = new(15f, 25f);
         private static readonly Color Pink = new(1f, 0.55f, 0.7f);
 
@@ -53,6 +59,7 @@ namespace BubbleTea.Extras
 
         private Transform body;          // the whole model: bobs, sits back and lies down
         private float size = 1f;         // the pet's scale
+        private Pet kind;
         private Transform head;
         private Transform tail;
         private readonly Transform[] legs = new Transform[4]; // front left, front right, back left, back right
@@ -128,9 +135,9 @@ namespace BubbleTea.Extras
             }
             if (staffDoor != null && sofa != null) kitchenSide = sofa.transform.position.z >= staffDoor.position.z ? 1f : -1f;
 
-            label = FloatingText.Create(transform, Vector3.up * (0.3f + 0.8f * size), 0.035f);
+            label = FloatingText.Create(transform, Vector3.up * (0.3f + (kind != null && kind.Upright ? 1.05f : 0.8f) * size), 0.035f);
             sniffTimer = UnityEngine.Random.Range(SniffEvery.x, SniffEvery.y);
-            breakTimer = UnityEngine.Random.Range(BreakEvery.x, BreakEvery.y);
+            breakTimer = UnityEngine.Random.Range(15f, 30f); // a first nap soon after it arrives
             pause = 1f;
             goal = transform.position;
         }
@@ -295,10 +302,10 @@ namespace BubbleTea.Extras
             {
                 greeted = true;
                 stateTimer = 2.5f; // stays for a cuddle
-                friend.PetVisit(PatienceBack, Joy);
+                friend.PetVisit(kind.PatienceBack, kind.Joy);
                 Say("\u2665", Pink, 2.5f); // a heart
 
-                if (UnityEngine.Random.value < TipChance)
+                if (UnityEngine.Random.value < kind.TipChance)
                 {
                     float rate = earnings != null ? earnings.RatePerMinute : 0f;
                     int tip = Mathf.Clamp(Mathf.RoundToInt(rate / 20f), 2, 200);
@@ -318,12 +325,18 @@ namespace BubbleTea.Extras
 
         // ---------------------------------------------------------------- breaks in the kitchen
 
-        // Off through the staff door for a nap on the staff sofa (or curled up beside it if it's full).
+        // Off through the staff door for a nap on the staff sofa, if a seat on it is free (else later).
         private void StartBreak()
         {
+            napSeat = StaffSofa.TakeSeat(this);
+            if (napSeat == null)
+            {
+                breakTimer = 15f;
+                goal = DiningSpot();
+                return;
+            }
             state = State.Nap;
             napping = false;
-            napSeat = StaffSofa.TakeSeat(this);
             stateTimer = UnityEngine.Random.Range(BreakSeconds.x, BreakSeconds.y);
             ResetStuck();
         }
@@ -348,7 +361,7 @@ namespace BubbleTea.Extras
 
             if (napSeat != null) transform.SetPositionAndRotation(spot + Vector3.up * 0.2f, napSeat.rotation);
             stateTimer -= Time.deltaTime;
-            body.localScale = new Vector3(1.05f, 0.8f + Mathf.Sin(Time.time * 2f) * 0.03f, 1.05f); // curled up, breathing
+            body.localScale = new Vector3(1.05f, 0.8f + Mathf.Sin(Time.time * 2f) * 0.03f, 1.05f) * size; // curled up, breathing
             label.Show(Mathf.Repeat(Time.time, 1.6f) < 0.8f ? "z" : "z Z", new Color(0.6f, 0.85f, 1f));
             if (stateTimer <= 0f) WakeUp();
         }
@@ -362,7 +375,7 @@ namespace BubbleTea.Extras
             }
             napSeat = null;
             napping = false;
-            body.localScale = Vector3.one;
+            body.localScale = Vector3.one * size;
             label.Hide();
             breakTimer = UnityEngine.Random.Range(BreakEvery.x, BreakEvery.y);
             state = State.Roam;
@@ -465,13 +478,15 @@ namespace BubbleTea.Extras
             sit = Mathf.MoveTowards(sit, sitGoal, dt * 3f);
             lie = Mathf.MoveTowards(lie, napping ? 1f : 0f, dt * 2.5f);
 
-            // Sitting tips the body back around the hips; lying lowers it to the floor.
-            float pitch = -28f * sit;
-            Vector3 hips = new(0f, 0.14f, -0.2f);
+            // Sitting tips the body back around the hips; lying lowers it to the floor. The panda
+            // stands up: it sits down on its bottom and naps on its back.
+            bool upright = kind != null && kind.Upright;
+            float pitch = upright ? -12f * sit - 75f * lie : -28f * sit;
+            Vector3 hips = upright ? new Vector3(0f, 0.2f, 0f) : new Vector3(0f, 0.14f, -0.2f);
             Quaternion tilt = Quaternion.Euler(pitch, 0f, 0f);
             Vector3 position = hips - tilt * hips;
             float bob = walking ? Mathf.Abs(Mathf.Sin(stride)) * 0.035f : 0f;
-            position.y += bob - 0.12f * lie;
+            position.y += bob - (upright ? 0.14f * sit + 0.05f * lie : 0.12f * lie);
             body.localPosition = position * size;
             body.localRotation = tilt;
 
@@ -483,11 +498,23 @@ namespace BubbleTea.Extras
                 bool front = i < 2;
                 bool pairA = i == 0 || i == 3;
                 float angle = pairA ? swing : -swing;
+                if (upright)
+                {
+                    // Front "legs" are its arms; sitting puts the legs out in front.
+                    angle = Mathf.Lerp(angle, front ? -20f : -80f, sit);
+                    angle = Mathf.Lerp(angle, front ? 0f : -10f, lie);
+                    legs[i].localRotation = Quaternion.Euler(angle, 0f, 0f);
+                    continue;
+                }
                 angle = Mathf.Lerp(angle, front ? 28f : -62f, sit);
                 angle = Mathf.Lerp(angle, front ? -80f : 80f, lie);
                 legs[i].localRotation = Quaternion.Euler(angle, 0f, 0f);
                 legs[i].localScale = new Vector3(1f, front ? 1f + 0.75f * sit : 1f, 1f);
             }
+
+            // The panda waves hello to a friend, and now and then while it stands about.
+            if (upright && legs[1] != null && lie < 0.5f && (cuddle || !walking && Mathf.Repeat(Time.time, 7f) < 1.8f))
+                legs[1].localRotation = Quaternion.Euler(0f, 0f, 140f + Mathf.Sin(Time.time * 10f) * 20f);
 
             // Head: nods with each step, sniffs the floor, looks around now and then, tilts at a friend.
             if (head != null)
@@ -520,11 +547,18 @@ namespace BubbleTea.Extras
         {
             body = new GameObject("Body").transform;
             body.SetParent(transform, false);
+            kind = pet;
             size = Mathf.Max(1f, pet.Size);
             body.localScale = Vector3.one * size;
             lastPosition = transform.position;
             Color dark = new(0.12f, 0.1f, 0.1f);
             Color pink = new(1f, 0.6f, 0.65f);
+
+            if (pet.Upright)
+            {
+                BuildPanda(pet);
+                return;
+            }
 
             ModelKit.Part(body, PrimitiveType.Sphere, new Vector3(0f, 0.32f, 0f), new Vector3(0.38f, 0.32f, 0.55f), pet.Fur);
             ModelKit.Part(body, PrimitiveType.Sphere, new Vector3(0f, 0.27f, 0.06f), new Vector3(0.3f, 0.22f, 0.4f), pet.Belly);
@@ -579,6 +613,58 @@ namespace BubbleTea.Extras
                 ModelKit.Part(tail, PrimitiveType.Sphere, new Vector3(0f, -0.04f, -0.04f), new Vector3(0.12f, 0.12f, 0.12f), pet.Patches ? dark : Color.white);
             else
                 ModelKit.Part(tail, PrimitiveType.Capsule, new Vector3(0f, 0.08f, -0.06f), new Vector3(0.06f, 0.16f, 0.06f), pet.Fur, new Vector3(-30f, 0f, 0f));
+        }
+
+        // A chibi panda standing up: a big round white head with round black ears, black eye patches
+        // with shiny eyes, pink cheeks and a little smile; a white tummy, black arms and legs.
+        private void BuildPanda(Pet pet)
+        {
+            Color white = pet.Fur;
+            Color black = pet.Ears;
+            Color pink = new(1f, 0.68f, 0.72f);
+
+            ModelKit.Part(body, PrimitiveType.Sphere, new Vector3(0f, 0.36f, 0f), new Vector3(0.36f, 0.4f, 0.32f), white);
+            ModelKit.Part(body, PrimitiveType.Sphere, new Vector3(0f, 0.5f, -0.01f), new Vector3(0.38f, 0.14f, 0.33f), black); // shoulders
+
+            // Arms (legs[0], legs[1]) hang from the shoulders; legs (legs[2], legs[3]) from the hips.
+            var joints = new[] { new Vector3(-0.17f, 0.5f, 0f), new Vector3(0.17f, 0.5f, 0f), new Vector3(-0.09f, 0.2f, 0f), new Vector3(0.09f, 0.2f, 0f) };
+            for (int i = 0; i < 4; i++)
+            {
+                Transform joint = new GameObject(i < 2 ? "Arm" : "Leg").transform;
+                joint.SetParent(body, false);
+                joint.localPosition = joints[i];
+                if (i < 2) ModelKit.Part(joint, PrimitiveType.Capsule, new Vector3(0f, -0.11f, 0.02f), new Vector3(0.11f, 0.12f, 0.11f), black);
+                else
+                {
+                    ModelKit.Part(joint, PrimitiveType.Cylinder, new Vector3(0f, -0.08f, 0f), new Vector3(0.13f, 0.08f, 0.13f), black);
+                    ModelKit.Part(joint, PrimitiveType.Sphere, new Vector3(0f, -0.17f, 0.03f), new Vector3(0.15f, 0.08f, 0.18f), black);
+                }
+                legs[i] = joint;
+            }
+
+            head = new GameObject("Head").transform;
+            head.SetParent(body, false);
+            head.localPosition = new Vector3(0f, 0.6f, 0.02f);
+            Transform face = new GameObject("Face").transform;
+            face.SetParent(head, false);
+            face.localPosition = new Vector3(0f, 0.2f, 0f);
+            ModelKit.Part(face, PrimitiveType.Sphere, Vector3.zero, new Vector3(0.5f, 0.44f, 0.42f), white);
+            foreach (float x in new[] { -1f, 1f })
+            {
+                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.19f, 0.17f, -0.03f), new Vector3(0.15f, 0.15f, 0.08f), black); // ear
+                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.1f, 0.01f, 0.18f), new Vector3(0.12f, 0.15f, 0.06f), black, new Vector3(0f, 0f, x * 28f)); // patch
+                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.095f, 0.025f, 0.205f), new Vector3(0.06f, 0.07f, 0.03f), white); // eye
+                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.093f, 0.022f, 0.218f), new Vector3(0.04f, 0.05f, 0.02f), black); // pupil
+                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.085f, 0.04f, 0.226f), new Vector3(0.014f, 0.014f, 0.01f), white); // shine
+                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.17f, -0.07f, 0.16f), new Vector3(0.09f, 0.06f, 0.03f), pink); // cheek
+                ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(x * 0.022f, -0.085f, 0.205f), new Vector3(0.04f, 0.013f, 0.012f), black, new Vector3(0f, 0f, x * -25f)); // smile
+            }
+            ModelKit.Part(face, PrimitiveType.Sphere, new Vector3(0f, -0.045f, 0.21f), new Vector3(0.05f, 0.032f, 0.03f), black); // nose
+
+            tail = new GameObject("Tail").transform;
+            tail.SetParent(body, false);
+            tail.localPosition = new Vector3(0f, 0.24f, -0.15f);
+            ModelKit.Part(tail, PrimitiveType.Sphere, Vector3.zero, new Vector3(0.09f, 0.09f, 0.07f), white);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

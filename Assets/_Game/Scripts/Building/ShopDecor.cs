@@ -35,7 +35,7 @@ namespace BubbleTea.Building
         public static float Flow => Sum(d => d.flow);
 
         /// <summary>Extra happiness from all decor in the shop.</summary>
-        public static float Happiness => Sum(d => d.happiness) + BubbleTea.Extras.Collections.Bonus; // finished collections count too
+        public static float Happiness => Sum(d => d.happiness) + BubbleTea.Extras.Collections.Bonus; // decor-shop pieces out in this shop count too
 
         private void OnEnable() => active.Add(this);
         private void OnDisable() => active.Remove(this);

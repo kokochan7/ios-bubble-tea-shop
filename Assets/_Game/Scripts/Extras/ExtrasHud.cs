@@ -352,15 +352,12 @@ namespace BubbleTea.Extras
             title.text = "DECOR SHOP";
             Tabs(body, new[] { "COZY", "NEON", "GREEN", "CUPS" });
             string collection = Collections.Names[tab];
-            bool complete = Collections.IsComplete(collection);
 
             RectTransform header = Row(body, 100f, 130f);
             header.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
-            RowText(header, $"{collection}   {Collections.OwnedIn(collection)}/4", 46, 0f, 1f, Color.white, 0f, 60f);
-            RowText(header, complete
-                ? $"Complete! Customers are {Collections.BonusPerCollection * 100f:0}% happier in every shop."
-                : $"Collect all 4 to make customers {Collections.BonusPerCollection * 100f:0}% happier in every shop.",
-                32, 0f, 1f, complete ? new Color(0.6f, 0.95f, 0.55f) : new Color(0.8f, 0.8f, 0.88f), 60f, 0f);
+            RowText(header, collection, 46, 0f, 1f, Color.white, 0f, 60f);
+            RowText(header, $"Each piece makes customers in this shop {Collections.BonusPerPiece * 100f:0}% happier. Now: +{Collections.Bonus * 100f:0}%",
+                32, 0f, 1f, new Color(0.6f, 0.95f, 0.55f), 60f, 0f);
 
             float top = 250f;
             foreach (Collections.Item item in Collections.All)
@@ -368,31 +365,14 @@ namespace BubbleTea.Extras
                 if (item.Collection != collection) continue;
                 RectTransform row = Row(body, top, 150f);
                 top += 165f;
-                RowText(row, item.Name, 40, 0f, 0.68f, Color.white);
-                if (!Profile.OwnsDecor(item.Id))
+                int here = Collections.CountPlaced(item.Id);
+                RowText(row, here > 0 ? $"{item.Name}  x{here}" : item.Name, 40, 0f, 0.68f, Color.white);
+                PriceButton(row, item.Price, () =>
                 {
-                    PriceButton(row, item.Price, () =>
-                    {
-                        Collections.Buy(item);
-                        Redraw();
-                    });
-                }
-                else if (Collections.IsPlaced(item.Id))
-                {
-                    RowButton(row, "PUT AWAY", UiKit.Gray, () =>
-                    {
-                        Collections.PutAway(item.Id);
-                        Redraw();
-                    });
-                }
-                else
-                {
-                    RowButton(row, "PLACE", UiKit.Pink, () =>
-                    {
-                        Close();
-                        Collections.PlaceNew(item);
-                    });
-                }
+                    if (Profile.Pearls < item.Price) return;
+                    Close(); // out of the way while it's placed
+                    Collections.Buy(item);
+                });
             }
 
             Text hint = UiKit.Label(body, "Earn pearls from daily goals, happy VIPs, mini-games and your pet.", 32,
@@ -491,7 +471,9 @@ namespace BubbleTea.Extras
                 {
                     RectTransform row = Row(body, top, 150f);
                     top += 165f;
-                    RowText(row, pet.Name, 40, 0f, 0.68f, Color.white);
+                    RowText(row, pet.Name, 40, 0f, 0.68f, Color.white, 10f, 60f);
+                    RowText(row, $"Patience +{pet.PatienceBack * 100f:0}%  Tips +{pet.Joy * 100f:0}%  Pet tips {pet.TipChance * 100f:0}%",
+                        26, 0f, 0.68f, new Color(0.75f, 0.9f, 0.8f), 80f, 6f);
                     if (!Profile.OwnsPet(pet.Id))
                     {
                         PriceButton(row, pet.Price, () =>
@@ -520,7 +502,7 @@ namespace BubbleTea.Extras
                     }
                 }
                 Text hint = UiKit.Label(body,
-                    "Your pet roams the shop and says hello to customers: they wait longer, tip more, and sometimes tip your pet. It also naps on empty chairs and sniffs out money (and pearls). Tap IN SHOP to send it home.",
+                    "Your pet roams the shop and says hello to customers: they wait longer, tip more, and sometimes tip your pet. It naps on the staff sofa when it's free and sniffs out money (and pearls). Tap IN SHOP to send it home.",
                     32, new Color(0.8f, 0.8f, 0.88f));
                 UiKit.Pin(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 50f), new Vector2(900f, 220f));
 

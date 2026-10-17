@@ -18,6 +18,9 @@ namespace BubbleTea.UI
         // TODO: set to false before the App Store release.
         private const bool ShowOnPhone = true;
 
+        private const string Code = "0000";
+        private static bool unlocked;
+
         [SerializeField, Tooltip("Opens the GM panel.")]
         private Button openButton;
 
@@ -43,7 +46,16 @@ namespace BubbleTea.UI
             if (openButton != null)
             {
                 openButton.gameObject.SetActive(Debug.isDebugBuild || ShowOnPhone);
-                openButton.onClick.AddListener(() => SetOpen(true));
+                openButton.onClick.AddListener(() =>
+                {
+                    // On the phone the GM tools ask for a code first (once per session).
+                    if (Application.isEditor || unlocked) SetOpen(true);
+                    else BubbleTea.Extras.Passcode.Ask("GM CODE", Code, () =>
+                    {
+                        unlocked = true;
+                        SetOpen(true);
+                    });
+                });
             }
             if (closeButton != null) closeButton.onClick.AddListener(() => SetOpen(false));
             if (moneyButton != null) moneyButton.onClick.AddListener(GiveMoney);

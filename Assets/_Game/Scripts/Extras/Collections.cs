@@ -8,9 +8,9 @@ using UnityEngine;
 namespace BubbleTea.Extras
 {
     /// <summary>
-    /// The decor shop: cosmetic pieces bought with pearls, in four collections of four. Owned pieces
-    /// can be put out in any shop (one of each per shop) and moved like other decor. Finishing a
-    /// collection makes customers a little happier in every shop (they tip more).
+    /// The decor shop: cosmetic pieces bought with pearls, in four collections of four. Each purchase
+    /// puts one more piece out in the open shop (buy the same piece as often as you like), placed and
+    /// moved like other decor. Every piece out makes customers in that shop 1% happier (they tip more).
     /// </summary>
     public static class Collections
     {
@@ -27,8 +27,10 @@ namespace BubbleTea.Extras
         /// <summary>The collections, in the order the shop shows them.</summary>
         public static readonly string[] Names = { "Cozy Corner", "Neon Nights", "Green Friends", "Cute Cups" };
 
-        /// <summary>Extra happiness for each finished collection (0.05 = +5%).</summary>
-        public const float BonusPerCollection = 0.05f;
+        /// <summary>Extra happiness in this shop for each piece out in it (0.01 = +1%).</summary>
+        public const float BonusPerPiece = 0.01f;
+
+        private const string Prefix = "Decor ";
 
         private static readonly List<GameObject> placed = new();
 
@@ -56,52 +58,45 @@ namespace BubbleTea.Extras
             new Item { Id = "cuptower", Name = "Cup Tower", Collection = "Cute Cups", Price = 7, Size = new Vector3(0.9f, 1.5f, 0.9f), Build = CupTower },
         };
 
-        /// <summary>Extra happiness from finished collections (read by the shop's decor bonus).</summary>
+        /// <summary>Extra happiness from the pieces out in the open shop (read by the shop's decor bonus).</summary>
         public static float Bonus
         {
             get
             {
-                int done = 0;
-                foreach (string name in Names) if (IsComplete(name)) done++;
-                return done * BonusPerCollection;
+                placed.RemoveAll(p => p == null);
+                return placed.Count * BonusPerPiece;
             }
         }
 
         public static Item Find(string id) => Array.Find(All, i => i.Id == id);
 
-        public static bool IsComplete(string collection)
+        /// <summary>How many of this piece are out in the open shop.</summary>
+        public static int CountPlaced(string id) => placed.FindAll(p => p != null && ItemId(p.name.Substring(Prefix.Length)) == id).Count;
+
+        // A copy's save key is the piece's ID, then "#2", "#3"... for the second and later copies.
+        private static string ItemId(string key)
         {
-            foreach (Item item in All) if (item.Collection == collection && !Profile.OwnsDecor(item.Id)) return false;
-            return true;
+            int hash = key.IndexOf('#');
+            return hash < 0 ? key : key.Substring(0, hash);
         }
 
-        public static int OwnedIn(string collection)
+        private static string NextKey(string id)
         {
-            int count = 0;
-            foreach (Item item in All) if (item.Collection == collection && Profile.OwnsDecor(item.Id)) count++;
-            return count;
+            for (int copy = 1; ; copy++)
+            {
+                string key = copy == 1 ? id : id + "#" + copy;
+                if (!placed.Exists(p => p != null && p.name == Prefix + key)) return key;
+            }
         }
 
-        /// <summary>True if this piece is out in the open shop.</summary>
-        public static bool IsPlaced(string id) => placed.Exists(p => p != null && p.name == "Decor " + id);
-
-        /// <summary>Buys a piece with pearls. Finishing a collection is announced.</summary>
+        /// <summary>
+        /// Buys a piece with pearls and puts it out next to the player to place. CANCEL puts it back
+        /// and gives the pearls back.
+        /// </summary>
         public static bool Buy(Item item)
         {
-            if (Profile.OwnsDecor(item.Id) || !Profile.TrySpend(item.Price)) return false;
+            if (!Profile.TrySpend(item.Price)) return false;
             Profile.AddDecor(item.Id);
-            if (IsComplete(item.Collection))
-            {
-                GameEvents.RaiseAnnouncement($"{item.Collection} collection complete!\nCustomers are {BonusPerCollection * 100f:0}% happier in every shop.",
-                    new Color(0.95f, 0.75f, 0.25f));
-            }
-            return true;
-        }
-
-        /// <summary>Puts a piece out next to the player and lets them place it (CANCEL puts it away again).</summary>
-        public static void PlaceNew(Item item)
-        {
-            if (IsPlaced(item.Id)) return;
             Vector3 spot = Vector3.zero;
             Quaternion facing = Quaternion.Euler(0f, 180f, 0f);
             if (PlayerMovement.Current != null)
@@ -111,19 +106,26 @@ namespace BubbleTea.Extras
                 spot = player.position + forward * 1.4f;
                 spot.y = 0f;
             }
-            Movable movable = Spawn(item, spot, facing);
+            string key = NextKey(item.Id);
+            Movable movable = Spawn(item, key, spot, facing);
             MoveMode.Begin(movable, mustFit: true, ended: kept =>
             {
-                if (!kept) PutAway(item.Id);
+                if (kept)
+                {
+                    GameEvents.RaiseAnnouncement($"{item.Name} placed! Customers here are {Bonus * 100f:0}% happier.", new Color(0.95f, 0.75f, 0.25f));
+                    return;
+                }
+                Remove(key);
+                Profile.AddPearls(item.Price, null); // changed their mind: pearls back
             });
+            return true;
         }
 
-        /// <summary>Takes a piece out of the open shop (it stays in the collection).</summary>
-        public static void PutAway(string id)
+        private static void Remove(string key)
         {
             for (int i = placed.Count - 1; i >= 0; i--)
             {
-                if (placed[i] != null && placed[i].name != "Decor " + id) continue;
+                if (placed[i] != null && placed[i].name != Prefix + key) continue;
                 if (placed[i] != null) UnityEngine.Object.Destroy(placed[i]);
                 placed.RemoveAt(i);
             }
@@ -133,31 +135,31 @@ namespace BubbleTea.Extras
         /// <summary>The pieces out in the open shop, for the save file.</summary>
         public static List<string> Snapshot()
         {
-            var ids = new List<string>();
-            foreach (GameObject piece in placed) if (piece != null) ids.Add(piece.name.Substring("Decor ".Length));
-            return ids;
+            var keys = new List<string>();
+            foreach (GameObject piece in placed) if (piece != null) keys.Add(piece.name.Substring(Prefix.Length));
+            return keys;
         }
 
         /// <summary>Puts the saved pieces back (their spots come back with the other moved things).</summary>
-        public static void Restore(List<string> ids)
+        public static void Restore(List<string> keys)
         {
             placed.Clear();
-            if (ids == null) return;
-            foreach (string id in ids)
+            if (keys == null) return;
+            foreach (string key in keys)
             {
-                Item item = Find(id);
-                if (item != null && Profile.OwnsDecor(id) && !IsPlaced(id)) Spawn(item, Vector3.zero, Quaternion.identity);
+                Item item = Find(ItemId(key));
+                if (item != null && !placed.Exists(p => p != null && p.name == Prefix + key)) Spawn(item, key, Vector3.zero, Quaternion.identity);
             }
         }
 
-        private static Movable Spawn(Item item, Vector3 position, Quaternion rotation)
+        private static Movable Spawn(Item item, string key, Vector3 position, Quaternion rotation)
         {
-            var root = new GameObject("Decor " + item.Id);
+            var root = new GameObject(Prefix + key);
             root.transform.SetPositionAndRotation(position, rotation);
             item.Build(root.transform);
             ModelKit.Collider(root, new Vector3(0f, item.Size.y * 0.5f, 0f), item.Size);
             placed.Add(root);
-            return Movable.Make(root, "decor:" + item.Id, tapToMove: true);
+            return Movable.Make(root, "decor:" + key, tapToMove: true);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

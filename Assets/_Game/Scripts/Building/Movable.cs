@@ -35,14 +35,20 @@ namespace BubbleTea.Building
 
         /// <summary>
         /// Makes a just-built thing movable if it's the kind that can be moved: bars and decor, and the
-        /// upgrade desk (from its menu). Counters, tables and travel spots stay put.
+        /// upgrade desk (from its menu), and each café table of a seating area. Counters and travel spots stay put.
         /// </summary>
         public static void AddTo(GameObject built, string id)
         {
             if (built == null) return;
             if (built.GetComponentInChildren<ServingCounter>(true) != null) return;
             if (built.GetComponentInChildren<ShopTravel>(true) != null) return;
-            if (built.GetComponentInChildren<SeatingTable>(true) != null) return;
+            SeatingTable[] tables = built.GetComponentsInChildren<SeatingTable>(true);
+            if (tables.Length > 0)
+            {
+                // Each café table moves on its own (with its chairs).
+                for (int i = 0; i < tables.Length; i++) Make(tables[i].gameObject, id + ":table" + i, tapToMove: true);
+                return;
+            }
             if (built.GetComponentInChildren<UpgradeZone>(true) != null) Make(built, id, tapToMove: false);
             else if (built.GetComponentInChildren<Station>(true) != null || built.GetComponentInChildren<ShopDecor>(true) != null)
                 Make(built, id, tapToMove: true);
@@ -87,6 +93,12 @@ namespace BubbleTea.Building
             if (sofa != null && sofa.InUse)
             {
                 reason = "Wait until nobody is taking a break on the sofa.";
+                return false;
+            }
+            SeatingTable table = GetComponentInChildren<SeatingTable>();
+            if (table != null && table.InUse)
+            {
+                reason = "Wait until nobody is sitting at this table.";
                 return false;
             }
             return true;
