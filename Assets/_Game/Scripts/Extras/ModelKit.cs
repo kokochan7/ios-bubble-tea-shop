@@ -18,7 +18,9 @@ namespace BubbleTea.Extras
             Color key = glow ? new Color(color.r, color.g, color.b, 0.5f) : color;
             if (materials.TryGetValue(key, out Material cached) && cached != null) return cached;
 
-            var material = new Material(FindShader()) { color = color };
+            Material template = BaseMaterial();
+            var material = template != null ? new Material(template) : new Material(FindShader());
+            material.color = color;
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
             if (glow && material.HasProperty("_EmissionColor"))
             {
@@ -53,7 +55,16 @@ namespace BubbleTea.Extras
             box.size = size;
         }
 
-        // The shop's own lit shader (taken from something already in the scene, so it's in the build).
+        private static Material baseMaterial;
+
+        // The lit material made by the shop builder in Resources, so it's always in the phone build.
+        private static Material BaseMaterial()
+        {
+            if (baseMaterial == null) baseMaterial = Resources.Load<Material>("ModelKitBase");
+            return baseMaterial;
+        }
+
+        // Fallback: the shop's own lit shader (taken from something already in the scene, so it's in the build).
         private static Shader FindShader()
         {
             if (shader != null) return shader;

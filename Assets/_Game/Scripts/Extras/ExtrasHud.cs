@@ -260,6 +260,7 @@ namespace BubbleTea.Extras
             {
                 for (int i = body.childCount - 1; i >= 0; i--) Destroy(body.GetChild(i).gameObject);
                 draw(body, title);
+                HudStyle.Request();
             };
             refresh();
             paused = pause;

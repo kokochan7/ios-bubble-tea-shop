@@ -6,8 +6,8 @@ using UnityEngine.UI;
 namespace BubbleTea.UI
 {
     /// <summary>
-    /// A banner near the top of the screen for shop events: a tour bus on its way, a tea critic,
-    /// today's special. Messages that arrive together are shown one after another.
+    /// A small toast near the bottom of the screen for shop events: a team levelling up, a tour bus
+    /// on its way, a tea critic, today's special. Messages that arrive together are shown one after another.
     /// </summary>
     public class AnnouncementBanner : MonoBehaviour
     {
@@ -21,7 +21,7 @@ namespace BubbleTea.UI
         private Text label;
 
         [SerializeField, Tooltip("Seconds each message stays up.")]
-        private float seconds = 5f;
+        private float seconds = 2.5f;
 
         private readonly Queue<(string message, Color color)> waiting = new();
         private float timer;

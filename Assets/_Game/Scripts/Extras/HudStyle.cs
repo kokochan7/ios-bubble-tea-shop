@@ -27,11 +27,17 @@ namespace BubbleTea.Extras
         /// <summary>A white rounded square with a top highlight and a bottom lip (tinted by the Image's color).</summary>
         public static Sprite Bevel => bevel != null ? bevel : bevel = MakeBevel();
 
+        private static bool requested;
+
+        /// <summary>Restyles on the next frame (pop-ups call this after drawing their rows).</summary>
+        public static void Request() => requested = true;
+
         private void Update()
         {
             timer -= Time.unscaledDeltaTime;
-            if (timer > 0f) return;
-            timer = 0.5f;
+            if (timer > 0f && !requested) return;
+            requested = false;
+            timer = 3f; // a full look round is costly on a phone; pop-ups ask for one with Request()
             Restyle();
         }
 

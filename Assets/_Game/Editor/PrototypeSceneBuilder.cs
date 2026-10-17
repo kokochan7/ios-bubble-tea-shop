@@ -460,6 +460,7 @@ namespace BubbleTea.EditorTools
             }
 
             Layout = plan.Layout;
+            CreateModelKitMaterial();
             BobaArtKit.RefreshDriveThru(); // the window's art without its old awning (it hid the order screen)
             // Colors are set every build (the materials may already exist with older colors).
             Material floorMat = GetOrCreateMaterial(plan.FloorMaterial, plan.FloorColor);
@@ -1523,6 +1524,23 @@ namespace BubbleTea.EditorTools
         // Size and edge gap of the top-corner HUD widgets (clock, money, stars, MENU, GOALS).
         // Money each shop starts with (Kenny): $110 in the Boba Shop, $330 in the Matcha House. No floor money pile.
         private static int StartingMoney(int shopNumber) => shopNumber > 1 ? 330 : 110;
+        // The material runtime models (pets, cars, collectible decor) copy their look from. It lives
+        // in Resources so it's always in the phone build with its shader (searching for a shader at
+        // runtime found nothing on iPhone, which drew the pets magenta).
+        private static void CreateModelKitMaterial()
+        {
+            const string folder = "Assets/_Game/Resources";
+            if (!AssetDatabase.IsValidFolder(folder)) AssetDatabase.CreateFolder("Assets/_Game", "Resources");
+            const string path = folder + "/ModelKitBase.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null) return;
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            material = new Material(shader) { color = Color.white };
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.2f);
+            AssetDatabase.CreateAsset(material, path);
+        }
+
         // Banners start below the two top rows (clock/money, then stars/pearls).
         private const float BannerTop = HudMargin + 2f * (120f * HudScale + 10f) + 10f;
 
@@ -1945,7 +1963,8 @@ namespace BubbleTea.EditorTools
             part.GetComponent<Renderer>().sharedMaterial = material;
         }
 
-        // A banner for shop events (tour bus, critic, today's special), below the other alerts.
+        // A small toast near the bottom of the screen for shop events (level-ups, tour bus, critic,
+        // today's special, pearls), up for a couple of seconds each (Kenny).
         private static void CreateAnnouncementBanner(Transform hud)
         {
             Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
@@ -1956,20 +1975,24 @@ namespace BubbleTea.EditorTools
             var announcer = root.gameObject.AddComponent<AnnouncementBanner>();
 
             RectTransform banner = CreateUiObject("Banner", root);
-            banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 1f);
-            banner.pivot = new Vector2(0.5f, 1f);
-            FitBesideColumn(banner, BannerTop + 300f, 140f); // under the staff alert
+            banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 0f);
+            banner.pivot = new Vector2(0.5f, 0f);
+            banner.anchoredPosition = new Vector2(0f, 300f);
+            banner.sizeDelta = new Vector2(720f, 110f);
             var image = banner.gameObject.AddComponent<Image>();
             image.sprite = rounded;
             image.type = Image.Type.Sliced;
             image.color = new Color(0.2f, 0.45f, 0.8f, BannerAlpha);
             image.raycastTarget = false;
 
-            Text text = CreateHudText("Text", banner, font, 36, TextAnchor.MiddleCenter);
+            Text text = CreateHudText("Text", banner, font, 32, TextAnchor.MiddleCenter);
             Stretch(text.rectTransform);
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.raycastTarget = false;
             SetReference(announcer, "banner", banner.gameObject);
+            var announcerSettings = new SerializedObject(announcer);
+            announcerSettings.FindProperty("seconds").floatValue = 2.5f;
+            announcerSettings.ApplyModifiedPropertiesWithoutUndo();
             SetReference(announcer, "background", image);
             SetReference(announcer, "label", text);
         }
