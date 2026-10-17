@@ -60,7 +60,21 @@ namespace BubbleTea.UI
         {
             if (helpLabel == null) return;
             helpTimer -= Time.deltaTime;
-            helpLabel.gameObject.SetActive(helpTimer > 0f);
+            bool show = helpTimer > 0f;
+            if (helpLabel.gameObject.activeSelf == show) return;
+            helpLabel.gameObject.SetActive(show);
+            if (show) DrawOnTop();
+        }
+
+        // The hint hangs down over the buttons on the left side of the screen, so it gets its own
+        // canvas layer above the whole HUD (the extra buttons are 30, move mode 40, open menus 50).
+        private void DrawOnTop()
+        {
+            var layer = helpLabel.GetComponent<Canvas>();
+            if (layer == null) layer = helpLabel.gameObject.AddComponent<Canvas>();
+            layer.overrideSorting = true;
+            layer.sortingOrder = 45;
+            helpLabel.raycastTarget = false;
         }
 
         private void Show(float stars)

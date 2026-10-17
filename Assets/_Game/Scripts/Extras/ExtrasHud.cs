@@ -6,10 +6,10 @@ using UnityEngine.UI;
 namespace BubbleTea.Extras
 {
     /// <summary>
-    /// The pearl counter beside the money, SHOP under STATS on the right and TEAM, PETS and PLAY down the left side,
+    /// The pearl counter beside the money, TEAM, PETS and SHOP on the right and MINI-GAMES down the left side,
     /// with their pop-ups: the decor shop and collections, the staff skill trees, pets, and the
     /// mini-games (only once the whole shop is built). Built in code when a shop opens (the save manager asks for it), so the
-    /// scenes don't need anything extra. The game keeps running behind SHOP, TEAM and PETS; PLAY pauses it.
+    /// scenes don't need anything extra. The game keeps running behind SHOP, TEAM and PETS; MINI-GAMES pauses it.
     /// </summary>
     public class ExtrasHud : MonoBehaviour
     {
@@ -71,6 +71,26 @@ namespace BubbleTea.Extras
         {
             yield return null;
             MenuLayers.Scan();
+            // Kenny swapped TEAM with MENU and PETS with STATS: the scene's MENU and STATS buttons
+            // move to the left column where TEAM and PETS were.
+            MoveSceneButton("MenuButton", 2);
+            MoveSceneButton("StatsButton", 3);
+        }
+
+        private static void MoveSceneButton(string name, int slot)
+        {
+#if UNITY_2023_1_OR_NEWER
+            Button[] buttons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+#else
+            Button[] buttons = FindObjectsOfType<Button>(true);
+#endif
+            foreach (Button button in buttons)
+            {
+                if (button.name != name) continue;
+                var rect = (RectTransform)button.transform;
+                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
+                rect.anchoredPosition = new Vector2(Margin, -Margin - slot * Step);
+            }
         }
 
         private void OnEnable()
@@ -116,7 +136,7 @@ namespace BubbleTea.Extras
             // Other pop-ups (game over, mini-games) un-pause as they close; keep the player's pause.
             if (Paused && Time.timeScale != 0f) Time.timeScale = 0f;
             int wait = MiniGames.SecondsUntilReady;
-            playLabel.text = wait > 0 ? $"{wait / 60}:{wait % 60:00}" : "PLAY";
+            playLabel.text = wait > 0 ? $"{wait / 60}:{wait % 60:00}" : "MINI-GAMES";
 
             endgameCheck -= Time.unscaledDeltaTime;
             if (endgameCheck <= 0f)
@@ -168,7 +188,7 @@ namespace BubbleTea.Extras
 
             Place((RectTransform)UiKit.Button(column, "SHOP", new Color(0.95f, 0.66f, 0.3f, 0.92f), Vector2.zero, () => Open(DecorShop), 50).transform, 4, false);
             Button team = UiKit.Button(column, "TEAM", new Color(0.62f, 0.45f, 0.88f, 0.92f), Vector2.zero, () => Open(Team), 50);
-            Place((RectTransform)team.transform, 2, true);
+            Place((RectTransform)team.transform, 1, false); // where MENU was (Kenny swapped them)
             // A red "+1" bubble on the top-left corner while there are skill points to spend.
             RectTransform badge = UiKit.Box(team.transform, "Points", new Color(0.9f, 0.2f, 0.2f), UiKit.Circle);
             UiKit.Pin(badge, new Vector2(0f, 1f), new Vector2(-14f, 12f), new Vector2(60f, 60f));
@@ -179,9 +199,10 @@ namespace BubbleTea.Extras
             pointsLabel.raycastTarget = false;
             pointsBadge = badge.gameObject;
             ShowPoints();
-            Place((RectTransform)UiKit.Button(column, "PETS", new Color(0.4f, 0.75f, 0.7f, 0.92f), Vector2.zero, () => Open(Pets), 50).transform, 3, true);
-            Button play = UiKit.Button(column, "PLAY", new Color(0.35f, 0.7f, 0.95f, 0.92f), Vector2.zero, () => Open(Play, true), 50);
+            Place((RectTransform)UiKit.Button(column, "PETS", new Color(0.4f, 0.75f, 0.7f, 0.92f), Vector2.zero, () => Open(Pets), 50).transform, 3, false); // where STATS was
+            Button play = UiKit.Button(column, "MINI-GAMES", new Color(0.35f, 0.7f, 0.95f, 0.92f), Vector2.zero, () => Open(Play, true), 30);
             playLabel = UiKit.TextOf(play);
+            playLabel.horizontalOverflow = HorizontalWrapMode.Overflow; // the long name on one line
             playButton = play.gameObject;
             Place((RectTransform)play.transform, 4, true);
             playButton.SetActive(false); // shows up once the whole shop is built
@@ -249,8 +270,8 @@ namespace BubbleTea.Extras
             if (Paused) saveManager?.Save();
         }
 
-        // A slot in the right-hand column (under MENU, GOALS and STATS) or the matching column on the
-        // left (under the clock and stars), so the buttons are split evenly across the screen.
+        // A slot in the right-hand column (TEAM, GOALS, PETS, SHOP) or the matching column on the
+        // left (under the clock and stars: MENU, STATS, MINI-GAMES), so the buttons are split evenly.
         private static void Place(RectTransform rect, int slot, bool left)
         {
             Vector2 anchor = left ? new Vector2(0f, 1f) : new Vector2(1f, 1f);
@@ -608,30 +629,31 @@ namespace BubbleTea.Extras
                     ? $"Your next game is ready in {wait / 60}:{wait % 60:00}."
                     : $"Play a quick game for up to {PearlPrize(1f)} pearls!",
                 40, Color.white);
-            UiKit.Pin(intro.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -20f), new Vector2(900f, 200f));
+            UiKit.Pin(intro.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -10f), new Vector2(900f, 110f));
             if (wait > 0) return;
 
-            GameCard(body, 260f, "SHAKE IT!", "Tap when the line is in the green zone. Five rounds, each one faster.", true);
-            GameCard(body, 640f, "PEARL DROP", "Tap the falling tapioca pearls before they land in the cup.", false);
+            GameCard(body, 0, "SHAKE IT!", "Tap when the line is in the green zone. Five rounds, each one faster.", MiniGames.Kind.Shake);
+            GameCard(body, 1, "PEARL DROP", "Tap the falling tapioca pearls before they land in the cup.", MiniGames.Kind.Drop);
+            GameCard(body, 2, "FILL IT UP", "Pour the tea and stop right on the line. Three cups, each one faster.", MiniGames.Kind.Pour);
+            GameCard(body, 3, "ORDER UP!", "Watch the toppings light up, then tap them back in the same order.", MiniGames.Kind.Memory);
+            GameCard(body, 4, "RUSH HOUR", "Customers pop up at the tables. Tap them before they leave!", MiniGames.Kind.Rush);
         }
 
-        private void GameCard(RectTransform body, float top, string name, string description, bool shake)
+        private void GameCard(RectTransform body, int slot, string name, string description, MiniGames.Kind kind)
         {
-            RectTransform row = Row(body, top, 340f);
-            Text label = UiKit.Label(row, name, 56, Color.white);
-            UiKit.Pin(label.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -20f), new Vector2(880f, 80f));
-            Text about = UiKit.Label(row, description, 34, new Color(0.8f, 0.8f, 0.88f));
-            UiKit.Pin(about.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -100f), new Vector2(860f, 100f));
-            Button start = UiKit.Button(row, "START", UiKit.Blue, new Vector2(360f, 100f), () => StartGame(shake), 46);
-            UiKit.Pin((RectTransform)start.transform, new Vector2(0.5f, 0f), new Vector2(0f, 20f), new Vector2(360f, 100f));
+            const float Height = 220f;
+            RectTransform row = Row(body, 130f + slot * (Height + 12f), Height);
+            RowText(row, name, 46, 0f, 0.68f, Color.white, 14f, Height * 0.55f);
+            RowText(row, description, 28, 0f, 0.68f, new Color(0.8f, 0.8f, 0.88f), Height * 0.42f, 12f);
+            RowButton(row, "START", UiKit.Blue, () => StartGame(kind));
         }
 
-        private void StartGame(bool shake)
+        private void StartGame(MiniGames.Kind kind)
         {
             refresh = null; // the game draws itself
             RectTransform body = (RectTransform)popup.transform.Find("Panel/Body");
             for (int i = body.childCount - 1; i >= 0; i--) Destroy(body.GetChild(i).gameObject);
-            MiniGames.Play(body, shake, score => ShowResult(body, score));
+            MiniGames.Play(body, kind, score => ShowResult(body, score));
         }
 
         private void ShowResult(RectTransform body, float score)
