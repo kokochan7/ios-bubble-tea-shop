@@ -143,16 +143,16 @@ namespace BubbleTea.Extras
             UiKit.Fill(column);
             column.gameObject.AddComponent<BubbleTea.UI.SafeArea>();
 
-            // Pearls, at the top center just right of the money (same look as the money counter).
+            // Pearls, centered just under the money (beside it, it ran into MENU on narrow phones).
             RectTransform counter = UiKit.Box(column, "Pearls", new Color(0.15f, 0.15f, 0.2f, 0.75f));
-            UiKit.Pin(counter, new Vector2(0.5f, 1f), new Vector2(0f, -Margin), new Vector2(240f, 120f));
-            counter.pivot = new Vector2(0f, 1f);
-            counter.anchoredPosition = new Vector2(330f * 0.5f * Scale + 10f, -Margin);
+            UiKit.Pin(counter, new Vector2(0.5f, 1f), new Vector2(0f, -Margin), new Vector2(240f, 100f));
+            counter.pivot = new Vector2(0.5f, 1f);
+            counter.anchoredPosition = new Vector2(0f, -Margin - 120f * Scale - 10f);
             counter.localScale = Vector3.one * Scale;
             counter.GetComponent<Image>().raycastTarget = false;
-            RectTransform pearl = UiKit.PearlIcon(counter, 70f);
-            UiKit.Pin(pearl, new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(70f, 70f));
-            pearlLabel = UiKit.Label(counter, Profile.Pearls.ToString("N0"), 58, new Color(1f, 0.92f, 0.7f), TextAnchor.MiddleCenter);
+            RectTransform pearl = UiKit.PearlIcon(counter, 64f);
+            UiKit.Pin(pearl, new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(64f, 64f));
+            pearlLabel = UiKit.Label(counter, Profile.Pearls.ToString("N0"), 52, new Color(1f, 0.92f, 0.7f), TextAnchor.MiddleCenter);
             pearlLabel.rectTransform.anchorMin = Vector2.zero;
             pearlLabel.rectTransform.anchorMax = Vector2.one;
             pearlLabel.rectTransform.offsetMin = new Vector2(84f, 0f);
@@ -163,10 +163,10 @@ namespace BubbleTea.Extras
             Place((RectTransform)team.transform, 4);
             // A red "+1" bubble on the top-left corner while there are skill points to spend.
             RectTransform badge = UiKit.Box(team.transform, "Points", new Color(0.9f, 0.2f, 0.2f), UiKit.Circle);
-            UiKit.Pin(badge, new Vector2(0f, 1f), new Vector2(-22f, 22f), new Vector2(76f, 76f));
+            UiKit.Pin(badge, new Vector2(0f, 1f), new Vector2(-14f, 12f), new Vector2(60f, 60f));
             badge.pivot = new Vector2(0f, 1f);
             badge.GetComponent<Image>().raycastTarget = false;
-            pointsLabel = UiKit.Label(badge, "", 38, Color.white);
+            pointsLabel = UiKit.Label(badge, "", 32, Color.white);
             UiKit.Fill(pointsLabel.rectTransform);
             pointsLabel.raycastTarget = false;
             pointsBadge = badge.gameObject;

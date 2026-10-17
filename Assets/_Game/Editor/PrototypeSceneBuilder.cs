@@ -1523,6 +1523,20 @@ namespace BubbleTea.EditorTools
         // Size and edge gap of the top-corner HUD widgets (clock, money, stars, MENU, GOALS).
         // Money each shop starts with (Kenny): $110 in the Boba Shop, $330 in the Matcha House. No floor money pile.
         private static int StartingMoney(int shopNumber) => shopNumber > 1 ? 330 : 110;
+        // Banners start below the two top rows (clock/money, then stars/pearls).
+        private const float BannerTop = HudMargin + 2f * (120f * HudScale + 10f) + 10f;
+
+        // Stretches a banner from the left edge to just left of the button column on the right,
+        // so it never slides under MENU, GOALS, STATS and the rest on a narrow phone.
+        private static void FitBesideColumn(RectTransform banner, float top, float height)
+        {
+            banner.anchorMin = new Vector2(0f, 1f);
+            banner.anchorMax = new Vector2(1f, 1f);
+            banner.pivot = new Vector2(0.5f, 1f);
+            banner.offsetMin = new Vector2(HudMargin, -top - height);
+            banner.offsetMax = new Vector2(-(200f * HudScale + 2f * HudMargin), -top);
+        }
+
         private const float BannerAlpha = 0.5f; // see-through so pop-up banners don't hide the shop (Kenny)
         private const float HudScale = 0.82f; // bigger so money, time, stars and buttons are easy to read on a phone
         private const float HudMargin = 16f;
@@ -1944,8 +1958,7 @@ namespace BubbleTea.EditorTools
             RectTransform banner = CreateUiObject("Banner", root);
             banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 1f);
             banner.pivot = new Vector2(0.5f, 1f);
-            banner.anchoredPosition = new Vector2(0f, -HudMargin - 120f * HudScale - 320f); // under the staff alert
-            banner.sizeDelta = new Vector2(860f, 140f);
+            FitBesideColumn(banner, BannerTop + 300f, 140f); // under the staff alert
             var image = banner.gameObject.AddComponent<Image>();
             image.sprite = rounded;
             image.type = Image.Type.Sliced;
@@ -2217,8 +2230,7 @@ namespace BubbleTea.EditorTools
             RectTransform banner = CreateUiObject("Banner", root);
             banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 1f);
             banner.pivot = new Vector2(0.5f, 1f);
-            banner.anchoredPosition = new Vector2(0f, -HudMargin - 120f * HudScale - 20f);
-            banner.sizeDelta = new Vector2(760f, 130f);
+            FitBesideColumn(banner, BannerTop, 130f);
             var image = banner.gameObject.AddComponent<Image>();
             image.sprite = rounded;
             image.type = Image.Type.Sliced;
@@ -2246,8 +2258,7 @@ namespace BubbleTea.EditorTools
             RectTransform banner = CreateUiObject("Banner", root);
             banner.anchorMin = banner.anchorMax = new Vector2(0.5f, 1f);
             banner.pivot = new Vector2(0.5f, 1f);
-            banner.anchoredPosition = new Vector2(0f, -HudMargin - 120f * HudScale - 170f); // under the pricey alert
-            banner.sizeDelta = new Vector2(760f, 130f);
+            FitBesideColumn(banner, BannerTop + 150f, 130f); // under the pricey alert
             var image = banner.gameObject.AddComponent<Image>();
             image.sprite = rounded;
             image.type = Image.Type.Sliced;
