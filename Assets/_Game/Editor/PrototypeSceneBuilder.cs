@@ -1544,14 +1544,14 @@ namespace BubbleTea.EditorTools
         // Banners start below the two top rows (clock/money, then stars/pearls).
         private const float BannerTop = HudMargin + 2f * (120f * HudScale + 10f) + 10f;
 
-        // Stretches a banner from the left edge to just left of the button column on the right,
-        // so it never slides under MENU, GOALS, STATS and the rest on a narrow phone.
+        // Stretches a banner between the button columns on the left and right, so it never slides
+        // under MENU, GOALS, STATS, SHOP or TEAM, PETS, PLAY on a narrow phone.
         private static void FitBesideColumn(RectTransform banner, float top, float height)
         {
             banner.anchorMin = new Vector2(0f, 1f);
             banner.anchorMax = new Vector2(1f, 1f);
             banner.pivot = new Vector2(0.5f, 1f);
-            banner.offsetMin = new Vector2(HudMargin, -top - height);
+            banner.offsetMin = new Vector2(200f * HudScale + 2f * HudMargin, -top - height);
             banner.offsetMax = new Vector2(-(200f * HudScale + 2f * HudMargin), -top);
         }
 

@@ -57,10 +57,35 @@ namespace BubbleTea.Extras
 
         private static Material baseMaterial;
 
-        // The lit material made by the shop builder in Resources, so it's always in the phone build.
+        // The material runtime models copy: preferably a plain lit material from something already
+        // showing in the shop (so its shader and keyword set are certainly in the phone build and
+        // render there), otherwise the builder's Resources/ModelKitBase material.
         private static Material BaseMaterial()
         {
-            if (baseMaterial == null) baseMaterial = Resources.Load<Material>("ModelKitBase");
+            if (baseMaterial != null) return baseMaterial;
+#if UNITY_2023_1_OR_NEWER
+            MeshRenderer[] renderers = Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None);
+#else
+            MeshRenderer[] renderers = Object.FindObjectsOfType<MeshRenderer>();
+#endif
+            foreach (MeshRenderer renderer in renderers)
+            {
+                if (!renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
+                Material material = renderer.sharedMaterial;
+                if (material == null || material.shader == null || !material.shader.isSupported) continue;
+                if (material.shader.name != "Universal Render Pipeline/Lit" || !material.HasProperty("_BaseColor")) continue;
+                if (material.mainTexture != null || material.IsKeywordEnabled("_EMISSION")) continue;
+                if (material.HasProperty("_Surface") && material.GetFloat("_Surface") > 0.5f) continue; // see-through
+                baseMaterial = new Material(material) { name = "ModelKit (from " + material.name + ")" };
+                break;
+            }
+            if (baseMaterial == null)
+            {
+                Material saved = Resources.Load<Material>("ModelKitBase");
+                if (saved != null) baseMaterial = new Material(saved);
+            }
+            if (baseMaterial != null)
+                Debug.Log($"Bubble Tea: runtime models use {baseMaterial.name} ({baseMaterial.shader.name}, supported: {baseMaterial.shader.isSupported}).");
             return baseMaterial;
         }
 
@@ -88,6 +113,11 @@ namespace BubbleTea.Extras
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetOnPlay() => materials.Clear();
+        private static void ResetOnPlay()
+        {
+            materials.Clear();
+            baseMaterial = null;
+            shader = null;
+        }
     }
 }

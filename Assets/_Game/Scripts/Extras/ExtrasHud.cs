@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace BubbleTea.Extras
 {
     /// <summary>
-    /// The pearl counter and the SHOP, TEAM, PETS and PLAY buttons down the right side of the screen,
+    /// The pearl counter, SHOP under STATS on the right and TEAM, PETS and PLAY down the left side,
     /// with their pop-ups: the decor shop and collections, the staff skill trees, pets, and the
     /// mini-games (only once the whole shop is built). Built in code when a shop opens (the save manager asks for it), so the
     /// scenes don't need anything extra. The game keeps running behind SHOP, TEAM and PETS; PLAY pauses it.
@@ -98,7 +98,7 @@ namespace BubbleTea.Extras
             int points = 0;
             foreach (TeamSkills.Role role in Enum.GetValues(typeof(TeamSkills.Role))) points += TeamSkills.PointsLeft(role);
             if (pointsBadge.activeSelf != points > 0) pointsBadge.SetActive(points > 0);
-            pointsLabel.text = "+" + points;
+            pointsLabel.text = points.ToString();
         }
 
         private void Update()
@@ -158,9 +158,9 @@ namespace BubbleTea.Extras
             pearlLabel.rectTransform.offsetMin = new Vector2(84f, 0f);
             pearlLabel.rectTransform.offsetMax = new Vector2(-18f, 0f);
 
-            Place((RectTransform)UiKit.Button(column, "SHOP", new Color(0.95f, 0.66f, 0.3f, 0.92f), Vector2.zero, () => Open(DecorShop), 50).transform, 3);
+            Place((RectTransform)UiKit.Button(column, "SHOP", new Color(0.95f, 0.66f, 0.3f, 0.92f), Vector2.zero, () => Open(DecorShop), 50).transform, 3, false);
             Button team = UiKit.Button(column, "TEAM", new Color(0.62f, 0.45f, 0.88f, 0.92f), Vector2.zero, () => Open(Team), 50);
-            Place((RectTransform)team.transform, 4);
+            Place((RectTransform)team.transform, 2, true);
             // A red "+1" bubble on the top-left corner while there are skill points to spend.
             RectTransform badge = UiKit.Box(team.transform, "Points", new Color(0.9f, 0.2f, 0.2f), UiKit.Circle);
             UiKit.Pin(badge, new Vector2(0f, 1f), new Vector2(-14f, 12f), new Vector2(60f, 60f));
@@ -171,11 +171,11 @@ namespace BubbleTea.Extras
             pointsLabel.raycastTarget = false;
             pointsBadge = badge.gameObject;
             ShowPoints();
-            Place((RectTransform)UiKit.Button(column, "PETS", new Color(0.4f, 0.75f, 0.7f, 0.92f), Vector2.zero, () => Open(Pets), 50).transform, 5);
+            Place((RectTransform)UiKit.Button(column, "PETS", new Color(0.4f, 0.75f, 0.7f, 0.92f), Vector2.zero, () => Open(Pets), 50).transform, 3, true);
             Button play = UiKit.Button(column, "PLAY", new Color(0.35f, 0.7f, 0.95f, 0.92f), Vector2.zero, () => Open(Play, true), 50);
             playLabel = UiKit.TextOf(play);
             playButton = play.gameObject;
-            Place((RectTransform)play.transform, 6);
+            Place((RectTransform)play.transform, 4, true);
             playButton.SetActive(false); // shows up once the whole shop is built
 
             BuildPauseButton();
@@ -241,10 +241,12 @@ namespace BubbleTea.Extras
             if (Paused) saveManager?.Save();
         }
 
-        // Top-right, in the same column as the MENU, GOALS and STATS buttons.
-        private static void Place(RectTransform rect, int slot)
+        // A slot in the right-hand column (under MENU, GOALS and STATS) or the matching column on the
+        // left (under the clock and stars), so the buttons are split evenly across the screen.
+        private static void Place(RectTransform rect, int slot, bool left)
         {
-            UiKit.Pin(rect, new Vector2(1f, 1f), new Vector2(-Margin, -Margin - slot * Step), new Vector2(200f, 110f));
+            Vector2 anchor = left ? new Vector2(0f, 1f) : new Vector2(1f, 1f);
+            UiKit.Pin(rect, anchor, new Vector2(left ? Margin : -Margin, -Margin - slot * Step), new Vector2(200f, 110f));
             rect.localScale = Vector3.one * Scale;
         }
 
