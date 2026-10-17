@@ -9,12 +9,16 @@ namespace BubbleTea.UI
 {
     /// <summary>
     /// Game master tools for testing faster, opened from the MENU panel: free money, building
-    /// every pad at once, instant pads and maxed upgrades. Only shown in the Editor and in
-    /// Development builds, so players of the App Store version never see it.
+    /// every pad at once, instant pads and maxed upgrades. Shown in the Editor, Development builds
+    /// and (while ShowOnPhone is on) normal phone builds; turn that off for the App Store.
     /// </summary>
     public class GmMenu : MonoBehaviour
     {
-        [SerializeField, Tooltip("Opens the GM panel (hidden outside the Editor and Development builds).")]
+        // Shows the GM button in normal (Release) phone builds too, for testing (Kenny).
+        // TODO: set to false before the App Store release.
+        private const bool ShowOnPhone = true;
+
+        [SerializeField, Tooltip("Opens the GM panel.")]
         private Button openButton;
 
         [SerializeField, Tooltip("The GM panel.")]
@@ -38,7 +42,7 @@ namespace BubbleTea.UI
         {
             if (openButton != null)
             {
-                openButton.gameObject.SetActive(Debug.isDebugBuild);
+                openButton.gameObject.SetActive(Debug.isDebugBuild || ShowOnPhone);
                 openButton.onClick.AddListener(() => SetOpen(true));
             }
             if (closeButton != null) closeButton.onClick.AddListener(() => SetOpen(false));

@@ -81,6 +81,19 @@ namespace BubbleTea.Cooking
             return false;
         }
 
+        /// <summary>The item at <paramref name="index"/>, oldest (bottom) first.</summary>
+        public CarriedItem At(int index) => Items[index];
+
+        /// <summary>Takes this exact item out, letting the rest settle down.</summary>
+        public bool Remove(CarriedItem item)
+        {
+            int i = Items.IndexOf(item);
+            if (i < 0) return false;
+            Items.RemoveAt(i);
+            for (int j = i; j < Items.Count; j++) Items[j].MoveTo(anchor, SlotPosition(j), itemScale);
+            return true;
+        }
+
         /// <summary>How many items in the stack match.</summary>
         public int CountOf(Func<ItemDefinition, bool> match)
         {

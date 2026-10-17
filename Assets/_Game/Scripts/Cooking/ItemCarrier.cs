@@ -8,7 +8,8 @@ namespace BubbleTea.Cooking
     /// <summary>
     /// Lets the player carry a stack of items. Stations and the counter look for carriers
     /// standing in their zone and hand items over automatically. Each level of the Carry More
-    /// upgrade adds room for one more item.
+    /// upgrade adds room for one more item. Drinks left on the player's tray for a few seconds are
+    /// tossed automatically, so there's no need to walk to the trash.
     /// </summary>
     public class ItemCarrier : MonoBehaviour, IHoldsItems
     {
@@ -23,6 +24,12 @@ namespace BubbleTea.Cooking
 
         [SerializeField, Tooltip("Optional tray shown under the items while carrying something.")]
         private GameObject tray;
+
+        [SerializeField, Min(0f), Tooltip("Seconds a drink can sit on the player's tray before it's tossed (0 = never).")]
+        private float tossDrinksAfter = 5f;
+
+        private readonly Dictionary<CarriedItem, float> landedAt = new();
+        private readonly List<CarriedItem> scratch = new();
 
         public ItemStack Stack => stack;
 
@@ -57,6 +64,39 @@ namespace BubbleTea.Cooking
         private void LateUpdate()
         {
             if (tray != null && tray.activeSelf != stack.Count > 0) tray.SetActive(stack.Count > 0);
+            if (usesCarryUpgrade && tossDrinksAfter > 0f) TossOldDrinks();
+        }
+
+        // Only drinks from the bars expire (not supply crates), and only on the player's tray.
+        private void TossOldDrinks()
+        {
+            scratch.Clear();
+            for (int i = 0; i < stack.Count; i++)
+            {
+                CarriedItem item = stack.At(i);
+                if (item == null) continue;
+                scratch.Add(item);
+                if (!landedAt.TryGetValue(item, out float since)) landedAt[item] = since = Time.time;
+                if (Time.time - since >= tossDrinksAfter && Station.AnyMakes(item.Definition)) scratch[scratch.Count - 1] = null;
+            }
+            foreach (CarriedItem item in new List<CarriedItem>(landedAt.Keys))
+            {
+                if (!scratch.Contains(item)) landedAt.Remove(item);
+            }
+            for (int i = stack.Count - 1; i >= 0; i--)
+            {
+                CarriedItem item = stack.At(i);
+                if (item != null && !scratch.Contains(item)) Toss(item);
+            }
+        }
+
+        /// <summary>Takes an item off the tray and makes it vanish with a little hop.</summary>
+        public void Toss(CarriedItem item)
+        {
+            if (item == null || !stack.Remove(item)) return;
+            landedAt.Remove(item);
+            item.MoveTo(transform, Vector3.up * 2.4f, 0.05f);
+            Destroy(item.gameObject, 0.35f);
         }
 
         private void OnStatChanged(StatId stat)

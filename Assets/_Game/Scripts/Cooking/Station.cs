@@ -127,6 +127,9 @@ namespace BubbleTea.Cooking
         // Hand-whisked and Whisk Master not bought yet.
         private bool NeedsHands => needsPlayer && Stats.Get(StatId.AutoWhisk, 0f) < 0.5f;
 
+        private const float SwapDelay = 0.6f; // seconds at a bar with a full tray before the oldest drink is swapped
+        private float swapWait;
+
         private bool PlayerHere => PlayerMovement.Current != null && zone.Contains(transform, PlayerMovement.Current.position);
 
         private void Awake()
@@ -245,6 +248,16 @@ namespace BubbleTea.Cooking
 
         /// <summary>A barista left this station.</summary>
         public void RemoveBarista() => baristas = Mathf.Max(0, baristas - 1);
+
+        /// <summary>True if any bar in the shop makes <paramref name="item"/> (it's a drink, not a crate).</summary>
+        public static bool AnyMakes(ItemDefinition item)
+        {
+            foreach (Station station in active)
+            {
+                if (station != null && station.Makes(item)) return true;
+            }
+            return false;
+        }
 
         /// <summary>True if this station turns something into <paramref name="item"/> (or makes it from scratch).</summary>
         public bool Makes(ItemDefinition item)
@@ -451,10 +464,38 @@ namespace BubbleTea.Cooking
             }
             if (!carrier.Stack.IsFull && output.TryTake(carrier.WillTake, out CarriedItem finished))
             {
+                swapWait = 0f;
                 carrier.Stack.Push(finished);
                 return true;
             }
-            return false;
+            return SwapOldest(carrier);
+        }
+
+        // The player's tray is full: after a short wait the oldest drink on it is tossed to make
+        // room for a fresh one from this bar (so there's no trip to the trash).
+        private bool SwapOldest(ItemCarrier carrier)
+        {
+            CarriedItem oldest = null;
+            if (carrier.transform == PlayerMovement.Current && carrier.Stack.IsFull)
+            {
+                for (int i = 0; i < carrier.Stack.Count && oldest == null; i++)
+                {
+                    CarriedItem item = carrier.Stack.At(i);
+                    if (item != null && AnyMakes(item.Definition)) oldest = item;
+                }
+            }
+            // Nothing to swap (or the oldest is the same drink this bar is offering anyway).
+            if (oldest == null || !output.Contains(i => i != oldest.Definition && carrier.WillTake(i)))
+            {
+                swapWait = 0f;
+                return false;
+            }
+            swapWait += Time.deltaTime;
+            if (swapWait < SwapDelay) return false;
+            swapWait = 0f;
+            carrier.Toss(oldest);
+            if (output.TryTake(i => i != oldest.Definition && carrier.WillTake(i), out CarriedItem fresh)) carrier.Stack.Push(fresh);
+            return true;
         }
 
         private bool IsInput(ItemDefinition item)
