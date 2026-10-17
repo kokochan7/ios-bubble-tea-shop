@@ -194,6 +194,7 @@ namespace BubbleTea.Customers
             if (kind == Visit.Tourist) patience *= touristPatience;
             else if (kind == Visit.Critic) patience *= criticPatience;
             patience *= 1f + ShopDecor.Patience; // a nicely decorated shop is worth the wait
+            patience *= Stats.Get(StatId.Patience, 1f); // Chill Music
             if (kind == Visit.Tourist || kind == Visit.Critic) AddHat(kind == Visit.Critic);
             ShowOrder();
             // The order stays hidden until they reach the counter.
@@ -383,7 +384,7 @@ namespace BubbleTea.Customers
             float mood = Mathf.Clamp01(Mood + petJoy); // a visit from the shop pet cheers them up
             if (visit == Visit.Critic || visit == Visit.Vip)
                 tipShare = UnityEngine.Random.Range(Mathf.Lerp(tipRange.x, tipRange.y, 0.5f), tipRange.y);
-            else if (UnityEngine.Random.value < Mathf.Lerp(tipChance.x, tipChance.y, mood) + ShopDecor.Happiness + petJoy * 0.5f)
+            else if (UnityEngine.Random.value < Mathf.Lerp(tipChance.x, tipChance.y, mood) + ShopDecor.Happiness + petJoy * 0.5f + Stats.Get(StatId.TipBonus, 0f))
                 tipShare = UnityEngine.Random.Range(tipRange.x, Mathf.Lerp(tipRange.x, tipRange.y, Mathf.Max(mood, 0.2f)))
                     * (1f + ShopDecor.Happiness); // decor makes customers happier, so they tip a bit more
             else

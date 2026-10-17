@@ -140,6 +140,17 @@ namespace BubbleTea.EditorTools
                     Levels(maxLevel, 0f, 1f, 2f, 3f, 4f), Costs(maxLevel, 50, 120, 250, 500)), // +1 item per level (see ItemCarrier)
                 GetOrCreateUpgrade("Brew Speed", StatId.BrewSpeed,
                     Levels(maxLevel, 0.75f, 1f, 1.25f, 1.5f, 1.75f), Costs(maxLevel, 60, 140, 280, 550)),
+                // More ways to spend kitchen cash (each explained in TEAM > KITCHEN).
+                GetOrCreateUpgrade("Quick Hands", StatId.HandoffSpeed,
+                    Levels(maxLevel, 1f, 1.15f, 1.3f, 1.45f, 1.6f), Costs(maxLevel, 60, 130, 260, 520)),
+                GetOrCreateUpgrade("Running Shoes", StatId.MoveSpeed,
+                    Levels(maxLevel, 1f, 1.1f, 1.2f, 1.3f, 1.4f), Costs(maxLevel, 80, 160, 320, 640)),
+                GetOrCreateUpgrade("Chill Music", StatId.Patience,
+                    Levels(maxLevel, 1f, 1.1f, 1.2f, 1.3f, 1.4f), Costs(maxLevel, 70, 150, 300, 600)),
+                GetOrCreateUpgrade("Tip Jar", StatId.TipBonus,
+                    Levels(maxLevel, 0f, 0.05f, 0.1f, 0.15f, 0.2f), Costs(maxLevel, 90, 190, 380, 760)),
+                GetOrCreateUpgrade("Premium Cups", StatId.DrinkPrice,
+                    Levels(maxLevel, 1f, 1.05f, 1.1f, 1.15f, 1.2f), Costs(maxLevel, 100, 220, 450, 900)),
             };
             if (shop > 1)
             {

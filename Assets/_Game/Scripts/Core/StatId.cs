@@ -29,5 +29,14 @@ namespace BubbleTea.Core
 
         /// <summary>1 once Whisk Master is bought: hand-whisked bars run without the player (0 = the player must whisk).</summary>
         AutoWhisk,
+
+        /// <summary>Multiplies how fast items change hands at bars and counters (1 = normal).</summary>
+        HandoffSpeed,
+
+        /// <summary>Multiplies how long customers wait before leaving (1 = normal).</summary>
+        Patience,
+
+        /// <summary>Added to every customer's chance to tip (0.05 = +5%).</summary>
+        TipBonus,
     }
 }

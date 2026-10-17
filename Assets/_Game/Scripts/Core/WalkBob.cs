@@ -33,8 +33,9 @@ namespace BubbleTea.Core
         [SerializeField, Tooltip("How far the arms swing while walking empty-handed, in degrees.")]
         private float armSwing = 22f;
 
-        [SerializeField, Tooltip("How far the arms reach forward while holding something, in degrees.")]
-        private float holdAngle = 78f;
+        // A new name so scenes drop the old 78 degrees, which held the hands up over the tray.
+        [SerializeField, Tooltip("How far the arms reach forward while holding something, in degrees (55: hands just under the tray).")]
+        private float trayHoldAngle = 55f;
 
         private Vector3 restPosition;
         private Quaternion restRotation;
@@ -96,8 +97,8 @@ namespace BubbleTea.Core
             bool holding = holder != null && holder.IsHolding;
             hold = Mathf.MoveTowards(hold, holding ? 1f : 0f, Time.deltaTime * 5f);
             float swing = step * armSwing * amount * (1f - hold);
-            if (shoulderL != null) shoulderL.localRotation = Quaternion.Euler(swing - holdAngle * hold, 0f, 0f);
-            if (shoulderR != null) shoulderR.localRotation = Quaternion.Euler(-swing - holdAngle * hold, 0f, 0f);
+            if (shoulderL != null) shoulderL.localRotation = Quaternion.Euler(swing - trayHoldAngle * hold, 0f, 0f);
+            if (shoulderR != null) shoulderR.localRotation = Quaternion.Euler(-swing - trayHoldAngle * hold, 0f, 0f);
         }
 
         private static Transform FindDeep(Transform parent, string childName)

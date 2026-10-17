@@ -62,7 +62,7 @@ namespace BubbleTea.Cooking
                 }
             }
 
-            timer -= Time.deltaTime;
+            timer -= Time.deltaTime * BubbleTea.Core.Stats.Get(BubbleTea.Core.StatId.HandoffSpeed, 1f); // Quick Hands
             if (timer > 0f) return;
 
             for (int i = 0; i < carriers.Count; i++)
