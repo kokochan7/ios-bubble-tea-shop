@@ -2147,14 +2147,43 @@ namespace BubbleTea.EditorTools
             serialized.FindProperty("zone.secondsPerHandoff").floatValue = 0.25f;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
-            // The dinghy: a wooden hull with a rim, two benches and room for six crates, built facing +z.
+            // Three dinghies take turns on the river (each with its own stripe color); the one that
+            // finds the jetty free and the crates low stops to unload, the others pass by.
             var boatGo = new GameObject("RiverDinghy");
             var dinghy = boatGo.AddComponent<RiverDinghy>();
-            Transform boat = new GameObject("Dinghy").transform;
-            boat.SetParent(boatGo.transform, false);
+            Color[] stripes = { new(0.85f, 0.22f, 0.20f), new(0.25f, 0.55f, 0.80f), new(0.98f, 0.78f, 0.30f) };
+            float riverZ = Layout.RiverZ;
+            float stopZ = Layout.BackZ + 1.8f; // just past the end of the jetty
+            var boatSettings = new SerializedObject(dinghy);
+            boatSettings.FindProperty("dock").objectReferenceValue = dock;
+            SerializedProperty boatList = boatSettings.FindProperty("boats");
+            boatList.arraySize = stripes.Length;
+            for (int b = 0; b < stripes.Length; b++)
+            {
+                Transform boat = BuildDinghy(boatGo.transform, b, stripes[b], out Transform[] cargo);
+                SerializedProperty entry = boatList.GetArrayElementAtIndex(b);
+                entry.FindPropertyRelative("model").objectReferenceValue = boat;
+                SerializedProperty cargoList = entry.FindPropertyRelative("cargo");
+                cargoList.arraySize = cargo.Length;
+                for (int i = 0; i < cargo.Length; i++) cargoList.GetArrayElementAtIndex(i).objectReferenceValue = cargo[i];
+                boat.position = new Vector3(-40f, 0f, riverZ);
+                boat.gameObject.SetActive(false);
+            }
+            boatSettings.FindProperty("upstream").vector3Value = new Vector3(-40f, 0f, riverZ);
+            boatSettings.FindProperty("jetty").vector3Value = new Vector3(Layout.SupplyDock.x, 0f, stopZ);
+            boatSettings.FindProperty("downstream").vector3Value = new Vector3(40f, 0f, riverZ);
+            boatSettings.FindProperty("secondsBetweenBoats").vector2Value = new Vector2(5f, 10f); // boats keep coming (Kenny)
+            boatSettings.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // A dinghy: a wooden hull with a rim, two benches and room for six crates, built facing +z.
+        private static Transform BuildDinghy(Transform parent, int number, Color stripeColor, out Transform[] cargo)
+        {
+            Transform boat = new GameObject("Dinghy " + (number + 1)).transform;
+            boat.SetParent(parent, false);
             Material hull = GetOrCreateMaterial("DinghyHull", new Color(0.55f, 0.36f, 0.22f));
             Material rim = GetOrCreateMaterial("DinghyRim", new Color(0.40f, 0.25f, 0.16f));
-            Material stripe = GetOrCreateMaterial("DinghyStripe", new Color(0.85f, 0.22f, 0.20f));
+            Material stripe = GetOrCreateMaterial(number == 0 ? "DinghyStripe" : "DinghyStripe" + (number + 1), stripeColor);
             Material crateWood = GetOrCreateMaterial("DinghyCrate", new Color(0.80f, 0.62f, 0.40f));
             BusPart(boat, PrimitiveType.Cube, "Hull", new Vector3(0f, 0.05f, 0f), new Vector3(1.3f, 0.3f, 2.8f), hull);
             GameObject bow = BusPart(boat, PrimitiveType.Cube, "Bow", new Vector3(0f, 0.08f, 1.5f), new Vector3(0.92f, 0.32f, 0.92f), hull);
@@ -2168,7 +2197,7 @@ namespace BubbleTea.EditorTools
             BusPart(boat, PrimitiveType.Cube, "Bench", new Vector3(0f, 0.3f, -1.05f), new Vector3(1.26f, 0.06f, 0.3f), rim);
             GameObject oar = BusPart(boat, PrimitiveType.Cube, "Oar", new Vector3(0.75f, 0.4f, -0.8f), new Vector3(0.06f, 0.06f, 1.8f), rim);
             oar.transform.localRotation = Quaternion.Euler(0f, 12f, 0f);
-            var cargo = new Transform[6];
+            cargo = new Transform[6];
             for (int i = 0; i < cargo.Length; i++)
             {
                 float x = i % 2 == 0 ? -0.3f : 0.3f, z = -0.55f + (i / 2) * 0.55f;
@@ -2176,22 +2205,7 @@ namespace BubbleTea.EditorTools
                 BusPart(box, PrimitiveType.Cube, "Slat", new Vector3(0f, 0f, 0.51f), new Vector3(1.02f, 0.25f, 0.02f), rim);
                 cargo[i] = box;
             }
-
-            float riverZ = Layout.RiverZ;
-            float stopZ = Layout.BackZ + 1.8f; // just past the end of the jetty
-            SetReference(dinghy, "dock", dock);
-            SetReference(dinghy, "boat", boat);
-            var boatSettings = new SerializedObject(dinghy);
-            SerializedProperty cargoList = boatSettings.FindProperty("cargo");
-            cargoList.arraySize = cargo.Length;
-            for (int i = 0; i < cargo.Length; i++) cargoList.GetArrayElementAtIndex(i).objectReferenceValue = cargo[i];
-            boatSettings.FindProperty("upstream").vector3Value = new Vector3(-40f, 0f, riverZ);
-            boatSettings.FindProperty("jetty").vector3Value = new Vector3(Layout.SupplyDock.x, 0f, stopZ);
-            boatSettings.FindProperty("downstream").vector3Value = new Vector3(40f, 0f, riverZ);
-            boatSettings.FindProperty("secondsBetweenBoats").vector2Value = new Vector2(10f, 18f); // comes by often (Kenny)
-            boatSettings.ApplyModifiedPropertiesWithoutUndo();
-            boat.position = new Vector3(-40f, 0f, riverZ);
-            boat.gameObject.SetActive(false);
+            return boat;
         }
 
         // A comfy two-seat sofa against the kitchen's back wall, where baristas take their breaks.

@@ -13,7 +13,7 @@ namespace BubbleTea.Extras
         private static Shader shader;
 
         /// <summary>Bumped with each change, so the PETS window shows whether the phone runs the newest build.</summary>
-        public const string BuildTag = "18 Oct A";
+        public const string BuildTag = "18 Oct B";
 
         /// <summary>Which material runtime models are made from (shown at the bottom of the PETS window).</summary>
         public static string Report { get; private set; } = "no models made yet";

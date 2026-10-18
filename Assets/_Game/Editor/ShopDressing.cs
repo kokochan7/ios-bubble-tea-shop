@@ -89,16 +89,8 @@ namespace BubbleTea.EditorTools
             else CreateFestiveDecor(root, style, layout);
             CreateKitchenFloor(root, "KitchenFloor", -w, w, layout);
             // Glass either side of each counter (a counter is 2.75 m wide), and the staff door.
-            float from = -w;
-            float[] counters = layout.SecondCounter ? new[] { layout.Counter.x, layout.Counter2.x } : new[] { layout.Counter.x };
-            foreach (float counterX in counters)
-            {
-                CreatePartition(root, from, counterX - 1.4f, layout);
-                from = counterX + 1.4f;
-            }
-            CreatePartition(root, from, layout.StaffDoorFrom, layout);
-            CreatePartition(root, layout.StaffDoorTo, w, layout);
-            CreateStaffDoor(root, layout);
+            // The night market is open all round: no glass and no staff door (Kenny).
+            if (!night) CreateCounterGlass(root, layout);
 
             if (expansionArea != null)
             {
@@ -113,6 +105,21 @@ namespace BubbleTea.EditorTools
                 CreatePartition(expansion, w, laneWall, layout);
                 CreateDriveThruLane(expansion, style, layout);
             }
+        }
+
+        private static void CreateCounterGlass(Transform root, PrototypeSceneBuilder.ShopLayout layout)
+        {
+            float w = layout.HalfWidth;
+            float from = -w;
+            float[] counters = layout.SecondCounter ? new[] { layout.Counter.x, layout.Counter2.x } : new[] { layout.Counter.x };
+            foreach (float counterX in counters)
+            {
+                CreatePartition(root, from, counterX - 1.4f, layout);
+                from = counterX + 1.4f;
+            }
+            CreatePartition(root, from, layout.StaffDoorFrom, layout);
+            CreatePartition(root, layout.StaffDoorTo, w, layout);
+            CreateStaffDoor(root, layout);
         }
 
         // ---------- Outside ----------
@@ -394,30 +401,62 @@ namespace BubbleTea.EditorTools
 
         // ---------- Night market ----------
 
-        // The river right along the back of the kitchen walkway: dark water with a soft shine, a
-        // wooden edge beam on the near side and a stone bank on the far one, a jetty out from the
-        // walkway by the fruit crates (where the dinghy stops) and reeds along the far bank.
+        // The river right along the back of the kitchen walkway: blue water with ripples that flow
+        // downstream (left to right, the way the dinghies go), floating leaves, lily pads and little
+        // candle lanterns drifting along, a wooden edge beam on the near side and a grassy bank on
+        // the far one, a jetty out from the walkway by the fruit crates (where the dinghies stop)
+        // and reeds along the far bank.
         private static void CreateRiver(Transform root, PrototypeSceneBuilder.ShopLayout layout)
         {
             float riverZ = layout.RiverZ;
-            float near = layout.BackZ, far = riverZ + (riverZ - near);
-            Material water = Mat("RiverWater", new Color(0.12f, 0.22f, 0.36f), 0.95f, new Color(0.03f, 0.07f, 0.14f));
-            Material stone = Mat("RiverBank", new Color(0.42f, 0.42f, 0.46f), 0.2f);
-            ApplyTexture(stone, CobbleTexture(), new Vector2(60f, 1f));
-            Part(root, PrimitiveType.Cube, "River", new Vector3(10f, -0.01f, riverZ), new Vector3(150f, 0.04f, far - near), water);
+            float near = layout.BackZ, far = riverZ + (riverZ - near), width = far - near;
+            Material water = Mat("RiverWater", new Color(0.24f, 0.52f, 0.72f), 0.92f, new Color(0.04f, 0.11f, 0.18f));
+            ApplyTexture(water, RippleTexture(), new Vector2(150f / 3f, width / 3f)); // ripples about 3 m across
+            GameObject river = Part(root, PrimitiveType.Cube, "River", new Vector3(10f, -0.01f, riverZ), new Vector3(150f, 0.04f, width), water);
             Material edge = Mat("TrimWood", new Color(0.62f, 0.43f, 0.30f), 0.3f);
             float w = layout.HalfWidth;
             Part(root, PrimitiveType.Cube, "Walkway Edge", new Vector3(0f, 0.04f, near), new Vector3(2f * w, 0.1f, 0.18f), edge);
-            Part(root, PrimitiveType.Cube, "Far Bank", new Vector3(10f, 0.02f, far + 0.3f), new Vector3(150f, 0.08f, 0.7f), stone);
+            Material bank = Mat("RiverGrassBank", new Color(0.20f, 0.30f, 0.22f), 0.1f);
+            Part(root, PrimitiveType.Cube, "Far Bank", new Vector3(10f, 0.03f, far + 0.4f), new Vector3(150f, 0.1f, 0.9f), bank);
 
-            // Moonlight glinting on the water.
-            Material glint = Mat("RiverGlint", new Color(0.70f, 0.78f, 1f), 0.9f, new Color(0.35f, 0.40f, 0.6f));
-            for (int i = 0; i < 26; i++)
+            // Things floating downstream: soft ripple streaks, leaves, lily pads and candle lanterns.
+            Material ripple = Mat("RiverRipple", new Color(0.75f, 0.88f, 1f), 0.9f, new Color(0.25f, 0.35f, 0.5f));
+            Material leaf = Mat("RiverLeaf", new Color(0.36f, 0.58f, 0.30f), 0.4f);
+            Material pad = Mat("RiverLilyPad", new Color(0.22f, 0.48f, 0.26f), 0.3f);
+            Material candle = Mat("RiverCandle", new Color(1f, 0.85f, 0.55f), 0.5f, new Color(1f, 0.6f, 0.25f) * 1.8f);
+            var drifters = new System.Collections.Generic.List<Transform>();
+            for (int i = 0; i < 44; i++)
             {
-                float x = -30f + i * 3.1f + Mathf.Repeat(i * 1.7f, 1.4f);
-                float z = Mathf.Lerp(near + 0.6f, far - 0.6f, Mathf.Repeat(i * 0.618f, 1f));
-                Part(root, PrimitiveType.Cube, "Glint", new Vector3(x, 0.015f, z), new Vector3(0.9f, 0.01f, 0.06f), glint);
+                float x = -30f + i * 1.6f + Mathf.Repeat(i * 1.7f, 1.2f);
+                float z = Mathf.Lerp(near + 0.4f, far - 0.4f, Mathf.Repeat(i * 0.618f, 1f));
+                GameObject bit;
+                switch (i % 4)
+                {
+                    case 0:
+                    case 1: // a soft streak of light on a ripple
+                        bit = Part(root, PrimitiveType.Sphere, "Ripple", new Vector3(x, 0.012f, z),
+                            new Vector3(0.5f + Mathf.Repeat(i * 0.37f, 0.5f), 0.004f, 0.07f), ripple);
+                        break;
+                    case 2: // a leaf or a lily pad
+                        bool lily = i % 8 == 2;
+                        bit = Part(root, PrimitiveType.Cylinder, lily ? "Lily Pad" : "Leaf", new Vector3(x, 0.02f, z),
+                            lily ? new Vector3(0.55f, 0.01f, 0.55f) : new Vector3(0.22f, 0.01f, 0.12f), lily ? pad : leaf);
+                        bit.transform.localRotation = Quaternion.Euler(0f, Mathf.Repeat(i * 47f, 360f), 0f);
+                        break;
+                    default: // a little floating candle lantern
+                        bit = Part(root, PrimitiveType.Cylinder, "Floating Candle", new Vector3(x, 0.06f, z), new Vector3(0.22f, 0.06f, 0.22f), candle);
+                        break;
+                }
+                drifters.Add(bit.transform);
             }
+            var flow = river.AddComponent<BubbleTea.Building.WaterFlow>();
+            var flowSettings = new SerializedObject(flow);
+            flowSettings.FindProperty("water").objectReferenceValue = river.GetComponent<Renderer>();
+            flowSettings.FindProperty("textureSpeed").floatValue = 0.9f / 3f; // the same 0.9 m/s as the floating things
+            SerializedProperty list = flowSettings.FindProperty("drifters");
+            list.arraySize = drifters.Count;
+            for (int i = 0; i < drifters.Count; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = drifters[i];
+            flowSettings.ApplyModifiedPropertiesWithoutUndo();
 
             // The jetty: planks on posts from the railing out over the water, beside the crate pallet.
             Material plank = Mat("JettyWood", new Color(0.58f, 0.42f, 0.28f), 0.25f);
@@ -864,6 +903,19 @@ namespace BubbleTea.EditorTools
         });
 
         // Rounded paving stones in staggered rows.
+        // Soft flowing ripples for the river, stretched along the flow (x). Seamless. 256 px = 3 m.
+        private static Texture2D RippleTexture() => SaveTexture("RiverRipples", 256, (x, y) =>
+        {
+            const float tau = Mathf.PI * 2f;
+            float u = x / 256f, v = y / 256f;
+            float s1 = 0.5f + 0.5f * Mathf.Sin(tau * (5f * v + 0.35f * Mathf.Sin(tau * 2f * u)));
+            float s2 = 0.5f + 0.5f * Mathf.Sin(tau * (9f * v + 0.25f * Mathf.Sin(tau * (3f * u + v))) + 1.3f);
+            float shade = 0.72f + 0.08f * Mathf.Sin(tau * (2f * u + v));
+            shade += Mathf.Pow(s1, 10f) * 0.45f + Mathf.Pow(s2, 16f) * 0.3f;
+            shade = Mathf.Clamp01(shade);
+            return new Color(shade * 0.94f, shade, shade);
+        });
+
         private static Texture2D CobbleTexture() => SaveTexture("Cobbles", 256, (x, y) =>
         {
             const int stone = 64;
