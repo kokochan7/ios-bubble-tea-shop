@@ -74,6 +74,7 @@ namespace BubbleTea.EditorTools
             public bool SecondCounter, NoDriveThru, Outdoor;
             public Vector3 Counter2, Cashier2;
             public float RiverZ;                                 // middle of the river, behind the back wall
+            public float WaterFromZ;                             // Night Market: the stall's back edge, where the river starts
             public Vector3[] Decor;                              // decor pads, in the order they appear
             public Vector3[] Baristas;
             public float[] Windows, Lamps, ExpansionWindows, ExpansionLamps; // x positions on the back wall
@@ -83,6 +84,8 @@ namespace BubbleTea.EditorTools
             public float LaneX => LaneWallX + 2.5f;      // middle of the drive-thru lane
             public float LaneOuterX => LaneWallX + 6f;   // far edge of the lane
             public float SidewalkZ => -HalfDepth - 3f;
+            /// <summary>The back edge of the floor: the back wall, or the river's edge at the Night Market.</summary>
+            public float BackZ => WaterFromZ > 0f ? WaterFromZ : HalfDepth;
         }
 
         // Both shops share one compact floor plan, 18 x 15 meters, so nobody walks far:
@@ -169,9 +172,10 @@ namespace BubbleTea.EditorTools
         }
 
         // The Night Market Stall: an outdoor street stall, 24 x 18 meters, bigger than the cafés.
-        //  - the kitchen (north of the counters): four fruit bars in a row along the back railing, the
-        //    river jetty where the fruit dinghy unloads in the back-east corner, the staff sofa beside
-        //    it, barista pads in front of the bars and the trash can in the front-west corner;
+        //  - the kitchen (north of the counters): a wooden walkway with the river running right along
+        //    its back edge (no walls anywhere, Kenny), four fruit bars in a row along the water, the
+        //    jetty where the fruit dinghy unloads in the back-east corner, the staff sofa in the
+        //    back-west corner, barista pads in front of the bars and the trash can in the front-west corner;
         //  - two counters side by side across the middle, each with its own line and cashier;
         //  - the dining area (south): the two lines run down to the entrance, six tables to the east,
         //    decor and the cleaner down the west side.
@@ -187,21 +191,23 @@ namespace BubbleTea.EditorTools
             Cashier = new(-2.4f, 0f, 1.8f),
             Cashier2 = new(3.1f, 0f, 1.8f),
             Seating = new(6.8f, 0f, -6f),     // six tables in the front-east, clear of the second line
-            TrashCan = new(-11.3f, 0f, 1.2f),
-            PlayerStart = new(-1.8f, 1f, 4.2f),
-            TeaBrewer = new(-8.4f, 0f, 7.9f),
-            TaroStation = new(-4.2f, 0f, 7.9f),
-            FruitBar = new(0f, 0f, 7.9f),
-            ExtraBar = new(4.2f, 0f, 7.9f),
+            TrashCan = new(-11.3f, 0f, 0.4f),
+            PlayerStart = new(-1.8f, 1f, 3.8f),
+            TeaBrewer = new(-8.4f, 0f, 5.8f),
+            TaroStation = new(-4.2f, 0f, 5.8f),
+            FruitBar = new(0f, 0f, 5.8f),
+            ExtraBar = new(4.2f, 0f, 5.8f),
             Cleaner = new(-8.6f, 0f, -1.6f),
             TravelBack = new(4.6f, 0f, -10.8f),  // on the street, just east of the entrance
             SecondShopPad = new(-6f, 0f, -10.8f),
-            SupplyDock = new(8.6f, 0f, 8f),      // the fruit jetty in the back-east corner
-            Stocker = new(10.8f, 0f, 5.6f),
+            SupplyDock = new(8.6f, 0f, 6f),      // the fruit jetty in the back-east corner
+            Stocker = new(11f, 0f, 4.4f),
             Chalkboard = new(-2.3f, 0f, -7.6f),  // between the two lines, by the entrance
-            Baristas = new Vector3[] { new(-8.8f, 0f, 3.9f), new(-6.2f, 0f, 3.9f), new(6.6f, 0f, 3.9f), new(9.2f, 0f, 3.9f) },
-            StaffSofa = new(10.9f, 0f, 8.3f),
-            RiverZ = 13.5f,
+            // The west two stand clear of the first counter's serving spot; the kitchen is shallower now.
+            Baristas = new Vector3[] { new(-9.9f, 0f, 2.4f), new(-7.4f, 0f, 2.4f), new(6.6f, 0f, 2.4f), new(9.2f, 0f, 2.4f) },
+            StaffSofa = new(-11f, 0f, 6.1f),
+            WaterFromZ = 7f,
+            RiverZ = 10f,
             // Order: bamboo plants, paper lanterns, lucky cat, koi pond, cherry blossom tree.
             Decor = new Vector3[]
             {
@@ -213,8 +219,8 @@ namespace BubbleTea.EditorTools
             ExpansionLamps = new float[0],
             Trees = new Vector3[]
             {
-                new(-15f, 0f, -11f), new(-15f, 0f, -4f), new(-15f, 0f, 3f), new(-15f, 0f, 9f),
-                new(15f, 0f, -11f), new(15f, 0f, -4f), new(15f, 0f, 3f), new(15f, 0f, 9f),
+                new(-15f, 0f, -11f), new(-15f, 0f, -4f), new(-15f, 0f, 1f), new(-15f, 0f, 5f),
+                new(15f, 0f, -11f), new(15f, 0f, -4f), new(15f, 0f, 1f), new(15f, 0f, 5f),
                 new(-8f, 0f, -14f), new(10f, 0f, -14f),
             },
         };
@@ -765,7 +771,10 @@ namespace BubbleTea.EditorTools
         {
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
             floor.name = "Floor";
-            floor.transform.localScale = new Vector3(Layout.HalfWidth / 5f, 1f, Layout.HalfDepth / 5f); // a plane is 10 x 10 meters
+            // A plane is 10 x 10 meters. It runs from the front wall to the back edge (the river's edge outdoors).
+            float front = -Layout.HalfDepth, back = Layout.BackZ;
+            floor.transform.position = new Vector3(0f, 0f, (front + back) / 2f);
+            floor.transform.localScale = new Vector3(Layout.HalfWidth / 5f, 1f, (back - front) / 10f);
             floor.GetComponent<Renderer>().sharedMaterial = material;
         }
 
@@ -779,9 +788,10 @@ namespace BubbleTea.EditorTools
             // The front (south) wall has a wide doorway. The player can step out onto a patch of
             // sidewalk in front of it (to reach the travel stop), fenced by invisible walls
             // (customers don't use physics, so they walk through them).
-            // Outdoors (the Night Market) the back is a low railing too, with the river beyond it.
-            float northHeight = Layout.Outdoor ? 1f : 3f;
-            CreateWall(root.transform, "North", new Vector3(0f, northHeight / 2f, d + 0.25f), new Vector3(2f * w + 0.5f, northHeight, 0.5f), wallMat);
+            // Outdoors (the Night Market) there are no walls to see at all (Kenny): they stay as
+            // invisible blockers, and the back one runs along the river's edge.
+            float northHeight = Layout.Outdoor ? 1f : 3f, back = Layout.BackZ;
+            CreateWall(root.transform, "North", new Vector3(0f, northHeight / 2f, back + 0.25f), new Vector3(2f * w + 0.5f, northHeight, 0.5f), wallMat);
             CreateWall(root.transform, "South (west of door)", new Vector3((-w - 0.25f + from) / 2f, 0.5f, -d - 0.25f),
                 new Vector3(from + w + 0.25f, 1f, 0.5f), wallMat);
             CreateWall(root.transform, "South (east of door)", new Vector3((w + 0.25f + to) / 2f, 0.5f, -d - 0.25f),
@@ -796,9 +806,9 @@ namespace BubbleTea.EditorTools
             // The sidewalk outside has no collider of its own, so the yard gets an invisible floor.
             CreateBlocker(root.transform, "Front Yard (floor)", new Vector3((from + yardEast) / 2f, -0.25f, (-d + yardSouth) / 2f),
                 new Vector3(yardEast - from + 1f, 0.5f, -d - yardSouth + 1f));
-            CreateWall(root.transform, "West", new Vector3(-w - 0.25f, 0.5f, 0f), new Vector3(0.5f, 1f, 2f * d + 0.5f), wallMat);
-            return CreateWall(root.transform, "East (opens with Expand Shop)", new Vector3(w + 0.25f, 0.5f, 0f),
-                new Vector3(0.5f, 1f, 2f * d + 0.5f), wallMat);
+            CreateWall(root.transform, "West", new Vector3(-w - 0.25f, 0.5f, (back - d) / 2f), new Vector3(0.5f, 1f, back + d + 0.5f), wallMat);
+            return CreateWall(root.transform, "East (opens with Expand Shop)", new Vector3(w + 0.25f, 0.5f, (back - d) / 2f),
+                new Vector3(0.5f, 1f, back + d + 0.5f), wallMat);
         }
 
         // The extra space to the east, hidden until Expand Shop is bought.
@@ -857,6 +867,12 @@ namespace BubbleTea.EditorTools
             wall.transform.localPosition = position;
             wall.transform.localScale = size;
             wall.GetComponent<Renderer>().sharedMaterial = material;
+            if (Layout.Outdoor)
+            {
+                // Out in the open the walls are invisible: only the collider stays, to keep the player in.
+                Object.DestroyImmediate(wall.GetComponent<MeshRenderer>());
+                Object.DestroyImmediate(wall.GetComponent<MeshFilter>());
+            }
             return wall;
         }
 
@@ -2162,7 +2178,7 @@ namespace BubbleTea.EditorTools
             }
 
             float riverZ = Layout.RiverZ;
-            float stopZ = Layout.HalfDepth + 2.3f; // beside the jetty, just behind the back railing
+            float stopZ = Layout.BackZ + 1.8f; // just past the end of the jetty
             SetReference(dinghy, "dock", dock);
             SetReference(dinghy, "boat", boat);
             var boatSettings = new SerializedObject(dinghy);
@@ -2172,6 +2188,7 @@ namespace BubbleTea.EditorTools
             boatSettings.FindProperty("upstream").vector3Value = new Vector3(-40f, 0f, riverZ);
             boatSettings.FindProperty("jetty").vector3Value = new Vector3(Layout.SupplyDock.x, 0f, stopZ);
             boatSettings.FindProperty("downstream").vector3Value = new Vector3(40f, 0f, riverZ);
+            boatSettings.FindProperty("secondsBetweenBoats").vector2Value = new Vector2(10f, 18f); // comes by often (Kenny)
             boatSettings.ApplyModifiedPropertiesWithoutUndo();
             boat.position = new Vector3(-40f, 0f, riverZ);
             boat.gameObject.SetActive(false);
